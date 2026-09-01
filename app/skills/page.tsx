@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import Link from "next/link";
 import { REPO_URL } from "@/lib/config";
 
 export const metadata = { title: "Skills" };
@@ -31,6 +32,10 @@ export default async function SkillsPage() {
         <a href={REPO_URL} target="_blank" rel="noreferrer" className="underline underline-offset-2">
           GitHub
         </a>
+        . Want a starting point to bring to the assistant? Grab a{" "}
+        <Link href="/templates" className="underline underline-offset-2">
+          template
+        </Link>
         .
       </p>
       <div className="mt-8 grid gap-4 sm:grid-cols-2">

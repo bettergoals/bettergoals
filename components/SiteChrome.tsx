@@ -3,6 +3,7 @@ import { BUILD_URL, REPO_URL } from "@/lib/config";
 
 const NAV = [
   { href: "/principles", label: "Principles" },
+  { href: "/templates", label: "Templates" },
   { href: "/skills", label: "Skills" },
   { href: "/contribute", label: "Contribute" },
   { href: BUILD_URL, label: "Ideas Board ↗" },
@@ -11,11 +12,11 @@ const NAV = [
 export function Nav() {
   return (
     <header className="sticky top-0 z-20 border-b border-ink/10 bg-chalk/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
         <Link href="/" className="text-lg font-bold tracking-tight">
           better<span className="text-sooner">goals</span>.ai
         </Link>
-        <nav className="flex items-center gap-1 text-sm font-medium sm:gap-2">
+        <nav className="flex flex-wrap items-center gap-1 text-sm font-medium sm:gap-2">
           {NAV.map((item) =>
             item.href.startsWith("http") ? (
               <a key={item.href} href={item.href} className="rounded-full px-3 py-1.5 hover:bg-ink/5">
