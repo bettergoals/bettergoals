@@ -8,6 +8,8 @@ export const SITE = {
 };
 
 export const REPO_URL = `https://github.com/${SITE.repo}`;
+/** The separate builder app where ideas are proposed, endorsed, and moved to Doing */
+export const BUILD_URL = process.env.NEXT_PUBLIC_BUILD_URL ?? "https://build.bettergoals.ai";
 export const NEW_IDEA_URL = `${REPO_URL}/issues/new?template=idea.yml`;
 
 /** 👍 votes needed before an idea counts as endorsed by the group */

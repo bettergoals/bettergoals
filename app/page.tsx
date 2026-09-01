@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { NEW_IDEA_URL, SITE } from "@/lib/config";
+import { BUILD_URL, NEW_IDEA_URL, SITE } from "@/lib/config";
 
 const PILLARS = [
   {
@@ -48,12 +48,12 @@ export default function Home() {
             feature on this site started as an idea on the board.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href="/board"
+            <a
+              href={BUILD_URL}
               className="rounded-full bg-sooner px-6 py-3 font-semibold text-ink hover:bg-sooner/90"
             >
-              See the live board
-            </Link>
+              See the live board ↗
+            </a>
             <a
               href={NEW_IDEA_URL}
               target="_blank"
