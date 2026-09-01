@@ -20,8 +20,8 @@ export type Template = {
 
 const DIR = path.join(process.cwd(), "public", "templates");
 
-/** Order on the page: hypothesis first, then the artefacts it feeds. */
-const ORDER = ["outcome-hypothesis", "okr-set", "goal-one-pager"];
+/** Order on the page: the group canvas, then the hypothesis, then the artefacts it feeds. */
+const ORDER = ["outcome-canvas", "outcome-hypothesis", "okr-set", "goal-one-pager"];
 
 function field(frontmatter: string, key: string): string {
   return new RegExp(`^${key}:\\s*(.+)$`, "m").exec(frontmatter)?.[1]?.trim() ?? "";
