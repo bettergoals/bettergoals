@@ -1,14 +1,23 @@
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { SITE } from "@/lib/config";
+import { BUILDER_COOKIE, passcodeValid } from "@/lib/builder";
 import type { BoardColumnKey } from "@/lib/github";
 
 const STAGE_LABELS: BoardColumnKey[] = ["idea", "discussing", "doing", "done"];
 
 /**
  * Moves an idea between board columns by swapping its stage label on GitHub.
- * Requires GITHUB_TOKEN with issues:write on the repo; without it the board is read-only.
+ * Requires the facilitator passcode (httpOnly cookie set by /api/board/unlock,
+ * or an x-passcode header) and a GITHUB_TOKEN with issues:write on the repo.
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const supplied = req.cookies.get(BUILDER_COOKIE)?.value ?? req.headers.get("x-passcode");
+  if (!passcodeValid(supplied)) {
+    return NextResponse.json(
+      { error: "Locked — enter the facilitator passcode on build.bettergoals.ai to move cards." },
+      { status: 401 }
+    );
+  }
   const token = process.env.GITHUB_TOKEN;
   if (!token) {
     return NextResponse.json(
