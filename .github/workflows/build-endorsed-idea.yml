@@ -35,7 +35,9 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          claude_args: "--max-turns 80"
+          claude_args: |
+            --max-turns 80
+            --allowedTools "Bash(git:*),Bash(npm:*),Bash(gh pr:*),Bash(gh issue:*),Bash(gh api:*),Read,Write,Edit,MultiEdit,Glob,Grep"
           prompt: |
             You are building an endorsed community idea into the bettergoals.ai website.
             Read CLAUDE.md first and follow its guardrails strictly.
