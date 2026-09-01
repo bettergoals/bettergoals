@@ -491,12 +491,27 @@ export default function OkrsPage() {
             propose an idea, try stating it as an outcome hypothesis — due to,
             we believe that, will result in — and name the leading indicator you
             would watch. If you can finish the idea without anything getting
-            better for anyone, it’s an output.
+            better for anyone, it’s an output. To run this with a group, the SSH{" "}
+            <a
+              href="https://www.soonersaferhappier.com/quick-learn-outcome-canvas"
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold underline underline-offset-2"
+            >
+              Outcome Canvas
+            </a>{" "}
+            gives you a workshop structure.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
-              href="/skills"
+              href="/templates/okr-set"
               className="rounded-full bg-sooner px-6 py-3 font-semibold text-ink hover:bg-sooner/90"
+            >
+              Take the OKR template →
+            </Link>
+            <Link
+              href="/skills"
+              className="rounded-full border border-chalk/30 px-6 py-3 font-semibold hover:bg-chalk/10"
             >
               Get the OKR skill →
             </Link>
@@ -507,14 +522,6 @@ export default function OkrsPage() {
               className="rounded-full border border-chalk/30 px-6 py-3 font-semibold hover:bg-chalk/10"
             >
               Propose an outcome ↗
-            </a>
-            <a
-              href="https://www.soonersaferhappier.com/quick-learn-outcome-canvas"
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-full border border-chalk/30 px-6 py-3 font-semibold hover:bg-chalk/10"
-            >
-              Outcome Canvas ↗
             </a>
           </div>
         </div>

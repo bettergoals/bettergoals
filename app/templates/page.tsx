@@ -17,7 +17,11 @@ export default async function TemplatesPage() {
         A better starting point than a blank page — or last quarter’s
         copy-paste. Each template is a fill-in canvas plus worked examples from
         this community, aligned to better value, sooner, safer, happier. Copy
-        one into your planning doc, or download the markdown.
+        one into your planning doc, or download the markdown. New to this? The{" "}
+        <Link href="/okrs" className="font-semibold underline underline-offset-2">
+          OKR framework
+        </Link>{" "}
+        explains the thinking behind these.
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
