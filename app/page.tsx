@@ -77,7 +77,13 @@ export default function Home() {
           ))}
         </div>
         <p className="mt-6 text-ink-soft">
-          Starting a planning cycle?{" "}
+          Want the mechanics?{" "}
+          <Link href="/okrs" className="font-semibold underline underline-offset-2">
+            Read the OKR framework
+          </Link>{" "}
+          — objectives as outcome hypotheses, key results that measure behaviour,
+          and a golden thread from strategy to experiment. Starting a planning
+          cycle?{" "}
           <Link href="/templates" className="font-semibold underline underline-offset-2">
             Take a starter template
           </Link>{" "}
