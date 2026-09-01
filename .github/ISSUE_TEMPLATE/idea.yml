@@ -1,0 +1,37 @@
+name: 💡 Idea
+description: Suggest content, a feature, or thinking for bettergoals.ai
+title: "[Idea] "
+labels: ["idea"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for contributing! Plain language is perfect — this takes about two minutes.
+        Your idea will appear on the [live board](https://bettergoals.ai/board) right away.
+  - type: textarea
+    id: what
+    attributes:
+      label: What's the idea?
+      description: Describe it however feels natural — a feature, content, a question, a provocation.
+      placeholder: e.g. A gallery of real goal anti-patterns and what makes them bad
+    validations:
+      required: true
+  - type: textarea
+    id: who
+    attributes:
+      label: Who is it for, and what gets better for them?
+      description: Practise what we preach — name the beneficiary and the outcome.
+      placeholder: e.g. Leaders drafting quarterly OKRs — they'd spot output-thinking in their own goals faster
+    validations:
+      required: false
+  - type: dropdown
+    id: size
+    attributes:
+      label: How big does this feel?
+      options:
+        - Small — an hour or two
+        - Medium — a day
+        - Large — needs breaking down
+        - No idea — that's fine!
+    validations:
+      required: false

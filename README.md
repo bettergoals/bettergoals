@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# bettergoals.ai
 
-## Getting Started
+A community resource from the [Sooner Safer Happier](https://soonersaferhappier.com) community for crafting better goals and outcomes — delivering **better value, sooner, safer and happier**. Supported by [TeamForm](https://teamform.co).
 
-First, run the development server:
+Built live, in the open, by the community: every feature on this site started as an idea on the [board](https://bettergoals.ai/board).
+
+## How it works
+
+1. **Ideas are GitHub issues.** Anyone opens one via the [idea form](../../issues/new?template=idea.yml) — it appears on the live board at [/board](https://bettergoals.ai/board) within seconds.
+2. **The community endorses.** 👍 reactions are votes; 3+ marks an idea as endorsed. Discussion happens in issue comments.
+3. **Claude builds it.** When a maintainer adds the `doing` label, a GitHub Action runs Claude Code, which implements the idea and opens a pull request.
+4. **Humans review and ship.** Every PR gets a Vercel preview deployment. The community reviews; merging ships to production.
+
+Labels drive the board columns: `idea` → Ideas, `discussing` → Discussing, `doing` → Doing, `done` → Done.
+
+## Development
 
 ```bash
+npm install
+cp .env.example .env.local   # add a GITHUB_TOKEN (required while the repo is private)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The board falls back to demo data when GitHub is unreachable, so the site always works.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+See [CLAUDE.md](CLAUDE.md) — it doubles as the guide for the automated Claude Code builds, including guardrails.
 
-## Learn More
+## Operations
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Deploy:** Vercel, linked to this repo. `main` → production (bettergoals.ai); PRs → preview URLs.
+- **Secrets:** `ANTHROPIC_API_KEY` (GitHub Actions secret) powers the automated builds. `GITHUB_TOKEN` (Vercel env var) raises the GitHub API rate limit for the board.
+- **Principles:** community-owned in [PRINCIPLES.md](PRINCIPLES.md); edits via PR appear on the site within a minute of merging (no redeploy needed).
+- **Skills:** downloadable AI-assistant skills live in `public/skills/` and are auto-listed at [/skills](https://bettergoals.ai/skills).
