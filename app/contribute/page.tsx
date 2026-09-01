@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   BUILD_SIGNIN_URL,
   BUILD_URL,
@@ -82,6 +83,14 @@ export default function ContributePage() {
               the description. Comment to shape it.
             </li>
           </ol>
+          <p className="mt-4 border-t border-ink/10 pt-4 text-sm leading-relaxed text-ink-soft">
+            Stuck on wording? Say what gets better and for whom — “due to… we
+            believe that… will result in…”. The{" "}
+            <Link href="/okrs" className="font-semibold underline underline-offset-2">
+              OKR framework
+            </Link>{" "}
+            is the guardrail we use for shaping outcomes here.
+          </p>
         </section>
 
         <section className="rounded-2xl border border-safer/40 bg-white p-6 shadow-sm">
