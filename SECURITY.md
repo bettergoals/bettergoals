@@ -25,18 +25,23 @@ Report a vulnerability: open a private security advisory on this repo, or email 
 **Data & privacy (C1, P-series)**
 - The only personal data handled today is GitHub's public profile data. The email sign-in feature is designed so emails appear only in signed cookies held by the user's own browser and in Resend's transactional log — never in public GitHub content and never in a database we operate.
 
-## Organisational controls — owner checklist
+## Operational controls
 
-These need the org owner (not code) and are the gap between "hardened" and "audit-ready":
+Automated:
 
-- [ ] Require 2FA for all members of the `bettergoals` GitHub org (org settings → Authentication security)
-- [ ] Branch protection on `main` and `preview` in both repos: require PRs, block force-pushes (note: keep automation compatible — no required approvals on `preview` if Claude PRs should merge with one human click)
-- [ ] Quarterly rotation of the fine-grained PAT and `ANTHROPIC_API_KEY`; rotate immediately if a maintainer leaves
-- [ ] Restrict Vercel project access to named team members; review quarterly
-- [ ] Enable GitHub Dependabot alerts + security updates on both repos
-- [ ] Review GitHub org audit log and Vercel deployment logs monthly (availability/monitoring evidence)
+- [x] Dependabot alerts + automated security fixes enabled on both repos; weekly grouped dependency-update PRs via `.github/dependabot.yml` (npm + Actions)
+- [x] Branch protection on product `main`: changes via pull request, force-pushes and deletions blocked (admins exempt so the promotion flow stays one-click)
+- [x] Monthly security-review issue opened automatically (`security-review-reminder.yml`): access reviews, log review, Dependabot triage, secret-rotation cadence — closed issues form the audit trail
+
+## Owner checklist
+
+These need the org owner (settings, not code) and are the gap between "hardened" and "audit-ready":
+
+- [ ] Require 2FA for all members of the `bettergoals` GitHub org (org settings → Authentication security; the enforcing account must have 2FA first)
+- [ ] Extend branch protection to product `preview` and builder `main` (same settings as product `main`)
+- [ ] Restrict Vercel project access to named team members; review via the monthly issue
 - [ ] Before enabling email sign-in: verify the sending domain in Resend, set a strong `SESSION_SECRET` (32+ random bytes), and add the KV-backed rate limiter
-- [ ] If pursuing an actual SOC 2 Type I/II: engage an auditor and stand up evidence collection (e.g. Vanta/Drata) — the controls above are the inputs
+- [ ] If pursuing an actual SOC 2 Type I/II report: engage an auditor and stand up evidence collection (e.g. Vanta/Drata) — the controls above are the inputs; this requires a commercial engagement and an observation period and cannot be completed from the repo
 
 ## Known accepted risks
 

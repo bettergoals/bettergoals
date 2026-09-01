@@ -1,0 +1,34 @@
+name: Monthly security review
+
+# Operational control (SOC 2 CC4.x/CC7.x): opens a recurring issue so access
+# reviews and secret rotation happen on a schedule and leave an audit trail.
+
+on:
+  schedule:
+    - cron: "0 9 1 * *" # 09:00 UTC on the 1st of each month
+  workflow_dispatch:
+
+jobs:
+  open-review-issue:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open the review issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh issue create --repo "$REPO" \
+            --title "Security review — $(date -u +%B\ %Y)" \
+            --body "$(cat <<'BODY'
+          Monthly security review checklist (see SECURITY.md for context). Check each item and close this issue when done — the closed issue is the audit evidence.
+
+          - [ ] Review GitHub org members and repo collaborators — remove anyone who no longer needs access
+          - [ ] Review Vercel project members on both projects
+          - [ ] Check GitHub org audit log and Vercel deployment logs for anything unexpected
+          - [ ] Review open Dependabot alerts and PRs on both repos
+          - [ ] Rotate BOARD_PASSCODE if a workshop ran this month
+          - [ ] Quarterly (Jan/Apr/Jul/Oct): rotate the fine-grained PAT and ANTHROPIC_API_KEY
+          BODY
+          )"
