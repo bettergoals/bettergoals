@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { REPO_URL } from "@/lib/config";
+import { BUILD_URL, REPO_URL } from "@/lib/config";
 
 const NAV = [
-  { href: "/board", label: "Ideas Board" },
   { href: "/principles", label: "Principles" },
   { href: "/skills", label: "Skills" },
   { href: "/contribute", label: "Contribute" },
+  { href: BUILD_URL, label: "Ideas Board ↗" },
 ];
 
 export function Nav() {
@@ -16,15 +16,17 @@ export function Nav() {
           better<span className="text-sooner">goals</span>.ai
         </Link>
         <nav className="flex items-center gap-1 text-sm font-medium sm:gap-2">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-full px-3 py-1.5 hover:bg-ink/5"
-            >
-              {item.label}
-            </Link>
-          ))}
+          {NAV.map((item) =>
+            item.href.startsWith("http") ? (
+              <a key={item.href} href={item.href} className="rounded-full px-3 py-1.5 hover:bg-ink/5">
+                {item.label}
+              </a>
+            ) : (
+              <Link key={item.href} href={item.href} className="rounded-full px-3 py-1.5 hover:bg-ink/5">
+                {item.label}
+              </Link>
+            )
+          )}
           <a
             href={REPO_URL}
             target="_blank"

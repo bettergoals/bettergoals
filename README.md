@@ -2,11 +2,11 @@
 
 A community resource from the [Sooner Safer Happier](https://soonersaferhappier.com) community for crafting better goals and outcomes — delivering **better value, sooner, safer and happier**. Supported by [TeamForm](https://teamform.co).
 
-Built live, in the open, by the community: every feature on this site started as an idea on the [board](https://bettergoals.ai/board).
+Built live, in the open, by the community: every feature on this site started as an idea on the [board](https://build.bettergoals.ai). This repo is the **product website**; the build experience lives in [`bettergoals/build-bettergoals`](https://github.com/bettergoals/build-bettergoals), deployed at build.bettergoals.ai.
 
 ## How it works
 
-1. **Ideas are GitHub issues.** Anyone opens one via the [idea form](../../issues/new?template=idea.yml) — it appears on the live board at [/board](https://bettergoals.ai/board) within seconds.
+1. **Ideas are GitHub issues** on this repo. Anyone opens one via the [idea form](../../issues/new?template=idea.yml) — it appears on the live board at [build.bettergoals.ai](https://build.bettergoals.ai) within seconds.
 2. **The community endorses.** 👍 reactions are votes; 3+ marks an idea as endorsed. Discussion happens in issue comments.
 3. **Claude builds it.** When a maintainer adds the `doing` label, a GitHub Action runs Claude Code, which implements the idea and opens a pull request.
 4. **Humans review and ship.** Every PR gets a Vercel preview deployment. The community reviews; merging ships to production.
