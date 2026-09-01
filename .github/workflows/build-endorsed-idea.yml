@@ -21,6 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: preview
           fetch-depth: 0
 
       - name: Comment that the build is starting
@@ -47,13 +48,15 @@ jobs:
             ---
 
             Steps:
-            1. Create a branch named `idea/${{ github.event.issue.number }}` from main.
+            1. Create a branch named `idea/${{ github.event.issue.number }}` from `preview`
+               (already checked out).
             2. Implement the smallest lovable version of this idea in the site.
                If the idea is ambiguous, make sensible product decisions and note
                them in the PR description rather than blocking.
             3. Run `npm run build` and fix any errors before finishing.
-            4. Commit, push the branch, and open a pull request titled after the
-               idea, with a body that links "Closes #${{ github.event.issue.number }}"
-               and summarises the decisions you made.
+            4. Commit, push the branch, and open a pull request **with base branch
+               `preview`** (not main), titled after the idea, with a body that links
+               "Closes #${{ github.event.issue.number }}" and summarises the
+               decisions you made.
             5. Comment on issue #${{ github.event.issue.number }} with a link to
                the pull request.
