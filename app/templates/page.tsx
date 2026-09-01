@@ -64,7 +64,15 @@ export default async function TemplatesPage() {
           <h2 className="font-semibold text-ink">Which one do I need?</h2>
           <ol className="mt-2 list-decimal space-y-1 pl-5">
             <li>
-              Start with an <strong>outcome hypothesis</strong> per candidate goal — it
+              Get the team round the <strong>outcome canvas</strong> to agree what change
+              you&rsquo;re going for at all —{" "}
+              <Link href="/canvas" className="underline underline-offset-2">
+                run it on a wall
+              </Link>
+              .
+            </li>
+            <li>
+              Then write an <strong>outcome hypothesis</strong> per candidate goal — it
               kills the ones that aren’t outcomes.
             </li>
             <li>
