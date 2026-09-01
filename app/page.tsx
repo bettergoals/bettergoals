@@ -76,6 +76,13 @@ export default function Home() {
             </div>
           ))}
         </div>
+        <p className="mt-6 text-ink-soft">
+          Starting a planning cycle?{" "}
+          <Link href="/templates" className="font-semibold underline underline-offset-2">
+            Take a starter template
+          </Link>{" "}
+          — outcome hypotheses, OKRs and goal one-pagers, with worked examples from this community.
+        </p>
       </section>
 
       <section className="border-y border-ink/10 bg-white">
