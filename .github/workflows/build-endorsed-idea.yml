@@ -39,7 +39,7 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           track_progress: true
           claude_args: |
-            --max-turns 80
+            --max-turns 130
             --allowedTools "Bash(git:*),Bash(npm:*),Bash(gh pr:*),Bash(gh issue:*),Bash(gh api:*),Read,Write,Edit,MultiEdit,Glob,Grep"
           prompt: |
             You are building an endorsed community idea into the bettergoals.ai website.
@@ -57,7 +57,9 @@ jobs:
                (already checked out).
             2. Implement the smallest lovable version of this idea in the site.
                If the idea is ambiguous, make sensible product decisions and note
-               them in the PR description rather than blocking.
+               them in the PR description rather than blocking. If the idea is too
+               large to finish, ship a coherent first slice rather than nothing.
+               Commit and push your branch early and often so no work is ever lost.
             3. Run `npm run build` and fix any errors before finishing.
             4. Commit, push the branch, and open a pull request **with base branch
                `preview`** (not main), titled after the idea, with a body that links
