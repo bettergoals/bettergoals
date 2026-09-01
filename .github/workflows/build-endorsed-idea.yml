@@ -4,6 +4,8 @@ name: Build endorsed idea
 # label, Claude Code implements it and opens a pull request. Vercel then posts
 # a preview deployment on the PR for the community to review.
 
+run-name: "idea-${{ github.event.issue.number }}: ${{ github.event.issue.title }}"
+
 on:
   issues:
     types: [labeled]
@@ -35,6 +37,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          track_progress: true
           claude_args: |
             --max-turns 80
             --allowedTools "Bash(git:*),Bash(npm:*),Bash(gh pr:*),Bash(gh issue:*),Bash(gh api:*),Read,Write,Edit,MultiEdit,Glob,Grep"
