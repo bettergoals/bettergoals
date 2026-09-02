@@ -88,6 +88,12 @@ export default function Home() {
             Take a starter template
           </Link>{" "}
           — outcome hypotheses, OKRs and goal one-pagers, with worked examples from this community.
+          Already have a goal written?{" "}
+          <Link href="/checker" className="font-semibold underline underline-offset-2">
+            Run it through the checker
+          </Link>{" "}
+          — thirty seconds, in your browser, and it will tell you honestly whether
+          you’ve written an outcome or an output.
         </p>
       </section>
 
