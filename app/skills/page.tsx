@@ -7,6 +7,11 @@ export const metadata = { title: "Skills" };
 
 type SkillMeta = { file: string; name: string; description: string };
 
+/** Skills that also have a no-assistant-required version built into the site. */
+const IN_BROWSER: Record<string, { href: string; label: string }> = {
+  "outcome-vs-output-check.md": { href: "/checker", label: "Try it here →" },
+};
+
 async function getSkills(): Promise<SkillMeta[]> {
   const dir = path.join(process.cwd(), "public", "skills");
   const files = (await fs.readdir(dir)).filter((f) => f.endsWith(".md"));
@@ -36,6 +41,10 @@ export default async function SkillsPage() {
         <Link href="/templates" className="underline underline-offset-2">
           template
         </Link>
+        . No assistant to hand? The outcome-vs-output check also runs{" "}
+        <Link href="/checker" className="underline underline-offset-2">
+          right here in your browser
+        </Link>
         .
       </p>
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -59,6 +68,14 @@ export default async function SkillsPage() {
               >
                 View
               </a>
+              {IN_BROWSER[s.file] && (
+                <Link
+                  href={IN_BROWSER[s.file].href}
+                  className="rounded-full border border-sooner/50 px-4 py-2 text-sm font-semibold text-sooner hover:bg-sooner/10"
+                >
+                  {IN_BROWSER[s.file].label}
+                </Link>
+              )}
             </div>
           </div>
         ))}
