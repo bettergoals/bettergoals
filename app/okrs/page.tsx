@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { NEW_IDEA_URL } from "@/lib/config";
+import { NEW_IDEA_URL, SSH_OUTCOME_CANVAS_URL } from "@/lib/config";
 
 export const metadata = {
   title: "The OKR Framework",
@@ -493,7 +493,7 @@ export default function OkrsPage() {
             would watch. If you can finish the idea without anything getting
             better for anyone, it’s an output. To run this with a group, the SSH{" "}
             <a
-              href="https://www.soonersaferhappier.com/quick-learn-outcome-canvas"
+              href={SSH_OUTCOME_CANVAS_URL}
               target="_blank"
               rel="noreferrer"
               className="font-semibold underline underline-offset-2"
