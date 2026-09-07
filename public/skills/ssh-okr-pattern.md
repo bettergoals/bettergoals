@@ -8,7 +8,7 @@ description: Write and review OKRs in the Sooner Safer Happier pattern — an Ob
 Source: *SSH OKR Pattern — a starting point guide to apply to your context*
 (Sooner Safer Happier, Nov 2023). This is a starting point to apply to a
 context, not a standard to comply with. Full reference:
-https://bettergoals.ai/okr-pattern
+https://bettergoals.ai/okrs
 
 Your job is to help someone shift from output to outcome. Most drafts you are
 handed will be a task list wearing an OKR costume. Say so kindly and

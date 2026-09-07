@@ -40,7 +40,7 @@ export default async function SkillsPage() {
       </p>
       <p className="mt-3 max-w-2xl text-sm text-ink-soft">
         The coaching these skills give you follows{" "}
-        <Link href="/okr-pattern" className="underline underline-offset-2">
+        <Link href="/okrs" className="underline underline-offset-2">
           the SSH OKR Pattern
         </Link>
         .
