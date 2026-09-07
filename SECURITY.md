@@ -11,7 +11,7 @@ Report a vulnerability: open a private security advisory on this repo, or email 
 - Board card moves require a facilitator passcode: compared in constant time server-side, held as an httpOnly/secure/SameSite cookie, 12-hour expiry.
 - Email sign-in (builder, ships dark until enabled): stateless one-time PINs bound to email + expiry via HMAC-SHA256; 30-day HMAC-signed httpOnly session cookies; no secrets or PII persisted server-side.
 - GitHub API access uses a fine-grained PAT scoped to one repo with least privilege (Issues RW, Contents R), stored only in Vercel env vars.
-- Automated builds authenticate via the Claude Code GitHub App and a repo-scoped Actions secret (`ANTHROPIC_API_KEY`); workflow `permissions:` blocks grant only what each job needs.
+- Automated builds authenticate with two repo-scoped Actions secrets: `ANTHROPIC_API_KEY` for the model, and `CROSS_REPO_TOKEN`, a fine-grained PAT limited to the two bettergoals repos (Contents RW, Pull requests RW, Issues RW) so a build can open PRs on either the product site or the board. Workflow `permissions:` blocks grant only what each job needs.
 
 **Change management (CC8.1)**
 - All production changes flow: PR → `preview` branch (staging at preview.bettergoals.ai) → human review → promotion PR → `main` (production). AI-built changes are never merged without human review.

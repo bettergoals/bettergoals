@@ -3,6 +3,12 @@ name: Build endorsed idea
 # When an idea is endorsed by the community and a maintainer adds the `doing`
 # label, Claude Code implements it and opens a pull request. Vercel then posts
 # a preview deployment on the PR for the community to review.
+#
+# Ideas may concern either the product site (this repo) or the build board at
+# build.bettergoals.ai (`bettergoals/build-bettergoals`). Both repos are checked
+# out and Claude works in whichever one the idea belongs to. Access to both is
+# provided by the `CROSS_REPO_TOKEN` secret: a fine-grained PAT with Contents RW,
+# Pull requests RW and Issues RW on both repos.
 
 run-name: "idea-${{ github.event.issue.number }}: ${{ github.event.issue.title }}"
 
@@ -19,12 +25,37 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
-      id-token: write
+    env:
+      HAS_CROSS_REPO_TOKEN: ${{ secrets.CROSS_REPO_TOKEN != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Check the cross-repo token is configured
+        if: env.HAS_CROSS_REPO_TOKEN != 'true'
+        run: |
+          echo "::error::Secret CROSS_REPO_TOKEN is missing. Add a fine-grained PAT with Contents RW, Pull requests RW and Issues RW on bettergoals/bettergoals and bettergoals/build-bettergoals."
+          exit 1
+
+      - name: Check out the product site (this repo, preview branch)
+        uses: actions/checkout@v4
         with:
           ref: preview
           fetch-depth: 0
+
+      - name: Check out the build board (bettergoals/build-bettergoals)
+        uses: actions/checkout@v4
+        with:
+          repository: bettergoals/build-bettergoals
+          ref: main
+          path: build-bettergoals
+          token: ${{ secrets.CROSS_REPO_TOKEN }}
+
+      - name: Prepare the build board checkout
+        run: |
+          # Keep the nested checkout invisible to the product repo's git.
+          echo "build-bettergoals/" >> .git/info/exclude
+          # Commits in the board repo carry the same bot identity the action
+          # configures for the product repo.
+          git -C build-bettergoals config user.name "claude[bot]"
+          git -C build-bettergoals config user.email "41898282+claude[bot]@users.noreply.github.com"
 
       - name: Comment that the build is starting
         env:
@@ -37,15 +68,24 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.CROSS_REPO_TOKEN }}
           track_progress: true
           claude_args: |
             --max-turns 130
-            --allowedTools "Bash(git:*),Bash(npm:*),Bash(gh pr:*),Bash(gh issue:*),Bash(gh api:*),Read,Write,Edit,MultiEdit,Glob,Grep"
+            --allowedTools "Bash(cd:*),Bash(git:*),Bash(npm:*),Bash(gh pr:*),Bash(gh issue:*),Bash(gh api:*),Read,Write,Edit,MultiEdit,Glob,Grep"
           prompt: |
-            You are building an endorsed community idea into the bettergoals.ai website.
-            Read CLAUDE.md first and follow its guardrails strictly.
+            You are building an endorsed community idea for bettergoals.ai.
 
-            The idea is GitHub issue #${{ github.event.issue.number }}:
+            Two repositories are checked out and you have push and pull-request
+            access to both:
+
+            - The current directory is the PRODUCT SITE, `bettergoals/bettergoals`
+              (bettergoals.ai), on its `preview` branch. Read its CLAUDE.md first.
+            - `./build-bettergoals/` is the BUILD BOARD, `bettergoals/build-bettergoals`
+              (build.bettergoals.ai: the kanban board, cards, "Move to…" controls,
+              passcode login), on its `main` branch. It has its own CLAUDE.md.
+
+            The idea is GitHub issue #${{ github.event.issue.number }} on the product repo:
             ---
             Title: ${{ github.event.issue.title }}
 
@@ -53,17 +93,29 @@ jobs:
             ---
 
             Steps:
-            1. Create a branch named `idea/${{ github.event.issue.number }}` from `preview`
-               (already checked out).
-            2. Implement the smallest lovable version of this idea in the site.
-               If the idea is ambiguous, make sensible product decisions and note
-               them in the PR description rather than blocking. If the idea is too
-               large to finish, ship a coherent first slice rather than nothing.
-               Commit and push your branch early and often so no work is ever lost.
-            3. Run `npm run build` and fix any errors before finishing.
-            4. Commit, push the branch, and open a pull request **with base branch
-               `preview`** (not main), titled after the idea, with a body that links
-               "Closes #${{ github.event.issue.number }}" and summarises the
-               decisions you made.
-            5. Comment on issue #${{ github.event.issue.number }} with a link to
-               the pull request.
+            1. Decide which repo the idea belongs to. Anything about the board,
+               cards, columns, card moves, or build.bettergoals.ai goes in the
+               build board; everything else goes in the product site. If the
+               idea genuinely needs both, make the product change here and the
+               board change there, and cross-link the two pull requests. Say
+               which repo you chose, and why, in your progress comment.
+            2. In the chosen repo, create a branch named
+               `idea/${{ github.event.issue.number }}` from the checked-out
+               branch (`preview` for the product site, `main` for the build board).
+            3. Implement the smallest lovable version of this idea, following
+               that repo's CLAUDE.md strictly. If the idea is ambiguous, make
+               sensible product decisions and note them in the PR description
+               rather than blocking. If the idea is too large to finish, ship a
+               coherent first slice rather than nothing. Commit and push your
+               branch early and often so no work is ever lost.
+            4. Run `npm ci` then `npm run build` in that repo and fix any errors
+               before finishing.
+            5. Commit, push the branch, and open a pull request titled after the
+               idea. Product site: base branch `preview` (not main), body links
+               "Closes #${{ github.event.issue.number }}". Build board: use
+               `gh pr create --repo bettergoals/build-bettergoals`, base branch
+               `main`, body links
+               "Closes bettergoals/bettergoals#${{ github.event.issue.number }}".
+               In both cases summarise the decisions you made.
+            6. Comment on issue #${{ github.event.issue.number }} on the product
+               repo with a link to the pull request.
