@@ -24,3 +24,11 @@ export const EMAIL_SIGNIN_ENABLED = process.env.NEXT_PUBLIC_EMAIL_SIGNIN === "tr
 
 /** 👍 votes needed before an idea counts as endorsed by the group */
 export const ENDORSE_THRESHOLD = 3;
+
+/**
+ * The canonical SSH quick-learn guide for the Outcome Canvas. Anything on this
+ * site that reproduces or adapts the canvas links here as the source of truth,
+ * so the community's version and the SSH original stay tied together.
+ */
+export const SSH_OUTCOME_CANVAS_URL =
+  "https://www.soonersaferhappier.com/training/quick-learn-outcome-canvas";
