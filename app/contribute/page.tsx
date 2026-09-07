@@ -129,6 +129,11 @@ export default function ContributePage() {
           back on the issue. The community reviews the preview together — and merging ships it to
           production at {SITE.url.replace("https://", "")}. Humans endorse; AI accelerates; humans ship.
         </p>
+        <p className="mt-3 text-sm leading-relaxed text-chalk/80">
+          And if an idea turns out to be the wrong thing to build — even after it has reached Doing —
+          it can be moved to <strong>Cancelled</strong>. Stopping work is a legitimate outcome, and
+          cancelled ideas stay visible on the board so the reasoning stays in the open.
+        </p>
       </section>
     </div>
   );

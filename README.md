@@ -11,7 +11,9 @@ Built live, in the open, by the community: every feature on this site started as
 3. **Claude builds it.** When a maintainer adds the `doing` label, a GitHub Action runs Claude Code, which implements the idea and opens a pull request.
 4. **Humans review and ship.** Every PR gets a Vercel preview deployment. The community reviews; merging ships to production.
 
-Labels drive the board columns: `idea` → Ideas, `discussing` → Discussing, `doing` → Doing, `done` → Done.
+Labels drive the board columns: `idea` → Ideas, `discussing` → Discussing, `doing` → Doing, `done` → Done, `cancelled` → Cancelled.
+
+**Cancelling an idea.** Not every idea should be built. Moving a card to **Cancelled** on the board adds the `cancelled` label and closes the issue as *not planned* — it stays visible in the Cancelled column so the decision is on the record rather than silently disappearing. Moving the card back to an active column reopens the issue. `cancelled` outranks every other stage label, so an idea cancelled mid-build stays in Cancelled.
 
 ## Development
 
