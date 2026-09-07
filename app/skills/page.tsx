@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import Link from "next/link";
 import { REPO_URL } from "@/lib/config";
 
 export const metadata = { title: "Skills" };
@@ -31,6 +32,13 @@ export default async function SkillsPage() {
         <a href={REPO_URL} target="_blank" rel="noreferrer" className="underline underline-offset-2">
           GitHub
         </a>
+        .
+      </p>
+      <p className="mt-3 max-w-2xl text-sm text-ink-soft">
+        The coaching these skills give you follows{" "}
+        <Link href="/okr-pattern" className="underline underline-offset-2">
+          the SSH OKR Pattern
+        </Link>
         .
       </p>
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
