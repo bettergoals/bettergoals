@@ -86,8 +86,11 @@ export default function ContributePage() {
           <p className="mt-4 border-t border-ink/10 pt-4 text-sm leading-relaxed text-ink-soft">
             Stuck on wording? Say what gets better and for whom — “due to… we
             believe that… will result in…”. The{" "}
-            <Link href="/principles" className="font-semibold underline underline-offset-2">
-              principles
+            <Link
+              href="/principles#outcome-definition-principles"
+              className="font-semibold underline underline-offset-2"
+            >
+              outcome definition principles
             </Link>{" "}
             are the guardrail we use for shaping outcomes here.
           </p>

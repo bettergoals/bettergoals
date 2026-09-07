@@ -1,31 +1,77 @@
 # Principles of bettergoals.ai
 
-These principles guide everything on this site — the content we curate, the features we build, and the way we build them. They are community-owned: propose a change by [editing this file on GitHub](https://github.com/bettergoals/bettergoals/edit/main/PRINCIPLES.md) and opening a pull request.
+These principles guide everything on this site — the outcomes we help people craft, the coaching we build, and the way we build it together. They come in three framings: **Guardrails** for how we work, **AI Outcome Coach Design Principles** for how the coaching behaves, and **Outcome Definition Principles** for what makes a goal better.
 
-## 1. Outcomes over outputs
+They are community-owned: propose a change by [editing this file on GitHub](https://github.com/bettergoals/bettergoals/edit/main/PRINCIPLES.md) and opening a pull request.
 
-A better goal describes a change in the world — for a customer, a colleague, a citizen — not a list of things to build. If you can complete a goal without anything getting better for anyone, it isn't a goal, it's a task list.
+## Guardrails
 
-## 2. Better value, sooner, safer, happier
+_How we contribute and build together._
 
-Every goal should be able to answer four questions: What value? How will we see it sooner? What makes this safe — to attempt, to challenge, and to miss? Who ends up happier?
+### Built in the open
 
-## 3. Small enough to learn from
+Everything we create is visible and transparent. Ideas are contributed and discussed openly; changes ship as pull requests anyone can review.
 
-Prefer goals you can test in weeks over ambitions you can only judge at year-end. The point of a goal is to create a feedback loop, not a verdict.
+### Accessible to novices, powerful for experts
 
-## 4. Safe to challenge
+Make it easy for anyone to contribute, regardless of technical experience, while enabling experienced contributors to build and extend more sophisticated capabilities.
 
-The best predictor of goal quality is whether the people closest to the work felt safe to say "this is the wrong goal." Psychological safety is a prerequisite, not a nice-to-have.
+### Humans endorse, AI accelerates
 
-## 5. Built in the open
+AI helps us generate, build and iterate faster, but does not decide what is valuable or what gets shipped. Humans remain accountable for endorsement, review and release.
 
-Everything on this site — content, features, even these principles — is contributed, discussed, and endorsed in the open. Ideas live as GitHub issues; changes ship as pull requests anyone can review.
+### Safe to challenge
 
-## 6. Accessible to novices, powerful for experts
+The best predictor of goal quality is whether the people closest to the work felt safe to say “this is the wrong goal.” Psychological safety is a prerequisite, not a nice-to-have.
 
-A first-time contributor should get from thought to board in two minutes. An advanced contributor should be able to ship a voice-coaching agent. Both belong here.
+### Respect IP. Give credit.
 
-## 7. Humans endorse, AI accelerates
+Only contribute content, code or IP that you have the right to share. Acknowledge the ideas, content, frameworks and code we build upon, and be transparent about how contributions will be used.
 
-AI (Claude Code) builds what the community endorses — it never decides what's worth building. Endorsement, review, and shipping to production are human acts.
+## AI Outcome Coach Design Principles
+
+_How any coaching we build — skills, prompts, agents — should behave._
+
+### Coach, don’t dictate
+
+Guide through questions, challenge and reflection rather than simply providing the answer.
+
+### Improve thinking, not just wording
+
+Help leaders clarify the problem, value and intended outcome — not just produce a better-written goal.
+
+### Challenge assumptions, don’t invent them
+
+Probe unclear assumptions, evidence, baselines and targets. Ask rather than make things up.
+
+### Create clarity, preserve autonomy
+
+Create clarity on the outcome and measures of success without prescribing the solution or how it should be achieved.
+
+### Human judgement stays in the loop
+
+AI can challenge, suggest and reframe; the leader remains accountable for the final outcome and decisions.
+
+## Outcome Definition Principles
+
+_What separates a better goal from a task list._
+
+### Start with customer and problem
+
+Be clear about who we are creating value for, what problem or opportunity we are addressing, and why it matters.
+
+### Outcomes over outputs
+
+Define the change or impact we want to achieve, not the project, activity, deliverable or solution we intend to produce.
+
+### Outcomes are hypotheses
+
+Treat the outcome as a bet, not a certainty. Make the underlying insight or belief explicit and leave room to experiment, learn and adapt how the outcome is achieved.
+
+### Measure movement and impact
+
+Define quantifiable measures of success, including leading indicators that show whether we’re on the right track and a lagging indicator of the impact achieved. Where possible, establish the baseline, target and timeframe.
+
+### Connect to strategy and value
+
+Make the “so what?” clear. The outcome should create identifiable customer or organisational value — better value, sooner, safer, happier — and connect to the broader strategic direction and Golden Thread.
