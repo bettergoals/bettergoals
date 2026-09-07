@@ -76,6 +76,13 @@ export default function Home() {
             </div>
           ))}
         </div>
+        <p className="mt-6 text-ink-soft">
+          Putting that into practice as Objectives and Key Results?{" "}
+          <Link href="/okrs" className="font-semibold underline underline-offset-2">
+            OKRs, the way SSH think about them
+          </Link>{" "}
+          is the short version.
+        </p>
       </section>
 
       <section className="border-y border-ink/10 bg-white">
