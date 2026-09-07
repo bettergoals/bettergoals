@@ -29,6 +29,6 @@ jobs:
           - [ ] Check GitHub org audit log and Vercel deployment logs for anything unexpected
           - [ ] Review open Dependabot alerts and PRs on both repos
           - [ ] Rotate BOARD_PASSCODE if a workshop ran this month
-          - [ ] Quarterly (Jan/Apr/Jul/Oct): rotate the fine-grained PAT and ANTHROPIC_API_KEY
+          - [ ] Quarterly (Jan/Apr/Jul/Oct): rotate the fine-grained PATs (Vercel GITHUB_TOKEN and Actions CROSS_REPO_TOKEN) and ANTHROPIC_API_KEY
           BODY
           )"
