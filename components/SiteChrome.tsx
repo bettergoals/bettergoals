@@ -4,7 +4,6 @@ import { BUILD_URL, REPO_URL } from "@/lib/config";
 const NAV = [
   { href: "/principles", label: "Principles" },
   { href: "/okrs", label: "OKRs" },
-  { href: "/okr-pattern", label: "OKR Pattern" },
   { href: "/templates", label: "Templates" },
   { href: "/skills", label: "Skills" },
   { href: "/contribute", label: "Contribute" },
