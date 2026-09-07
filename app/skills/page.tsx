@@ -38,6 +38,13 @@ export default async function SkillsPage() {
         </a>
         .
       </p>
+      <p className="mt-3 max-w-2xl text-sm text-ink-soft">
+        The coaching these skills give you follows{" "}
+        <Link href="/okr-pattern" className="underline underline-offset-2">
+          the SSH OKR Pattern
+        </Link>
+        .
+      </p>
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         {skills.map((s) => (
           <div key={s.file} className="flex flex-col rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
