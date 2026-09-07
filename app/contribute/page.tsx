@@ -86,10 +86,10 @@ export default function ContributePage() {
           <p className="mt-4 border-t border-ink/10 pt-4 text-sm leading-relaxed text-ink-soft">
             Stuck on wording? Say what gets better and for whom — “due to… we
             believe that… will result in…”. The{" "}
-            <Link href="/okrs" className="font-semibold underline underline-offset-2">
-              OKR framework
+            <Link href="/principles" className="font-semibold underline underline-offset-2">
+              principles
             </Link>{" "}
-            is the guardrail we use for shaping outcomes here.
+            are the guardrail we use for shaping outcomes here.
           </p>
         </section>
 

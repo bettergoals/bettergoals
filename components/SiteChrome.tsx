@@ -3,8 +3,6 @@ import { BUILD_URL, REPO_URL } from "@/lib/config";
 
 const NAV = [
   { href: "/principles", label: "Principles" },
-  { href: "/okrs", label: "OKRs" },
-  { href: "/templates", label: "Templates" },
   { href: "/skills", label: "Skills" },
   { href: "/contribute", label: "Contribute" },
   { href: BUILD_URL, label: "Ideas Board ↗" },
