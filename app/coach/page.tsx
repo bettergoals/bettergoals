@@ -26,27 +26,13 @@ export default async function CoachPage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <h1 className="text-3xl font-bold tracking-tight">Outcome Coach</h1>
       <p className="mt-2 max-w-2xl text-ink-soft">
-        Write the outcome — any input. A rough thought, an objective, a whole OKR, or the sentence your
-        exec team argued about this morning. You&rsquo;ll get a score against the{" "}
+        Write the outcome — any input. A rough thought, an objective, a whole OKR, the sentence your
+        exec team argued about this morning, or a photo of the whiteboard they argued at. You&rsquo;ll
+        get a score against the{" "}
         <Link href="/principles" className="underline underline-offset-2">
           outcome definition principles
         </Link>
         , the reasons, {ai ? "the questions you most need to answer — and once you have, help writing a better one" : "what's missing, and what to do next"}.
-      </p>
-
-      <p className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-ink-soft">
-        <span className="rounded-full bg-safer/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink">
-          Zero data retention
-        </span>
-        <span>
-          {ai
-            ? "Your draft goes to a model that keeps nothing and never trains on it — and no account, no database, no copy here."
-            : "This deployment runs the structural check: your draft never leaves this site."}{" "}
-          <Link href="/privacy" className="underline underline-offset-2">
-            How that works
-          </Link>
-          .
-        </span>
       </p>
 
       <p className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-ink-soft">
@@ -147,6 +133,15 @@ export default async function CoachPage({
             </p>
           </>
         )}
+        <p className="mt-2">
+          Pictures are different, and deliberately so. When you hand it a photo or a screenshot, the
+          text recognition runs inside your own browser: the image is never uploaded, never reaches
+          this site, and is forgotten when you close the tab. Only the words it finds go into the
+          box, where you can edit or delete them before anything is submitted — so a face, a name or
+          a colleague&rsquo;s handwriting caught in the corner of a whiteboard shot never leaves your
+          device. The first picture you read downloads the recognition engine to your browser, which
+          takes a few seconds.
+        </p>
         <p className="mt-4 border-t border-ink/10 pt-4">
           <strong className="text-ink">Did it get your goal wrong?</strong> That is the most useful
           thing you can tell us, and it is how the coach improves.{" "}

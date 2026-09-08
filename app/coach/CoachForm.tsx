@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { CopyButton } from "@/components/CopyButton";
+import { ImageToText } from "@/components/ImageToText";
 import type { CoachReview } from "@/lib/coachAi";
 import {
   EXAMPLES,
@@ -420,7 +421,8 @@ export function CoachForm({ initialDraft, aiEnabled }: { initialDraft: string; a
         Your goal, objective or outcome
       </label>
       <p id="outcome-hint" className="mt-1 text-sm text-ink-soft">
-        Plain text, up to {MAX_INPUT_LENGTH.toLocaleString()} characters.{" "}
+        Type it, paste it, or read it off a picture. Up to {MAX_INPUT_LENGTH.toLocaleString()}{" "}
+        characters.{" "}
         {aiEnabled
           ? "It goes to an AI model to write the review and nothing is kept, but anonymise anything confidential first — the coaching is just as good on a redacted version, and it never needs to know who anyone is."
           : "Leave confidential detail out and paste an anonymised version — the check works just as well on one."}
@@ -437,6 +439,9 @@ export function CoachForm({ initialDraft, aiEnabled }: { initialDraft: string; a
         placeholder="e.g. Reduce the time it takes a new customer to get set up, from 12 days to 3 days by Q3, so they stop giving up on us part-way through."
         className="mt-3 w-full rounded-2xl border border-ink/15 bg-white p-4 font-sans text-base leading-relaxed shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
       />
+      {/* The textarea is controlled, so the picture's words arrive through
+          setDraft rather than by writing to the DOM behind React's back. */}
+      <ImageToText textareaId="outcome" maxLength={MAX_INPUT_LENGTH} onText={setDraft} />
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <SubmitButton
           idle={hasResult ? "Check it again" : aiEnabled ? "Coach my outcome" : "Check my outcome"}
