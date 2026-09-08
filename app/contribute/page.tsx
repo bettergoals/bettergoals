@@ -120,6 +120,42 @@ export default function ContributePage() {
         </section>
       </div>
 
+      <section className="mt-8 rounded-2xl border border-happier/40 bg-white p-6 shadow-sm sm:p-8">
+        <p className="text-xs font-bold uppercase tracking-widest text-happier">
+          Before you post
+        </p>
+        <h2 className="mt-1 text-xl font-bold">Respect IP, give credit</h2>
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-ink-soft">
+          One guardrail applies to every lane above — whether you&rsquo;re at a hackathon table or
+          opening a pull request from home.
+        </p>
+        <ul className="mt-4 grid gap-3 text-sm leading-relaxed text-ink-soft sm:grid-cols-3">
+          <li className="rounded-xl bg-chalk p-4">
+            <strong className="block text-ink">Share only what&rsquo;s yours to share</strong>
+            No client material, confidential examples, or licensed content you don&rsquo;t hold the
+            rights to. Describe the thinking in your own words instead.
+          </li>
+          <li className="rounded-xl bg-chalk p-4">
+            <strong className="block text-ink">Name what you build on</strong>
+            Credit the person, book, framework, or repo behind the idea, and link the source where
+            you can.
+          </li>
+          <li className="rounded-xl bg-chalk p-4">
+            <strong className="block text-ink">Everything here is public</strong>
+            Ideas, comments, and code are discussed in the open, may be reused by the community,
+            are read by Claude Code as it builds, and ship to a public site.
+          </li>
+        </ul>
+        <p className="mt-4 text-sm leading-relaxed text-ink-soft">
+          Not sure you have the right to share something? Ask in the issue before you post it — the
+          full wording lives in{" "}
+          <Link href="/principles" className="font-semibold underline underline-offset-2">
+            principle 8
+          </Link>
+          .
+        </p>
+      </section>
+
       <section className="mt-8 rounded-2xl bg-ink p-6 text-chalk sm:p-8">
         <h2 className="text-xl font-bold">What happens when an idea is endorsed?</h2>
         <p className="mt-3 text-sm leading-relaxed text-chalk/80">

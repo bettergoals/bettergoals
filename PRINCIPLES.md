@@ -32,4 +32,10 @@ AI (Claude Code) builds what the community endorses — it never decides what's 
 
 ## 8. Respect IP and give credit
 
-Only contribute what you have the right to share. Acknowledge the ideas, content, frameworks and code we build upon — name the source and link it where you can — and be transparent about how contributions will be used. Everything here is public and may be built on by the community and by Claude Code, so borrowed work needs a credit, and work that isn't yours to give doesn't belong here.
+Only contribute what you have the right to share. Acknowledge the ideas, content, frameworks and code we build upon, and be transparent about how contributions will be used. In practice that means three things:
+
+- **Share only what's yours to share.** Client material, confidential examples, paywalled content, and licensed frameworks or code you don't hold the rights to don't belong here. Describe the thinking in your own words instead — the idea is welcome even when the artefact can't be.
+- **Name what you build on.** Credit the person, book, framework, or repository behind an idea, and link to the source where you can. Standing on the shoulders of others is encouraged here; doing it quietly is not.
+- **Know how contributions are used.** Everything here is public. What you contribute is discussed in the open as issues and pull requests, may be edited, extended, or reused by the community, is read by Claude Code as context when it builds, and ships to a public website under your name or display name. Contribute on that basis.
+
+Anonymised, permission-checked examples beat borrowed ones. If you aren't sure you have the right to share something, ask in the issue before you post it — that question is always safe to raise.
