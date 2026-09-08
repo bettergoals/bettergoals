@@ -424,9 +424,13 @@ export default function OkrsPage() {
             </Link>{" "}
             are the tie-breaker when the framework and reality disagree.
           </p>
-          <p className="mt-6 text-sm text-chalk/60">
-            Sourced from the <em>SSH OKR Pattern — input for AI Outcome Coach</em>{" "}
-            pack, contributed by the community as{" "}
+          <p className="mt-8 text-xs font-semibold uppercase tracking-widest text-chalk/60">
+            Attribution
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-chalk/80">
+            Everything on this page is drawn from the{" "}
+            <em>SSH OKR Pattern — input for AI Outcome Coach</em> pack,
+            contributed by the community as{" "}
             <a
               href="https://github.com/bettergoals/bettergoals/issues/28"
               target="_blank"
@@ -435,16 +439,21 @@ export default function OkrsPage() {
             >
               idea #28
             </a>
-            . ©{" "}
+            . The pattern, its wording and its examples remain ©{" "}
             <a
               href={SSH_SOURCES.ssh}
               target="_blank"
               rel="noreferrer"
-              className="underline underline-offset-2"
+              className="font-semibold underline underline-offset-2"
             >
               Sooner Safer Happier
             </a>
-            , used here with the community’s thanks. Further reading:{" "}
+            , used here with the community’s thanks — keep the credit with it if
+            you adapt or reshare it, as{" "}
+            <Link href="/principles" className="underline underline-offset-2">
+              our principles
+            </Link>{" "}
+            ask. Further reading:{" "}
             <a
               href={SSH_SOURCES.okrChecklist}
               target="_blank"
