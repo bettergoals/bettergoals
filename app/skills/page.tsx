@@ -47,7 +47,13 @@ export default async function SkillsPage() {
         <Link href="/coach" className="underline underline-offset-2">
           Outcome Coach
         </Link>{" "}
-        scores a draft in seconds and hands you a prompt to continue with.
+        scores a draft in seconds and hands you a prompt to continue with. Need to bring your boss,
+        your PMO or your peers along?{" "}
+        <Link href="/teach" className="underline underline-offset-2">
+          Teach outcomes
+        </Link>{" "}
+        is the conversation guide that goes with the{" "}
+        <code className="font-mono">teaching-outcomes-to-others</code> skill below.
       </p>
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         {skills.map((s) => (

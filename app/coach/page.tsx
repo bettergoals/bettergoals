@@ -136,7 +136,11 @@ export default async function CoachPage({
             </Link>
           </span>
         ))}
-        .
+        . Already happy with your goal and stuck on everyone else?{" "}
+        <Link href="/teach" className="font-semibold underline underline-offset-2">
+          Teach outcomes
+        </Link>{" "}
+        covers your boss, your PMO and your peers.
       </p>
 
       {submitted && !evaluation && (
@@ -253,6 +257,41 @@ export default async function CoachPage({
             <div className="mt-4">
               <CopyButton text={evaluation.handoffPrompt} label="Copy the prompt" />
             </div>
+          </section>
+
+          <section aria-labelledby="teach-heading">
+            <h2 id="teach-heading" className="text-2xl font-bold tracking-tight">
+              Now take it to someone else
+            </h2>
+            <p className="mt-2 max-w-2xl text-ink-soft">
+              A sharper goal that nobody else recognises is still a goal you&rsquo;ll be argued out
+              of. The hard part is usually the boss who needs a date, the PMO that reports
+              milestones, or the peers whose goals were set for them.{" "}
+              <Link href="/teach" className="font-semibold underline underline-offset-2">
+                Teach outcomes
+              </Link>{" "}
+              has the opener, the objections you&rsquo;ll hear and what to say back, for each of the
+              three.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {[
+                { id: "boss", label: "Talk to my boss →" },
+                { id: "pmo", label: "Take it to the PMO →" },
+                { id: "peers", label: "Teach my peers →" },
+              ].map((a) => (
+                <Link
+                  key={a.id}
+                  href={`/teach?for=${a.id}&outcome=${encodeURIComponent(evaluation.text)}`}
+                  className="rounded-full border border-ink/15 bg-white px-5 py-2.5 text-sm font-semibold shadow-sm hover:bg-ink/5"
+                >
+                  {a.label}
+                </Link>
+              ))}
+            </div>
+            <p className="mt-3 text-sm text-ink-soft">
+              Your draft travels with you, so the rehearsal prompt over there already knows the goal
+              you&rsquo;re arguing for.
+            </p>
           </section>
         </div>
       )}
