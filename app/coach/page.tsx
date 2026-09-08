@@ -31,7 +31,22 @@ export default async function CoachPage({
         <Link href="/principles" className="underline underline-offset-2">
           outcome definition principles
         </Link>
-        , the reasons, {ai ? "the questions you most need to answer, and help writing a better one" : "what's missing, and what to do next"}.
+        , the reasons, {ai ? "the questions you most need to answer — and once you have, help writing a better one" : "what's missing, and what to do next"}.
+      </p>
+
+      <p className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-ink-soft">
+        <span className="rounded-full bg-safer/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink">
+          Zero data retention
+        </span>
+        <span>
+          {ai
+            ? "Your draft goes to a model that keeps nothing and never trains on it — and no account, no database, no copy here."
+            : "This deployment runs the structural check: your draft never leaves this site."}{" "}
+          <Link href="/privacy" className="underline underline-offset-2">
+            How that works
+          </Link>
+          .
+        </span>
       </p>
 
       <p className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-ink-soft">
@@ -79,6 +94,15 @@ export default async function CoachPage({
               the coach design principles: it asks rather than tells, and it never invents a baseline, a
               target or a fact you didn&rsquo;t give it — anything it doesn&rsquo;t know is left in
               «guillemets» for you to fill in.
+            </p>
+            <p className="mt-2">
+              It asks before it writes. On a first draft you get the score and two or three clarifying
+              questions — who you are in this, who the outcome is for, what you hope changes for them — and
+              no suggested wording yet, because a phrasing built on the coach&rsquo;s guesses about your
+              organisation teaches you nothing. Answer what you can and the wording comes next; rough,
+              rounded and anonymised answers are enough, and none of the questions need a commercially
+              confidential number. If you&rsquo;d rather not answer, skip them and it will offer wording with
+              «placeholders» instead.
             </p>
             <p className="mt-2">
               It can still be wrong. It reads a sentence, not your organisation, so it can miss context

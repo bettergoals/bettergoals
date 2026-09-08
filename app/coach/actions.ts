@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  type CoachStage,
   type CoachTurn,
   CoachAiError,
   MAX_ANSWER_LENGTH,
@@ -60,6 +61,9 @@ export async function coachAction(prev: CoachState, data: FormData): Promise<Coa
 
   const draft = field(data, "outcome", MAX_INPUT_LENGTH);
   const priorTurns = readTurns(data);
+  // "Skip the questions" is a submit button; the page carries the answer to it
+  // forward in a hidden field so a later pass doesn't ask all over again.
+  const skipped = field(data, "skipped", 4) === "1" || field(data, "skip", 4) === "1";
 
   // "Use this as my draft" without JavaScript: swap the draft in and hand the
   // page back for the author to fill in the «placeholders» before checking.
@@ -69,6 +73,7 @@ export async function coachAction(prev: CoachState, data: FormData): Promise<Coa
       ...prev,
       draft: adopt,
       turns: priorTurns,
+      skipped,
       notice: "Your draft has been replaced with the candidate. Fill in anything in «guillemets», then check it again.",
       tooShort: false,
       cleared: false,
@@ -79,6 +84,7 @@ export async function coachAction(prev: CoachState, data: FormData): Promise<Coa
   const base: CoachState = {
     draft,
     turns: [...priorTurns, ...readAnswers(data)],
+    skipped,
     review: null,
     fallback: null,
     fallbackReason: null,
@@ -101,8 +107,12 @@ export async function coachAction(prev: CoachState, data: FormData): Promise<Coa
     };
   }
 
+  // A first draft gets the clarifying round: the questions come before any
+  // wording. Answers, or an explicit skip, move it on to the full review.
+  const stage: CoachStage = base.turns.length === 0 && !skipped ? "clarify" : "review";
+
   try {
-    const review = await coachOutcome(draft, base.turns);
+    const review = await coachOutcome(draft, base.turns, stage);
     return { ...base, review };
   } catch (err) {
     const message = err instanceof CoachAiError ? err.message : "The AI coach hit an unexpected error";
