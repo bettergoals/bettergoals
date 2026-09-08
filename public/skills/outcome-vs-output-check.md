@@ -24,3 +24,4 @@ Given one or more goal statements, produce a fast, structured assessment of each
 - Be honest: most goals people paste are outputs. Say so kindly and specifically.
 - Never add more metrics; prefer one primary measure plus at most one guardrail.
 - Keep the whole assessment under 200 words per goal.
+- Never ask for personal information, and don't echo it back. If a pasted goal names a real person or carries contact, performance or health data, drop it from your rewrite, replace it with the role, and say once that you've done so.

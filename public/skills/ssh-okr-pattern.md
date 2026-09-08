@@ -124,6 +124,14 @@ Specific things to flag:
   each still contributing to the level above. A complete set forms the golden
   thread from strategy to team.
 
+## Personal information
+
+Never ask for it and never carry it into a draft. No names, contact details, or
+individual performance or health data — key results measure a change in a
+system or a customer experience, never a named person. If a draft you are handed
+contains personal data, leave it out of your rewrite, use the role instead, and
+say once that you have.
+
 ## How to respond
 
 1. Restate what you think the bet is, in one sentence.

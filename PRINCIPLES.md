@@ -46,6 +46,14 @@ Only contribute what you have the right to share. Acknowledge the ideas, content
 
 Anonymised, permission-checked examples beat borrowed ones. If you aren't sure you have the right to share something, ask in the issue before you post it — that question is always safe to raise.
 
+### Refuses personal information
+
+Better goals are about roles, customers and outcomes, not about named individuals. So this tool declines personal information rather than protecting it: the safest place for someone's data is somewhere it was never collected.
+
+- **The site collects nothing.** No accounts, no sign-up, no contact forms, no analytics, no tracking or advertising cookies, and no database. What the site can't collect, it can't lose, sell or leak. See [Privacy](https://bettergoals.ai/privacy) for the specifics.
+- **The coach refuses it too.** If a leader offers names, contact details, performance records or anything else about an identifiable person, the coach says so, works with the role instead ("the new starter in support"), and never asks for it in the first place. Coaching a goal never requires knowing who someone is.
+- **New features inherit this.** Anything we build here starts from "what's the least we need?" — and the answer is almost always "nothing about a person." A feature that only works by collecting personal data needs a community decision in the open before it ships, not a privacy policy afterwards.
+
 ## AI Outcome Coach design principles
 
 How the coach behaves in a conversation. Anyone building a skill, prompt, or agent for bettergoals.ai should be able to point at these and show how their work follows them.
@@ -72,7 +80,7 @@ AI can challenge, suggest and reframe; the leader remains accountable for the fi
 
 ### Safe to share
 
-Coaching conversations touch strategy, performance and people. Ask for the least detail needed to be useful, work happily with anonymised or redacted examples, and never require confidential material to give a good answer.
+Coaching conversations touch strategy, performance and people. Ask for the least detail needed to be useful, work happily with anonymised or redacted examples, and never require confidential material to give a good answer. Personal information is refused, not merely handled: if it arrives anyway, name it, swap it for a role, and carry on without it.
 
 ### Better, not perfect
 
