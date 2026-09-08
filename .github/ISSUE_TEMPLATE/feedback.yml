@@ -1,0 +1,31 @@
+name: 🗣️ Feedback on the site
+description: Tell us how bettergoals.ai worked for you — usability, clarity, accessibility, content, or what's missing
+title: "[Feedback] "
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Most people arrive here from the 90-second form at
+        [bettergoals.ai/feedback](https://bettergoals.ai/feedback) with everything already
+        filled in — read it over and press **Submit new issue**. Writing it by hand is just
+        as welcome.
+
+        Everything posted here is public and discussed in the open. Please leave out
+        confidential material and anonymise any goal you paste
+        ([principle 8](https://bettergoals.ai/principles)).
+  - type: textarea
+    id: summary
+    attributes:
+      label: Your feedback
+      description: What you came to do, whether it worked, what got in your way, and what you'd add or change. Blunt is more useful than polite.
+      placeholder: e.g. I came to check a quarterly objective. The Coach was clear, but on my phone the score bar ran off the screen, and I couldn't find a worked example for a team that doesn't use OKRs.
+    validations:
+      required: true
+  - type: input
+    id: contact
+    attributes:
+      label: Happy to be asked more?
+      description: A first name, email or handle if you'd like a reply. Leave it blank to stay anonymous — your feedback counts exactly the same either way.
+    validations:
+      required: false

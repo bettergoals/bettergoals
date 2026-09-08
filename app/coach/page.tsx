@@ -8,6 +8,7 @@ import {
   type Check,
   type CheckStatus,
 } from "@/lib/outcomeCoach";
+import { COACH_FEEDBACK_HREF } from "@/lib/feedback";
 
 export const metadata = {
   title: "Outcome Coach",
@@ -317,6 +318,14 @@ export default async function CoachPage({
           logged, and the address bar carries your words wherever you bookmark or forward the link.
           Anonymise anything sensitive before you paste it — the check reads structure, so redacted
           examples score exactly the same.
+        </p>
+        <p className="mt-4 border-t border-ink/10 pt-4">
+          <strong className="text-ink">Did it get your goal wrong?</strong> That is the most useful
+          thing you can tell us, and it is how the check improves.{" "}
+          <Link href={COACH_FEEDBACK_HREF} className="font-semibold underline underline-offset-2">
+            Say what it missed
+          </Link>{" "}
+          — ninety seconds, anonymous if you like.
         </p>
       </section>
     </div>
