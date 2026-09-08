@@ -76,8 +76,8 @@ export function ImageToText({ textareaId, maxLength }: { textareaId: string; max
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<string | null>(null);
+  const runningRef = useRef(false);
 
   const showPreview = useCallback((file: File | null) => {
     if (previewRef.current) URL.revokeObjectURL(previewRef.current);
@@ -111,6 +111,8 @@ export function ImageToText({ textareaId, maxLength }: { textareaId: string; max
 
   const read = useCallback(
     async (file: File) => {
+      // One image at a time — a second worker would fight the first for the same textarea.
+      if (runningRef.current) return;
       if (!file.type.startsWith("image/")) {
         showPreview(null);
         setPhase("error");
@@ -124,6 +126,7 @@ export function ImageToText({ textareaId, maxLength }: { textareaId: string; max
         return;
       }
 
+      runningRef.current = true;
       showPreview(file);
       setPhase("reading");
       setProgress(0);
@@ -161,6 +164,8 @@ export function ImageToText({ textareaId, maxLength }: { textareaId: string; max
         setMessage(
           "Couldn’t read that image. The recognition engine downloads on first use, so a blocked or offline connection will stop it — type or paste your goal instead.",
         );
+      } finally {
+        runningRef.current = false;
       }
     },
     [insert, showPreview],
@@ -194,30 +199,26 @@ export function ImageToText({ textareaId, maxLength }: { textareaId: string; max
         the shot stay with you.
       </p>
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="sr-only"
-        disabled={busy}
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          // Let the same image be chosen twice in a row.
-          event.target.value = "";
-          if (file) void read(file);
-        }}
-      />
-
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
+      <div className="mt-4">
+        <label htmlFor="outcome-image" className="sr-only">
+          Choose a photo or screenshot to read your goal from
+        </label>
+        <input
+          id="outcome-image"
+          type="file"
+          accept="image/*"
           disabled={busy}
-          onClick={() => inputRef.current?.click()}
-          className="rounded-full border border-ink/15 bg-white px-5 py-2.5 text-sm font-semibold hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {busy ? "Reading the image…" : "Choose a photo or screenshot"}
-        </button>
-        <span className="text-sm text-ink-soft">or paste a screenshot anywhere on this page</span>
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            // Clear it so the same image can be chosen twice in a row.
+            event.target.value = "";
+            if (file) void read(file);
+          }}
+          className="block w-full text-sm text-ink-soft file:mr-3 file:cursor-pointer file:rounded-full file:border file:border-ink/15 file:bg-white file:px-5 file:py-2.5 file:text-sm file:font-semibold file:text-ink hover:file:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60"
+        />
+        <p className="mt-2 text-sm text-ink-soft">
+          Or paste a screenshot anywhere on this page.
+        </p>
       </div>
 
       {busy && (
@@ -237,13 +238,15 @@ export function ImageToText({ textareaId, maxLength }: { textareaId: string; max
 
       <p
         aria-live="polite"
-        className={`mt-3 text-sm leading-relaxed ${phase === "error" ? "text-ink" : "text-ink-soft"}`}
+        className={`text-sm leading-relaxed ${message && !busy ? "mt-4" : ""} ${
+          phase === "error" ? "text-ink" : "text-ink-soft"
+        }`}
       >
         {!busy && message}
       </p>
 
       {previewUrl && !busy && (
-        <div className="mt-1 flex items-center gap-3">
+        <div className="mt-3 flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element -- a local object URL, never uploaded and never optimised by the server */}
           <img
             src={previewUrl}
