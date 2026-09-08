@@ -11,6 +11,8 @@ export type CoachState = {
   draft: string;
   /** Questions the coach has asked and the author has answered. */
   turns: CoachTurn[];
+  /** The author asked the coach to skip the clarifying round and just review. */
+  skipped: boolean;
   /** The AI review, when the coach could run. */
   review: CoachReview | null;
   /** The structural check, shown when the coach can't run (no key, or an error). */
@@ -28,6 +30,7 @@ export type CoachState = {
 export const INITIAL_STATE: CoachState = {
   draft: "",
   turns: [],
+  skipped: false,
   review: null,
   fallback: null,
   fallbackReason: null,

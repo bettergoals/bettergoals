@@ -89,6 +89,74 @@ function SubmitButton({ idle, busy }: { idle: string; busy: string }) {
   );
 }
 
+/**
+ * The clarifying round's escape hatch. A plain submit button, so it works with
+ * JavaScript off: "create clarity, preserve autonomy" — the author decides when
+ * they've said enough, not the coach.
+ */
+function SkipButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      name="skip"
+      value="1"
+      disabled={pending}
+      className="text-sm font-semibold underline underline-offset-2 hover:text-ink-soft disabled:opacity-50"
+    >
+      Skip the questions and write it anyway
+    </button>
+  );
+}
+
+/**
+ * The coach's questions with a box under each. In the clarifying round this
+ * renders above the score and is the only thing asked of the author; later it
+ * sits under the review as the next pass.
+ */
+function Questions({ questions, seq, clarifying }: { questions: string[]; seq: number; clarifying: boolean }) {
+  if (!questions.length) return null;
+  return (
+    <section aria-labelledby="questions-heading">
+      <h2 id="questions-heading" className="text-2xl font-bold tracking-tight">
+        {clarifying ? "First, a few questions" : "The coach asks"}
+      </h2>
+      <p className="mt-2 max-w-2xl text-ink-soft">
+        {clarifying
+          ? "Before it offers you any wording, the coach wants the context only you have — who you are in this, who the outcome is for, and what you hope changes for them. Answer what you can: rough, rounded and anonymised is fine, “don’t know” is a real answer, and nothing here needs a confidential number."
+          : "Answer what you can — rough, rounded and anonymised is fine, and “don’t know” is a real answer. Edit the draft above too if you want. Then send it back for another pass."}
+      </p>
+      <ol className="mt-4 space-y-4">
+        {questions.map((q, i) => (
+          <li key={`${seq}-${i}`} className="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
+            <input type="hidden" name={`q${i}`} value={q} />
+            <label htmlFor={`a${i}`} className="block font-semibold">
+              <span className="mr-2 text-sooner" aria-hidden="true">
+                {i + 1}
+              </span>
+              {q}
+            </label>
+            <textarea
+              id={`a${i}`}
+              name={`a${i}`}
+              rows={3}
+              maxLength={1500}
+              className="mt-3 w-full rounded-2xl border border-ink/15 bg-white p-3 text-sm leading-relaxed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            />
+          </li>
+        ))}
+      </ol>
+      <div className="mt-4 flex flex-wrap items-center gap-4">
+        <SubmitButton
+          idle={clarifying ? "Answer and write my outcome" : "Send my answers"}
+          busy="Coaching — this takes a few seconds…"
+        />
+        {clarifying && <SkipButton />}
+      </div>
+    </section>
+  );
+}
+
 /** The shared shape of an AI review and the structural check. */
 type Scored = {
   text: string;
@@ -298,6 +366,8 @@ export function CoachForm({ initialDraft, aiEnabled }: { initialDraft: string; a
   const scored: Scored | null = review ?? state.fallback;
   const hasResult = Boolean(scored);
   const questions = review?.questions ?? [];
+  /** The coach has asked and is holding back the wording until it hears back. */
+  const clarifying = review?.stage === "clarify" && questions.length > 0;
 
   function adopt(text: string) {
     setDraft(text);
@@ -308,6 +378,7 @@ export function CoachForm({ initialDraft, aiEnabled }: { initialDraft: string; a
   return (
     <form action={formAction} className="mt-8">
       <input type="hidden" name="turns" value={JSON.stringify(state.turns)} />
+      {state.skipped && <input type="hidden" name="skipped" value="1" />}
 
       <label htmlFor="outcome" className="block font-semibold">
         Your goal, objective or outcome
@@ -393,6 +464,11 @@ export function CoachForm({ initialDraft, aiEnabled }: { initialDraft: string; a
             </p>
           )}
 
+          {/* The clarifying round leads: questions before the wording, and
+              before the score, so the first thing asked of the author is the
+              context only they have. */}
+          {clarifying && <Questions questions={questions} seq={state.seq} clarifying />}
+
           <Verdict scored={scored} review={review} />
 
           {state.turns.length > 0 && (
@@ -423,38 +499,25 @@ export function CoachForm({ initialDraft, aiEnabled }: { initialDraft: string; a
             </section>
           )}
 
-          {review && questions.length > 0 && (
-            <section aria-labelledby="questions-heading">
-              <h2 id="questions-heading" className="text-2xl font-bold tracking-tight">
-                The coach asks
+          {review && !clarifying && <Questions questions={questions} seq={state.seq} clarifying={false} />}
+
+          {clarifying && (
+            <section
+              aria-labelledby="wording-heading"
+              className="rounded-3xl border border-dashed border-ink/25 bg-white p-6 sm:p-8"
+            >
+              <h2 id="wording-heading" className="text-2xl font-bold tracking-tight">
+                Ways you might write it
               </h2>
               <p className="mt-2 max-w-2xl text-ink-soft">
-                Answer what you can — rough, rounded and anonymised is fine, and &ldquo;don&rsquo;t know&rdquo; is
-                a real answer. Edit the draft above too if you want. Then send it back for another pass.
+                These arrive once you&rsquo;ve answered the questions above. The coach won&rsquo;t phrase your
+                outcome around facts it doesn&rsquo;t have: a confident sentence built on its guesses is worse
+                than the rough one you already own.
               </p>
-              <ol className="mt-4 space-y-4">
-                {questions.map((q, i) => (
-                  <li key={`${state.seq}-${i}`} className="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
-                    <input type="hidden" name={`q${i}`} value={q} />
-                    <label htmlFor={`a${i}`} className="block font-semibold">
-                      <span className="mr-2 text-sooner" aria-hidden="true">
-                        {i + 1}
-                      </span>
-                      {q}
-                    </label>
-                    <textarea
-                      id={`a${i}`}
-                      name={`a${i}`}
-                      rows={3}
-                      maxLength={1500}
-                      className="mt-3 w-full rounded-2xl border border-ink/15 bg-white p-3 text-sm leading-relaxed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                    />
-                  </li>
-                ))}
-              </ol>
-              <div className="mt-4">
-                <SubmitButton idle="Send my answers" busy="Coaching — this takes a few seconds…" />
-              </div>
+              <p className="mt-2 max-w-2xl text-sm text-ink-soft">
+                In a hurry? Skip the questions and it will offer wording anyway, with «placeholders» wherever
+                you haven&rsquo;t told it something.
+              </p>
             </section>
           )}
 

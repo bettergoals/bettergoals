@@ -9,6 +9,13 @@
  * answer, and offer candidate rewrites that never invent a fact — anything the
  * author hasn't said is left as a «placeholder» for them to fill in.
  *
+ * The conversation happens in two stages. On a first draft the coach is in the
+ * "clarify" stage: it asks two or three questions about the context only the
+ * author has — who they are in this, who it's for, what they hope changes — and
+ * deliberately offers no candidate wording yet. Once there are answers (or the
+ * author skips) it moves to "review" and helps them write it. Coaching before
+ * ghost-writing: a rewrite built on guesses teaches nobody anything.
+ *
  * The conversation is stateless on the server. Each request carries the draft
  * and every question-and-answer so far, and the reply is a complete review of
  * the draft *as clarified by the answers*. Nothing is stored — see /privacy.
@@ -56,6 +63,12 @@ export class CoachAiError extends Error {
 /** One question the coach asked and what the author said back. */
 export type CoachTurn = { question: string; answer: string };
 
+/**
+ * Where the conversation is up to. `clarify` = asking for the context it needs
+ * before it will offer wording; `review` = coaching the draft as clarified.
+ */
+export type CoachStage = "clarify" | "review";
+
 export type CoachCandidate = {
   text: string;
   /** Why this phrasing, and which «placeholders» the author still owes. */
@@ -65,6 +78,8 @@ export type CoachCandidate = {
 export type CoachReview = {
   source: "ai";
   model: string;
+  /** Which stage this reply is: `clarify` asks first and offers no candidates. */
+  stage: CoachStage;
   /** The draft as reviewed. */
   text: string;
   verdict: "outcome" | "output" | "hybrid";
@@ -78,7 +93,8 @@ export type CoachReview = {
   gaps: Check[];
   /** 1–3 questions, most important first. Empty when `done`. */
   questions: string[];
-  /** 0–3 candidate rewrites. Never contain facts the author didn't give. */
+  /** 0–3 candidate rewrites. Never contain facts the author didn't give, and
+   *  always empty in the `clarify` stage — questions come before wording. */
   candidates: CoachCandidate[];
   /** Set when the draft or answers contained personal information that was set aside. */
   personalInfo: string | null;
@@ -222,6 +238,29 @@ Rules for "done": true when the thinking has moved enough — every check strong
 Conversation: you may be given previous questions and the author's answers. Review the draft AS CLARIFIED BY THE ANSWERS — an answer that supplies the baseline counts as the baseline being known, even if the draft text hasn't been updated yet — and let the candidates carry those answers into the wording. Where an answer is "don't know" or "not relevant", treat that as settled and do not ask again in another form; suggest how they might find out in a nextStep instead.
 
 Style: British English. Plain words. Warm and direct. No flattery, no hedging, no lecturing. Keep the whole reply well under 900 words.`;
+
+/**
+ * What changes between the two stages. Appended to the system prompt so the
+ * shared rules above stay in one place and only the turn's job differs.
+ */
+const STAGE_PROMPT: Record<CoachStage, string> = {
+  clarify: `## This turn: ask before you write
+
+This is the author's first draft and they have told you nothing else yet. Do not write their outcome for them this turn. Ask first — the context you are missing is context only they have, and a phrasing built on your guesses teaches them nothing.
+
+- "candidates" MUST be an empty array this turn. No exceptions, however obvious the rewrite looks.
+- "questions": exactly two or three, most important first — the ones whose answers would most change how this outcome should be written. Choose from the context the draft has not given you: who the author is in this and what they can actually influence; who the outcome is for and what would be different for them; what impact or value they are hoping for and how they would see it; by when it needs to have moved. Never ask about something the draft already answers, and ask each thing once.
+- Ask for nothing commercially confidential and nothing personal. No revenue or cost figures, customer or supplier names, contract terms, headcount, pricing, roadmap secrets, individual performance or anything under an NDA. Frame every question so it can be answered with a role, a direction, a rough percentage or a range — and say so in the question itself when you ask about a number ("a rough percentage is plenty").
+- Still fill in all seven checks honestly, and still score the draft as it stands: the author should see where they are before they answer.
+- "headline": one or two sentences saying how the draft reads today, and that you will help them phrase it once you know these couple of things.
+- "done": true only if the draft genuinely needs nothing — every check strong. Otherwise false.`,
+
+  review: `## This turn: coach the draft as clarified
+
+The author has answered your questions, or asked you to get on with it. Review the draft as clarified by whatever they gave you, and now help them write it — the "candidates" rules above are in force. Carry their answers into the wording, keep asking only for what is still genuinely missing, and leave a «placeholder» wherever you would otherwise be guessing.`,
+};
+
+const systemPrompt = (stage: CoachStage): string => `${SYSTEM_PROMPT}\n\n${STAGE_PROMPT[stage]}`;
 
 /* ------------------------------------------------------------------------ */
 /* The call                                                                   */
@@ -382,35 +421,47 @@ function buildHandoffPrompt(text: string, turns: CoachTurn[], gaps: Check[], que
 /* Public entry point                                                          */
 /* ------------------------------------------------------------------------ */
 
-function userMessage(draft: string, turns: CoachTurn[]): string {
+function userMessage(draft: string, turns: CoachTurn[], stage: CoachStage): string {
   const parts = ["The author's draft:", '"""', draft, '"""'];
   if (turns.length) {
     parts.push("", "Questions you asked earlier, and the author's answers (review the draft as clarified by these):");
     turns.forEach((t, i) => {
       parts.push(`${i + 1}. Q: ${t.question}`, `   A: ${t.answer}`);
     });
+  } else if (stage === "clarify") {
+    parts.push("", "This is the clarifying round — no questions have been asked yet, and no candidate wording this turn.");
   } else {
-    parts.push("", "This is the first review — no questions have been asked yet.");
+    parts.push("", "The author skipped the clarifying round: they want your reading of the draft as it stands.");
   }
   parts.push("", "Return the JSON object now.");
   return parts.join("\n");
 }
 
 /**
- * Coach one draft, as clarified by any answers so far. Throws `CoachAiError`
- * when the gateway isn't configured or fails — the caller decides what to
- * show instead (the structural check).
+ * Coach one draft, as clarified by any answers so far.
+ *
+ * `stage` is what the caller is asking for: "clarify" for a first draft (ask
+ * the important questions, no wording yet) or "review" once there are answers
+ * or the author has skipped ahead. The stage on the reply is the one that was
+ * honoured — a draft the model finds already strong is never held back for
+ * questions. Throws `CoachAiError` when the gateway isn't configured or fails;
+ * the caller decides what to show instead (the structural check).
  */
-export async function coachOutcome(draft: string, turns: CoachTurn[]): Promise<CoachReview> {
+export async function coachOutcome(
+  draft: string,
+  turns: CoachTurn[],
+  stage: CoachStage = "review",
+): Promise<CoachReview> {
   const text = draft.trim();
   const safeTurns = turns.slice(-MAX_TURNS * 3).map((t) => ({
     question: str(t.question, 500),
     answer: str(t.answer, MAX_ANSWER_LENGTH),
   }));
+  const asked: CoachStage = safeTurns.length ? "review" : stage;
 
   const reply = await chat([
-    { role: "system", content: SYSTEM_PROMPT },
-    { role: "user", content: userMessage(text, safeTurns) },
+    { role: "system", content: systemPrompt(asked) },
+    { role: "user", content: userMessage(text, safeTurns, asked) },
   ]);
   const raw = parseJson(reply);
 
@@ -421,20 +472,35 @@ export async function coachOutcome(draft: string, turns: CoachTurn[]): Promise<C
 
   const verdict = raw.verdict === "outcome" || raw.verdict === "output" || raw.verdict === "hybrid" ? raw.verdict : "hybrid";
   const done = raw.done === true;
+
+  // A draft with nothing left to fix isn't held back for questions.
+  const stageOut: CoachStage = asked === "clarify" && !done ? "clarify" : "review";
+
   const questions = done
     ? []
     : (Array.isArray(raw.questions) ? raw.questions : []).map((q) => str(q, 500)).filter(Boolean).slice(0, 3);
-  const candidates = (Array.isArray(raw.candidates) ? raw.candidates : [])
-    .map((c) => {
-      const cand = c as { text?: unknown; note?: unknown };
-      return { text: str(cand?.text, 800), note: str(cand?.note, 500) };
-    })
-    .filter((c) => c.text)
-    .slice(0, 3);
+  // The clarifying round exists to ask something: if the model returned no
+  // questions, fall back to the ones the checks already produced.
+  if (stageOut === "clarify" && !questions.length) {
+    questions.push(...gaps.slice(0, 2).map((g) => g.question));
+  }
+
+  // The stage decides, not the model: no wording until it has asked.
+  const candidates =
+    stageOut === "clarify"
+      ? []
+      : (Array.isArray(raw.candidates) ? raw.candidates : [])
+          .map((c) => {
+            const cand = c as { text?: unknown; note?: unknown };
+            return { text: str(cand?.text, 800), note: str(cand?.note, 500) };
+          })
+          .filter((c) => c.text)
+          .slice(0, 3);
 
   return {
     source: "ai",
     model: MODEL(),
+    stage: stageOut,
     text,
     verdict,
     headline: str(raw.headline, 600) || "Here is how the draft reads against the outcome principles.",

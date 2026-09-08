@@ -30,7 +30,7 @@ export default async function CoachPage({
         <Link href="/principles" className="underline underline-offset-2">
           outcome definition principles
         </Link>
-        , the reasons, {ai ? "the questions you most need to answer, and help writing a better one" : "what's missing, and what to do next"}.
+        , the reasons, {ai ? "the questions you most need to answer — and once you have, help writing a better one" : "what's missing, and what to do next"}.
       </p>
 
       <CoachForm initialDraft={initialDraft} aiEnabled={ai} />
@@ -50,6 +50,15 @@ export default async function CoachPage({
               the coach design principles: it asks rather than tells, and it never invents a baseline, a
               target or a fact you didn&rsquo;t give it — anything it doesn&rsquo;t know is left in
               «guillemets» for you to fill in.
+            </p>
+            <p className="mt-2">
+              It asks before it writes. On a first draft you get the score and two or three clarifying
+              questions — who you are in this, who the outcome is for, what you hope changes for them — and
+              no suggested wording yet, because a phrasing built on the coach&rsquo;s guesses about your
+              organisation teaches you nothing. Answer what you can and the wording comes next; rough,
+              rounded and anonymised answers are enough, and none of the questions need a commercially
+              confidential number. If you&rsquo;d rather not answer, skip them and it will offer wording with
+              «placeholders» instead.
             </p>
             <p className="mt-2">
               It can still be wrong. It reads a sentence, not your organisation, so it can miss context
