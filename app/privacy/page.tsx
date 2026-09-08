@@ -106,15 +106,40 @@ export default function PrivacyPage() {
       </h2>
       <p className="mt-3 leading-relaxed text-ink-soft">
         The{" "}
+        <Link href="/coach" className="underline underline-offset-2">
+          Outcome Coach
+        </Link>{" "}
+        on this site sends the goal you paste, and any answers you give it, to
+        an AI model through Vercel&rsquo;s AI Gateway to write the review. That
+        is the one place text you type leaves this site. We store none of it:
+        there is no database and no account, and the conversation exists only
+        on the page in front of you until you leave it. The model provider
+        processes the text to generate the reply, under{" "}
+        <a
+          href="https://vercel.com/docs/ai-gateway"
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-2"
+        >
+          Vercel&rsquo;s AI Gateway terms
+        </a>
+        . Anonymise anything sensitive before you paste it &mdash; the coaching
+        is just as good on a redacted version. If the AI coach isn&rsquo;t
+        switched on for a deployment, the page runs a structural check that
+        sends nothing anywhere.
+      </p>
+      <p className="mt-3 leading-relaxed text-ink-soft">
+        The{" "}
         <Link href="/skills" className="underline underline-offset-2">
           coaching skills
         </Link>{" "}
-        you download run inside your own AI assistant — nothing comes back here.
-        They are written to refuse personal information: they never ask for
-        names, contact details, or individual performance or health data, and if
-        you paste some anyway they say so, swap it for the role, and carry on
-        without it. Coaching a goal never requires knowing who someone is, and
-        goals aimed at outcomes rarely name a person.
+        you download run inside your own AI assistant &mdash; nothing comes back
+        here. Both the on-site coach and the skills are written to refuse
+        personal information: they never ask for names, contact details, or
+        individual performance or health data, and if you paste some anyway
+        they say so, swap it for the role, and carry on without it. Coaching a
+        goal never requires knowing who someone is, and goals aimed at outcomes
+        rarely name a person.
       </p>
 
       <h2 className="mt-12 text-2xl font-bold tracking-tight">
