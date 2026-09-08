@@ -23,6 +23,8 @@ export type CoachState = {
   notice: string | null;
   /** The draft was too short to review at all. */
   tooShort: boolean;
+  /** The author asked to start again, so the draft and the conversation were cleared. */
+  cleared: boolean;
   /** Bumps on every submission so the client can key its transient UI. */
   seq: number;
 };
@@ -36,5 +38,6 @@ export const INITIAL_STATE: CoachState = {
   fallbackReason: null,
   notice: null,
   tooShort: false,
+  cleared: false,
   seq: 0,
 };

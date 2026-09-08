@@ -110,6 +110,28 @@ function SkipButton() {
 }
 
 /**
+ * Start again submits the form with `restart`, so the server action can hand
+ * back a blank state. `useFormStatus().data` tells us whether the submission
+ * in flight is this button's, so a coaching run doesn't relabel it.
+ */
+function RestartButton() {
+  const { pending, data } = useFormStatus();
+  const restarting = pending && Boolean(data?.get("restart"));
+  return (
+    <button
+      type="submit"
+      name="restart"
+      value="1"
+      disabled={pending}
+      aria-disabled={pending}
+      className="rounded-full text-sm font-semibold underline underline-offset-2 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-progress disabled:opacity-70"
+    >
+      {restarting ? "Starting again…" : "Start again"}
+    </button>
+  );
+}
+
+/**
  * The coach's questions with a box under each. In the clarifying round this
  * renders above the score and is the only thing asked of the author; later it
  * sits under the review as the next pass.
@@ -343,7 +365,10 @@ function Handoff({ prompt, ai }: { prompt: string; ai: boolean }) {
 
 export function CoachForm({ initialDraft, aiEnabled }: { initialDraft: string; aiEnabled: boolean }) {
   const [state, formAction] = useActionState(coachAction, { ...INITIAL_STATE, draft: initialDraft });
-  const [draft, setDraft] = useState(initialDraft);
+  // Seeded from the action's state, not the prop, so that with JavaScript off
+  // the textarea shows what the last submission decided the draft is — the
+  // adopted candidate, or nothing at all after "Start again".
+  const [draft, setDraft] = useState(state.draft);
   const [seenSeq, setSeenSeq] = useState(state.seq);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -359,8 +384,19 @@ export function CoachForm({ initialDraft, aiEnabled }: { initialDraft: string; a
   }
 
   useEffect(() => {
-    if (state.seq > 0 && !state.notice) resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [state.seq, state.notice]);
+    if (state.seq > 0 && !state.notice && !state.cleared)
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [state.seq, state.notice, state.cleared]);
+
+  // Starting again should feel like arriving fresh: back at the top of the
+  // page with the cursor in an empty box, and without the ?outcome= that a
+  // reload would otherwise use to bring the old draft back.
+  useEffect(() => {
+    if (!state.cleared) return;
+    if (window.location.search) window.history.replaceState(null, "", window.location.pathname);
+    textareaRef.current?.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [state.cleared, state.seq]);
 
   const review = state.review;
   const scored: Scored | null = review ?? state.fallback;
@@ -406,12 +442,16 @@ export function CoachForm({ initialDraft, aiEnabled }: { initialDraft: string; a
           idle={hasResult ? "Check it again" : aiEnabled ? "Coach my outcome" : "Check my outcome"}
           busy={aiEnabled ? "Coaching — this takes a few seconds…" : "Checking…"}
         />
-        {(hasResult || state.turns.length > 0) && (
-          <Link href="/coach" className="text-sm font-semibold underline underline-offset-2">
-            Start again
-          </Link>
-        )}
+        {(hasResult || state.turns.length > 0) && <RestartButton />}
       </div>
+
+      {state.cleared && (
+        <p role="status" className="mt-6 rounded-2xl border border-sooner/40 bg-sooner/10 p-4 text-sm leading-relaxed">
+          <span className="font-semibold">Cleared. </span>
+          The draft and everything you told the coach are gone. Write a new goal above and check it whenever
+          you&rsquo;re ready.
+        </p>
+      )}
 
       {!hasResult && (
         <p className="mt-6 text-sm text-ink-soft">

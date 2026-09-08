@@ -20,12 +20,19 @@
  * and every question-and-answer so far, and the reply is a complete review of
  * the draft *as clarified by the answers*. Nothing is stored — see /privacy.
  *
+ * Zero data retention is set on every call, not assumed: see GATEWAY_PRIVACY
+ * below. If the chosen model has no zero-retention provider, the gateway
+ * refuses the request and the page falls back to the structural check — the
+ * text is never quietly sent to a provider that would keep it.
+ *
  * Configuration (server-only environment, never exposed to the browser):
  *   AI_GATEWAY_API_KEY   required — created in the Vercel dashboard (AI Gateway).
  *                        Unset = the page falls back to the structural check
  *                        and says so.
  *   AI_GATEWAY_MODEL     optional — gateway model slug; default below. Sonnet is
  *                        the default because a person is waiting on the page.
+ *                        Must be a model some provider serves under ZDR, or
+ *                        every call fails closed (see GATEWAY_PRIVACY).
  *   AI_GATEWAY_BASE_URL  optional — default https://ai-gateway.vercel.sh/v1
  *
  * No SDK: the gateway speaks the OpenAI chat-completions shape, so a fetch is
@@ -38,6 +45,23 @@ import { type Band, type Check, type CheckStatus, bandFor } from "./outcomeCoach
 
 const BASE_URL = () => process.env.AI_GATEWAY_BASE_URL || "https://ai-gateway.vercel.sh/v1";
 const MODEL = () => process.env.AI_GATEWAY_MODEL || "anthropic/claude-sonnet-5";
+
+/**
+ * The data-protection terms every call is sent under, set per request so the
+ * promise on /privacy lives in this repository rather than in a dashboard
+ * someone might toggle.
+ *
+ *   zeroDataRetention      — route only to providers with a verified zero
+ *                            data retention agreement: they process the text
+ *                            to generate the reply and keep nothing after.
+ *   disallowPromptTraining — and never train on it.
+ *
+ * The gateway treats these as filters, not preferences: if no provider for the
+ * model qualifies, it returns `no_providers_available` and we show the
+ * structural check instead. Failing closed is the point.
+ * https://vercel.com/docs/ai-gateway/security-and-compliance/zdr
+ */
+export const GATEWAY_PRIVACY = { zeroDataRetention: true, disallowPromptTraining: true } as const;
 
 /** Output budget. Generous: on some models this caps thinking and answer together. */
 const MAX_TOKENS = 8000;
@@ -282,7 +306,13 @@ async function chat(messages: GatewayMessage[]): Promise<string> {
     res = await fetch(`${BASE_URL()}/chat/completions`, {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: MODEL(), max_tokens: MAX_TOKENS, stream: true, messages }),
+      body: JSON.stringify({
+        model: MODEL(),
+        max_tokens: MAX_TOKENS,
+        stream: true,
+        messages,
+        providerOptions: { gateway: GATEWAY_PRIVACY },
+      }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (err) {
@@ -293,7 +323,17 @@ async function chat(messages: GatewayMessage[]): Promise<string> {
   if (!res.ok) {
     // The body goes to the server log, not the page: it can carry account
     // detail that has no business in front of a visitor.
-    console.error(`[coach] AI gateway ${res.status}: ${(await res.text()).slice(0, 500)}`);
+    const body = await res.text();
+    console.error(`[coach] AI gateway ${res.status}: ${body.slice(0, 500)}`);
+    // The one refusal worth naming: no provider would take the request under
+    // zero data retention, so nothing was sent. Say that, don't hide it behind
+    // a status code — it's the promise working, not a fault.
+    if (/no_providers_available|No ZDR/i.test(body)) {
+      throw new CoachAiError(
+        502,
+        "No zero-data-retention provider was available for this model, so your draft wasn't sent anywhere"
+      );
+    }
     throw new CoachAiError(502, `The AI gateway refused the request (${res.status})`);
   }
   if (!res.body) throw new CoachAiError(502, "AI gateway returned no body");
