@@ -56,7 +56,7 @@ export function Footer() {
           </a>{" "}
           ·{" "}
           <Link href="/privacy" className="underline underline-offset-2">
-            No personal data
+            No personal data, zero data retention
           </Link>
         </p>
         <p className="opacity-80">

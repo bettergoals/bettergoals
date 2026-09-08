@@ -94,6 +94,19 @@ export default function Home() {
           </Link>{" "}
           is the short version.
         </p>
+        <p className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-ink-soft">
+          <span className="rounded-full bg-safer/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink">
+            Zero data retention
+          </span>
+          <span>
+            Paste a real goal. The coach only uses models that keep nothing and never train on your
+            words, and there&rsquo;s no account and no database here to hold them either.{" "}
+            <Link href="/privacy" className="font-semibold underline underline-offset-2">
+              How that works
+            </Link>
+            .
+          </span>
+        </p>
       </section>
 
       <section className="border-y border-ink/10 bg-white">
