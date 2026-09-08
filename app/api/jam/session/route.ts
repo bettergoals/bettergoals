@@ -20,12 +20,63 @@ const MODEL = () => process.env.OPENAI_REALTIME_MODEL || "gpt-realtime";
 const VOICE = () => process.env.OPENAI_REALTIME_VOICE || "marin";
 const MAX_NAMES = 20;
 
+/**
+ * Cost guard. Every secret this route hands out can stream ten minutes of
+ * real-time audio on the site's account, so it only serves requests that a
+ * browser on this site would make, and only so many of them.
+ *
+ * The counters live in memory, per serverless instance, and reset on a cold
+ * start — a brake, not a wall. A malicious client can forge an Origin header
+ * too. Proper protection (a signed session, a durable rate limit) is a
+ * follow-up; this keeps a casual script from running up the bill.
+ */
+const WINDOW_MS = 10 * 60_000;
+const PER_CLIENT = 6;
+const PER_INSTANCE = 60;
+const seen = new Map<string, number[]>();
+let instanceHits: number[] = [];
+
+function sameOrigin(req: Request): boolean {
+  const site = req.headers.get("sec-fetch-site");
+  if (site && site !== "same-origin") return false;
+  const origin = req.headers.get("origin");
+  if (!origin) return false;
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  try {
+    return Boolean(host) && new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}
+
+function overLimit(req: Request, now: number): boolean {
+  const client = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+  const fresh = (stamps: number[]) => stamps.filter((t) => now - t < WINDOW_MS);
+  instanceHits = fresh(instanceHits);
+  const mine = fresh(seen.get(client) ?? []);
+  if (instanceHits.length >= PER_INSTANCE || mine.length >= PER_CLIENT) return true;
+  instanceHits.push(now);
+  mine.push(now);
+  seen.set(client, mine);
+  if (seen.size > 5000) seen.clear();
+  return false;
+}
+
 export async function POST(req: Request) {
   const key = process.env.OPENAI_API_KEY;
   if (!key) {
     return NextResponse.json(
       { error: "not_configured", message: "The voice coach isn't switched on for this deployment yet." },
       { status: 503 }
+    );
+  }
+  if (!sameOrigin(req)) {
+    return NextResponse.json({ error: "forbidden", message: "Sessions can only be started from this site." }, { status: 403 });
+  }
+  if (overLimit(req, Date.now())) {
+    return NextResponse.json(
+      { error: "rate_limited", message: "Too many sessions started recently. Give it a few minutes and try again." },
+      { status: 429 }
     );
   }
 

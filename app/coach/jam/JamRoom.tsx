@@ -28,6 +28,7 @@ type RealtimeEvent = {
   call_id?: string;
   arguments?: string;
   transcript?: string;
+  item?: { type?: string; name?: string; call_id?: string; arguments?: string };
   error?: { message?: string };
 };
 
@@ -48,6 +49,7 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const responseActive = useRef(false);
   const responseQueued = useRef(false);
+  const handledCalls = useRef(new Set<string>());
 
   const setBoard = useCallback((next: BoardItem[]) => {
     boardRef.current = next;
@@ -97,6 +99,28 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
     setLines((prev) => [...prev, { who, text: clean }].slice(-MAX_LINES));
   }, []);
 
+  const runToolCall = useCallback(
+    (name?: string, callId?: string, rawArgs?: string) => {
+      if (!name || !callId || handledCalls.current.has(callId)) return;
+      handledCalls.current.add(callId);
+      let args: Record<string, unknown> = {};
+      try {
+        args = JSON.parse(rawArgs || "{}") as Record<string, unknown>;
+      } catch {
+        args = {};
+      }
+      const { items: next, result } = runBoardTool(boardRef.current, name, args);
+      setBoard(next);
+      send({
+        type: "conversation.item.create",
+        item: { type: "function_call_output", call_id: callId, output: JSON.stringify(result) },
+      });
+      // The tool ran inside an active response; the follow-up goes out once it finishes.
+      responseQueued.current = true;
+    },
+    [send, setBoard]
+  );
+
   const handleEvent = useCallback(
     (ev: RealtimeEvent) => {
       switch (ev.type) {
@@ -110,24 +134,15 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
             requestResponse();
           }
           break;
-        case "response.function_call_arguments.done": {
-          if (!ev.name || !ev.call_id) break;
-          let args: Record<string, unknown> = {};
-          try {
-            args = JSON.parse(ev.arguments || "{}") as Record<string, unknown>;
-          } catch {
-            args = {};
-          }
-          const { items: next, result } = runBoardTool(boardRef.current, ev.name, args);
-          setBoard(next);
-          send({
-            type: "conversation.item.create",
-            item: { type: "function_call_output", call_id: ev.call_id, output: JSON.stringify(result) },
-          });
-          // The tool ran inside an active response; the follow-up is sent once it finishes.
-          responseQueued.current = true;
+        // The same tool call arrives twice — once as its arguments finish, once
+        // as the completed output item (the only one whose `name` is in the
+        // published schema). Whichever lands first runs it; the other is ignored.
+        case "response.function_call_arguments.done":
+          runToolCall(ev.name, ev.call_id, ev.arguments);
           break;
-        }
+        case "response.output_item.done":
+          if (ev.item?.type === "function_call") runToolCall(ev.item.name, ev.item.call_id, ev.item.arguments);
+          break;
         case "conversation.item.input_audio_transcription.completed":
           if (ev.transcript) addLine("room", ev.transcript);
           break;
@@ -135,11 +150,14 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
           if (ev.transcript) addLine("coach", ev.transcript);
           break;
         case "error":
+          // A failed response never sends response.done; don't wait for one.
+          responseActive.current = false;
+          responseQueued.current = false;
           setError(ev.error?.message ?? "The coach hit an error.");
           break;
       }
     },
-    [addLine, requestResponse, send, setBoard]
+    [addLine, requestResponse, runToolCall]
   );
 
   const stop = useCallback((ended = true) => {
@@ -149,8 +167,11 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
     pcRef.current = null;
     micRef.current?.getTracks().forEach((t) => t.stop());
     micRef.current = null;
+    if (audioRef.current) audioRef.current.srcObject = null;
     responseActive.current = false;
     responseQueued.current = false;
+    handledCalls.current.clear();
+    setMuted(false);
     if (ended) setStatus("ended");
   }, []);
 
