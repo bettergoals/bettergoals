@@ -3,6 +3,7 @@ import { BUILD_URL, REPO_URL } from "@/lib/config";
 
 const NAV = [
   { href: "/coach", label: "Coach" },
+  { href: "/teach", label: "Teach" },
   { href: "/principles", label: "Principles" },
   { href: "/okrs", label: "OKRs" },
   { href: "/templates", label: "Templates" },
@@ -54,8 +55,12 @@ export function Footer() {
             Contribute on GitHub
           </a>{" "}
           ·{" "}
+          <Link href="/feedback" className="underline underline-offset-2">
+            Give feedback
+          </Link>{" "}
+          ·{" "}
           <Link href="/privacy" className="underline underline-offset-2">
-            No personal data
+            No personal data, zero data retention
           </Link>
         </p>
         <p className="opacity-80">

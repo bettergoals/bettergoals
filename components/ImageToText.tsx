@@ -66,7 +66,17 @@ function tidy(raw: string): string {
 /** True once hydrated, false on the server — the gate that keeps this a pure enhancement. */
 const subscribeToNothing = () => () => {};
 
-export function ImageToText({ textareaId, maxLength }: { textareaId: string; maxLength: number }) {
+export function ImageToText({
+  textareaId,
+  maxLength,
+  onText,
+}: {
+  /** The textarea the words land in — used to read what's there and to focus it. */
+  textareaId: string;
+  maxLength: number;
+  /** Hands the new draft back to whoever owns the textarea's state (it is a controlled input). */
+  onText: (next: string) => void;
+}) {
   const hydrated = useSyncExternalStore(
     subscribeToNothing,
     () => true,
@@ -100,13 +110,14 @@ export function ImageToText({ textareaId, maxLength }: { textareaId: string; max
       const existing = el.value.trim();
       const next = (existing ? `${existing}\n\n${text}` : text).slice(0, maxLength);
       const added = next.length - existing.length;
-      el.value = next;
+      onText(next);
       el.focus();
-      el.setSelectionRange(next.length, next.length);
       el.scrollIntoView({ block: "nearest" });
+      // React re-renders the controlled value first; then put the cursor at the end.
+      requestAnimationFrame(() => el.setSelectionRange(next.length, next.length));
       return added;
     },
-    [maxLength, textareaId],
+    [maxLength, onText, textareaId],
   );
 
   const read = useCallback(
