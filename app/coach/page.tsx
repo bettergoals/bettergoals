@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CopyButton } from "@/components/CopyButton";
+import { ImageToText } from "@/components/ImageToText";
 import {
   EXAMPLES,
   MAX_INPUT_LENGTH,
@@ -81,8 +82,8 @@ export default async function CoachPage({
       <h1 className="text-3xl font-bold tracking-tight">Outcome Coach</h1>
       <p className="mt-2 max-w-2xl text-ink-soft">
         Write the outcome — any input. A rough thought, an objective, a whole OKR,
-        or the sentence your exec team argued about this morning. You&rsquo;ll get a
-        score against the{" "}
+        the sentence your exec team argued about this morning, or a photo of the
+        whiteboard they argued at. You&rsquo;ll get a score against the{" "}
         <Link href="/principles" className="underline underline-offset-2">
           outcome definition principles
         </Link>
@@ -94,9 +95,10 @@ export default async function CoachPage({
           Your goal, objective or outcome
         </label>
         <p id="outcome-hint" className="mt-1 text-sm text-ink-soft">
-          Plain text, up to {MAX_INPUT_LENGTH.toLocaleString()} characters. Your draft travels in the
-          page address, so leave confidential detail out and paste an anonymised version — the check
-          works just as well on one.
+          Type it, paste it, or read it off a picture. Up to{" "}
+          {MAX_INPUT_LENGTH.toLocaleString()} characters. Your draft travels in the page address, so
+          leave confidential detail out and paste an anonymised version — the check works just as
+          well on one.
         </p>
         <textarea
           id="outcome"
@@ -108,6 +110,7 @@ export default async function CoachPage({
           placeholder="e.g. Reduce the time it takes a new customer to get set up, from 12 days to 3 days by Q3, so they stop giving up on us part-way through."
           className="mt-3 w-full rounded-2xl border border-ink/15 bg-white p-4 font-sans text-base leading-relaxed shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         />
+        <ImageToText textareaId="outcome" maxLength={MAX_INPUT_LENGTH} />
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button
             type="submit"
@@ -278,6 +281,15 @@ export default async function CoachPage({
           logged, and the address bar carries your words wherever you bookmark or forward the link.
           Anonymise anything sensitive before you paste it — the check reads structure, so redacted
           examples score exactly the same.
+        </p>
+        <p className="mt-2">
+          Pictures are different, and deliberately so. When you hand it a photo or a screenshot, the
+          text recognition runs inside your own browser: the image is never uploaded, never reaches
+          this site, and is forgotten when you close the tab. Only the words it finds go into the
+          box, where you can edit or delete them before anything is submitted — so a face, a name or
+          a colleague&rsquo;s handwriting caught in the corner of a whiteboard shot never leaves your
+          device. The first picture you read downloads the recognition engine to your browser, which
+          takes a few seconds.
         </p>
       </section>
     </div>

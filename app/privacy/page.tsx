@@ -116,6 +116,17 @@ export default function PrivacyPage() {
         without it. Coaching a goal never requires knowing who someone is, and
         goals aimed at outcomes rarely name a person.
       </p>
+      <p className="mt-3 leading-relaxed text-ink-soft">
+        The{" "}
+        <Link href="/coach" className="underline underline-offset-2">
+          Outcome Coach
+        </Link>{" "}
+        can read a goal off a photo or a screenshot. That recognition runs inside
+        your own browser — the picture is never uploaded and never reaches this
+        site, so the faces, names and handwriting that end up in the corner of a
+        whiteboard shot stay on your device. Only the words it finds go into the
+        box, and only if you then submit them.
+      </p>
 
       <h2 className="mt-12 text-2xl font-bold tracking-tight">
         Holding us to it
