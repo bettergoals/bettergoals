@@ -29,3 +29,7 @@ A first-time contributor should get from thought to board in two minutes. An adv
 ## 7. Humans endorse, AI accelerates
 
 AI (Claude Code) builds what the community endorses — it never decides what's worth building. Endorsement, review, and shipping to production are human acts.
+
+## 8. Respect IP and give credit
+
+Only contribute what you have the right to share. Acknowledge the ideas, content, frameworks and code we build upon — name the source and link it where you can — and be transparent about how contributions will be used. Everything here is public and may be built on by the community and by Claude Code, so borrowed work needs a credit, and work that isn't yours to give doesn't belong here.
