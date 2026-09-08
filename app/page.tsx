@@ -439,6 +439,13 @@ export default async function Home({
                 the two-minute path from “I have a thought” to “it’s on the board” —
                 whether you live in GitHub or have never touched it.
               </p>
+              <p className="mx-auto mt-3 max-w-xl text-chalk/80">
+                Used the site already?{" "}
+                <Link href="/feedback" className="font-semibold underline underline-offset-2">
+                  Tell us what you think
+                </Link>{" "}
+                — ninety seconds, anonymous if you like. It shapes what gets built next.
+              </p>
             </div>
           </section>
         </>

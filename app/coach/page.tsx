@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { coachAiEnabled } from "@/lib/coachAi";
+import { COACH_FEEDBACK_HREF } from "@/lib/feedback";
 import { CoachForm } from "./CoachForm";
 
 export const metadata = {
@@ -122,6 +123,14 @@ export default async function CoachPage({
             </p>
           </>
         )}
+        <p className="mt-4 border-t border-ink/10 pt-4">
+          <strong className="text-ink">Did it get your goal wrong?</strong> That is the most useful
+          thing you can tell us, and it is how the coach improves.{" "}
+          <Link href={COACH_FEEDBACK_HREF} className="font-semibold underline underline-offset-2">
+            Say what it missed
+          </Link>{" "}
+          — ninety seconds, anonymous if you like.
+        </p>
       </section>
     </div>
   );

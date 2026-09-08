@@ -22,7 +22,7 @@ const NOT_COLLECTED = [
   {
     thing: "Contact and mailing details",
     detail:
-      "No contact forms, no newsletter, no “enter your email to download”. Every template and skill downloads straight away.",
+      "No newsletter, no “enter your email to download” — every template and skill downloads straight away. The feedback form asks for contact details only as an optional field you can leave blank.",
   },
   {
     thing: "A database",
@@ -123,6 +123,22 @@ export default function PrivacyPage() {
         is a separate app. Moving a card asks for a shared facilitator passcode,
         held in a cookie in your own browser for 12 hours — it identifies the
         workshop, not you.
+      </p>
+
+      <h2 className="mt-12 text-2xl font-bold tracking-tight">
+        When you send feedback
+      </h2>
+      <p className="mt-3 leading-relaxed text-ink-soft">
+        The{" "}
+        <Link href="/feedback" className="underline underline-offset-2">
+          feedback form
+        </Link>{" "}
+        has no server behind it. Your answers travel in the page address so the page
+        can show you a summary, and the last tap posts that summary to GitHub from
+        your own browser — we never receive it, and there is nowhere here for it to
+        be stored. Every question is optional, none of them asks who you are, and
+        the contact field is yours to leave blank; copying the summary and pasting it
+        elsewhere sends it with no identity attached at all.
       </p>
 
       <h2 className="mt-12 text-2xl font-bold tracking-tight">
