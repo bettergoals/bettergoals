@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BUILD_URL, REPO_URL } from "@/lib/config";
 
 const NAV = [
+  { href: "/coach", label: "Coach" },
   { href: "/principles", label: "Principles" },
   { href: "/okrs", label: "OKRs" },
   { href: "/templates", label: "Templates" },
