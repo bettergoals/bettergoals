@@ -52,6 +52,19 @@ export default async function CoachPage({
 
       <CoachForm initialDraft={initialDraft} aiEnabled={ai} />
 
+      <aside className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-sooner/40 bg-sooner/10 p-6">
+        <div>
+          <h2 className="font-semibold">Setting goals as a team, out loud?</h2>
+          <p className="mt-1 max-w-xl text-sm text-ink-soft">
+            The goal jam is a voice coach for the room: it listens, asks the sharpening questions by name, and
+            chalks the emerging goal onto a live board on the big screen.
+          </p>
+        </div>
+        <Link href="/coach/jam" className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-chalk hover:bg-ink-soft">
+          Start a goal jam →
+        </Link>
+      </aside>
+
       <section className="mt-14 rounded-2xl border border-ink/10 bg-white p-6 text-sm leading-relaxed text-ink-soft">
         <h2 className="font-semibold text-ink">How the coach works, and what it can&rsquo;t do</h2>
         {ai ? (
@@ -136,15 +149,6 @@ export default async function CoachPage({
             Say what it missed
           </Link>{" "}
           — ninety seconds, anonymous if you like.
-        </p>
-        <p className="mt-2">
-          Pictures are different, and deliberately so. When you hand it a photo or a screenshot, the
-          text recognition runs inside your own browser: the image is never uploaded, never reaches
-          this site, and is forgotten when you close the tab. Only the words it finds go into the
-          box, where you can edit or delete them before anything is submitted — so a face, a name or
-          a colleague&rsquo;s handwriting caught in the corner of a whiteboard shot never leaves your
-          device. The first picture you read downloads the recognition engine to your browser, which
-          takes a few seconds.
         </p>
       </section>
     </div>
