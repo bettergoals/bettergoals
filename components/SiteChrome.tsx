@@ -51,7 +51,11 @@ export function Footer() {
           Built in the open by the community, for the community.{" "}
           <a href={REPO_URL} className="underline underline-offset-2" target="_blank" rel="noreferrer">
             Contribute on GitHub
-          </a>
+          </a>{" "}
+          ·{" "}
+          <Link href="/privacy" className="underline underline-offset-2">
+            No personal data
+          </Link>
         </p>
         <p className="opacity-80">
           Supported by{" "}
