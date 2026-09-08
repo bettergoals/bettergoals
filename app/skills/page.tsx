@@ -28,13 +28,20 @@ export default async function SkillsPage() {
       <p className="mt-2 max-w-2xl text-ink-soft">
         Downloadable skills for Claude (and other AI assistants) created by this
         community. Drop one into your assistant and it becomes a better-goals
-        coach, checker, or facilitator. Contribute your own via{" "}
+        coach, checker, or facilitator. Point one at a filled-in{" "}
+        <Link href="/templates" className="underline underline-offset-2">
+          Outcome Canvas
+        </Link>{" "}
+        for a critique of your draft. Contribute your own via{" "}
         <a href={REPO_URL} target="_blank" rel="noreferrer" className="underline underline-offset-2">
           GitHub
         </a>
-        . Want a starting point to bring to the assistant? Grab a{" "}
-        <Link href="/templates" className="underline underline-offset-2">
-          template
+        .
+      </p>
+      <p className="mt-3 max-w-2xl text-sm text-ink-soft">
+        The coaching these skills give you follows{" "}
+        <Link href="/okrs" className="underline underline-offset-2">
+          the SSH OKR Pattern
         </Link>
         .
       </p>

@@ -11,7 +11,9 @@ Built live, in the open, by the community: every feature on this site started as
 3. **Claude builds it.** When a maintainer adds the `doing` label, a GitHub Action runs Claude Code, which implements the idea and opens a pull request.
 4. **Humans review and ship.** Every PR gets a Vercel preview deployment. The community reviews; merging ships to production.
 
-Labels drive the board columns: `idea` → Ideas, `discussing` → Discussing, `doing` → Doing, `done` → Done.
+Labels drive the board columns: `idea` → Ideas, `discussing` → Discussing, `doing` → Doing, `done` → Done, `cancelled` → Cancelled.
+
+**Cancelling an idea.** Not every idea should be built. Moving a card to **Cancelled** on the board adds the `cancelled` label and closes the issue as *not planned* — it stays visible in the Cancelled column so the decision is on the record rather than silently disappearing. Moving the card back to an active column reopens the issue. `cancelled` outranks every other stage label, so an idea cancelled mid-build stays in Cancelled.
 
 ## Development
 
@@ -30,7 +32,7 @@ See [CLAUDE.md](CLAUDE.md) — it doubles as the guide for the automated Claude 
 ## Operations
 
 - **Deploy:** Vercel, linked to this repo. `main` → production (bettergoals.ai); PRs → preview URLs.
-- **Secrets:** `ANTHROPIC_API_KEY` (GitHub Actions secret) powers the automated builds. `GITHUB_TOKEN` (Vercel env var) raises the GitHub API rate limit for the board.
+- **Secrets:** `ANTHROPIC_API_KEY` (GitHub Actions secret) powers the automated builds. `CROSS_REPO_TOKEN` (GitHub Actions secret) is a fine-grained PAT with Contents, Pull requests and Issues read/write on both this repo and `build-bettergoals`, so builds can fix the board too. `GITHUB_TOKEN` (Vercel env var) raises the GitHub API rate limit for the board.
 - **Feature flags:** `NEXT_PUBLIC_EMAIL_SIGNIN=true` surfaces the email + PIN contribution path on [/contribute](https://bettergoals.ai/contribute). Leave it unset until sign-in is live on the builder app.
 - **Principles:** community-owned in [PRINCIPLES.md](PRINCIPLES.md); edits via PR appear on the site within a minute of merging (no redeploy needed).
 - **Skills:** downloadable AI-assistant skills live in `public/skills/` and are auto-listed at [/skills](https://bettergoals.ai/skills).

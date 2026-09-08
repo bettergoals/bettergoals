@@ -12,6 +12,8 @@ A community website from the Sooner Safer Happier executive community for crafti
 
 This repo is the PRODUCT website only. The build experience (kanban board, card moves) lives in the separate repo `bettergoals/build-bettergoals`, deployed at build.bettergoals.ai — do not add board/move features here.
 
+When running from the build Action, that repo is also checked out at `./build-bettergoals/` (its own git repo, its own `CLAUDE.md`, ignored by this repo's git). Ideas about the board are built there and get a PR against its `main`; ideas about the product site are built here and get a PR against `preview`.
+
 - `app/` — routes: `/` (landing), `/principles`, `/skills`, `/contribute`, `/qr`
 - `lib/config.ts` — site constants (repo, builder URL, endorse threshold)
 - `public/skills/*.md` — downloadable skills; the Skills page auto-lists them (frontmatter `name:` and `description:` required)

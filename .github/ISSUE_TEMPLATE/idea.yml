@@ -8,6 +8,10 @@ body:
       value: |
         Thanks for contributing! Plain language is perfect — this takes about two minutes.
         Your idea will appear on the [live board](https://bettergoals.ai/board) right away.
+
+        One guardrail ([principle 8](https://bettergoals.ai/principles)): share only what you have
+        the right to share — no client, confidential, or licensed material — and credit the people,
+        books, frameworks, and repos you build on. Everything posted here is public.
   - type: textarea
     id: what
     attributes:

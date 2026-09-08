@@ -2,7 +2,10 @@ name: Mark idea done
 
 # When an idea issue is closed (e.g. its PR reaches main and "Closes #N" fires),
 # swap its stage label to `done` so it lands in the board's Done column.
-# Reopening moves it back to `discussing`.
+# Reopening moves it back to `discussing`, clearing any `cancelled` label.
+#
+# Exception: an idea cancelled from the board is closed deliberately and carries
+# the `cancelled` label. That is not "done", so leave its labels untouched.
 
 on:
   issues:
@@ -21,11 +24,34 @@ jobs:
           NUMBER: ${{ github.event.issue.number }}
           ACTION: ${{ github.event.action }}
         run: |
+          # Read the labels fresh: the board sets `cancelled` and closes the
+          # issue in one API call, so the event payload may predate the label.
+          labels=$(gh issue view "$NUMBER" --repo "$REPO" --json labels --jq '.labels[].name')
+
+          is_cancelled=false
+          if echo "$labels" | grep -qix 'cancelled'; then
+            is_cancelled=true
+          fi
+
           if [ "$ACTION" = "closed" ]; then
+            if [ "$is_cancelled" = true ]; then
+              echo "Issue #$NUMBER is cancelled — leaving its stage labels alone."
+              exit 0
+            fi
             gh issue edit "$NUMBER" --repo "$REPO" \
               --remove-label idea --remove-label discussing --remove-label doing \
               --add-label done
           else
-            gh issue edit "$NUMBER" --repo "$REPO" \
-              --remove-label done --add-label discussing
+            # Only pass --remove-label cancelled when it is actually there:
+            # gh fails on a label that does not exist in the repo.
+            args=(--remove-label done)
+            if [ "$is_cancelled" = true ]; then
+              args+=(--remove-label cancelled)
+            fi
+            # Park it in Discussing only if it has no active stage label — moving
+            # a cancelled card straight back to Doing already set one for us.
+            if ! echo "$labels" | grep -qix -e idea -e discussing -e doing; then
+              args+=(--add-label discussing)
+            fi
+            gh issue edit "$NUMBER" --repo "$REPO" "${args[@]}"
           fi

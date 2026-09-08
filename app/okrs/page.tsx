@@ -1,183 +1,65 @@
 import Link from "next/link";
-import { NEW_IDEA_URL } from "@/lib/config";
+import {
+  CADENCE,
+  CHECKLIST,
+  MBO_TO_OKR,
+  NAVIGATION,
+  NOT_OK_OKR,
+  OK_OKR,
+  SSH_SOURCES,
+  THREE_MS,
+  WHY_OKRS,
+} from "@/lib/okrPattern";
 
 export const metadata = {
-  title: "The OKR Framework",
+  title: "OKRs",
   description:
-    "Objectives and Key Results, the Sooner Safer Happier way: an outcome hypothesis, 3–5 measurable key results, and a golden thread from strategy to experiment.",
+    "An overview of OKRs the Sooner Safer Happier way: the Objective is the bet, the Key Results are the feedback — with the format, the 3Ms, and what OK and NOT OK OKRs look like.",
 };
 
-const THREE_MS = [
+/** The four things to take away if you read nothing else — all from the SSH pack. */
+const ESSENCE = [
   {
-    m: "Mission",
+    label: "The Objective",
+    text: "Clarity of the bet you are placing and the capability you are building. Where you want to play, and how you will win.",
     color: "text-sooner",
     border: "border-sooner/40",
-    lead: "The Objective",
-    text: "Outcome over output. Inspirational, aspirational, and clear about the change you want to see in the world.",
   },
   {
-    m: "Measurement",
-    color: "text-safer",
-    border: "border-safer/40",
-    lead: "The Key Results",
-    text: "Measures of movement and behaviour, not activity. Leading indicators you can act on, plus a lagging measure of impact.",
-  },
-  {
-    m: "Mindset",
-    color: "text-happier",
-    border: "border-happier/40",
-    lead: "The way you hold them",
-    text: "Emergent over deterministic. Empowering, not assigning. Safe to challenge, safe to pivot, safe to invalidate.",
-  },
-];
-
-const HYPOTHESIS = [
-  { label: "Due to…", hint: "this insight, feedback or belief" },
-  { label: "We believe that…", hint: "this bet" },
-  { label: "Will result in…", hint: "this outcome" },
-];
-
-const OK_KRS = [
-  "Double ad click-through rate from 2.5% to 5%",
-  "Increase customer NPS from +40 to +60",
-  "Increase referrals from 50k to 100k per month",
-  "Grow daily digital transactions from 100k to 400k",
-  "Increase market share from #2 to #1 by Q2",
-];
-
-const OK_PATTERNS = [
-  "Outcome over output — inspirational and aspirational",
-  "Measurable: <verb> <measure> from <x> to <y> by <when>",
-  "Measures of behaviour and of movement toward the objective",
-  "Four leading indicators plus one lagging measure of impact",
-  "An early and often feedback loop — value added incrementally",
-  "No more than 3–5 key results, business and technology as one",
-];
-
-const NOTOK_KRS = [
-  "Create a new training program",
-  "Design agreed by all necessary committees",
-  "Contract signed with vendor for build",
-  "Build new feature screens",
-  "Get InfoSec and data privacy approval",
-  "Provision hardware",
-  "Test data migration",
-  "Go live",
-];
-
-const NOTOK_PATTERNS = [
-  "Output over outcome — a task list, not a change",
-  "Not inspirational, and the duration isn’t clear",
-  "Not measurable: no from, no to, no by when",
-  "No measure of changed behaviour, and none of value",
-  "No leading indicators, so nothing to steer with",
-  "Too many key results, and technology-only — where’s the business value?",
-];
-
-const SHIFT = [
-  ["Top down", "Top down, bottom up and sideways"],
-  ["Command and control", "Empowerment and autonomy"],
-  ["Outputs and tasks", "Outcomes and experiments"],
-  ["Annual", "Multi-year, annual, quarterly"],
-  ["Private and siloed", "Transparent and aligned"],
-  ["Risk averse", "Aspirational"],
-];
-
-const CAR = [
-  {
-    thing: "Strategy",
-    metaphor: "the travel destination",
-    question: "Where do you want to go?",
-    color: "text-happier",
-    border: "border-happier/40",
-  },
-  {
-    thing: "KPIs",
-    metaphor: "the dashboard",
-    question: "How healthy is the car?",
+    label: "The Key Results",
+    text: "The feedback. Leading and lagging metrics that tell you how the journey is going and what success looks like.",
     color: "text-safer",
     border: "border-safer/40",
   },
   {
-    thing: "OKRs",
-    metaphor: "the GPS",
-    question: "Are you on the right track?",
-    color: "text-sooner",
-    border: "border-sooner/40",
+    label: "3 to 5 of them",
+    text: "3–4 leading indicators so you can pivot early, plus 1 lagging indicator — the impact metric. No more than five.",
+    color: "text-happier",
+    border: "border-happier/40",
+  },
+  {
+    label: "Held as a hypothesis",
+    text: "Emergent over deterministic. The outcome may turn out to be invalid, and finding that out early is the point.",
+    color: "text-ink-soft",
+    border: "border-ink/20",
   },
 ];
 
-const LADDER = [
-  {
-    horizon: "Multi-year",
-    span: "North Star",
-    example: "Top 3 most valuable luxury brand",
-    indent: "",
-  },
-  {
-    horizon: "Annual",
-    span: "< 12 months",
-    example: "Luxury bags: top 3 market share in China",
-    indent: "sm:ml-4",
-  },
-  {
-    horizon: "Quarterly outcome",
-    span: "< 3 months",
-    example: "Handbags: increase market share in Shanghai",
-    indent: "sm:ml-8",
-  },
-  {
-    horizon: "Experiments",
-    span: "< 1 month",
-    example: "Social media influencers · online promotion",
-    indent: "sm:ml-12",
-  },
-];
-
-const QUESTIONS = [
-  {
-    q: "Do we use OKRs for regulatory work?",
-    a: [
-      "Yes. Regulatory work needs framing as an outcome just as much as discretionary work does. Being compliant is an output; the outcome is the position you choose to take — do the bare minimum to comply, do it as cheaply as possible, or be the best in the market at this legislation.",
-      "You have probably never implemented this regulation before, so how you implement it is unknowable up front — and other organisations have found that how you do it can become a competitive advantage.",
-    ],
-  },
-  {
-    q: "What is the difference between impact metrics and KPIs?",
-    a: [
-      "Nothing meaningful — they are the same thing under two names: high-level, lagging measures of the health of the business (revenue, margin, churn, satisfaction). Use whichever name your organisation already accepts.",
-      "Outcomes are the leading indicators for those metrics. Executives tend to watch impact metrics; teams focus mostly on outcomes.",
-    ],
-  },
-  {
-    q: "Should we track FTE reductions as a key result?",
-    a: [
-      "If the organisation genuinely has that goal, it isn’t unreasonable: cost is the lagging key result and FTE reduction is a leading one. It is not a metric to make visible to everyone — it is handed to the accountable leader, who builds the plan with Finance and HR.",
-      "Track flow efficiency alongside it as a balancing measure, so visible costs going down doesn’t just push hidden costs up.",
-    ],
-  },
-  {
-    q: "How do we support platform teams who struggle with OKRs?",
-    a: [
-      "Platforms are a shared-service value stream: the value they create is enabling the customer value streams. Two questions unlock most platform OKRs — how are we helping the customer value streams go faster, and how are we enabling self-service?",
-      "Then get clear on the basics: who is the internal customer, what is the thing of value, what does awesome look like, what does awful look like, what would happen if the product didn’t exist, and what is the biggest impediment to realising value?",
-    ],
-  },
-  {
-    q: "How many OKRs should we have?",
-    a: [
-      "Less is more: no more than three to five OKRs per value stream, each with three to five key results. Think big, start small, learn fast.",
-      "Go shallow and broad across the enterprise for multi-year and annual OKRs, and narrow and deep within a value stream for annual and quarterly ones.",
-    ],
-  },
-];
-
-function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) {
+function SectionHeading({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children?: React.ReactNode;
+}) {
   return (
-    <>
-      <p className="text-xs font-bold uppercase tracking-widest text-ink-soft/70">{eyebrow}</p>
-      <h2 className="mt-1 text-2xl font-bold tracking-tight">{title}</h2>
-    </>
+    <div className="max-w-3xl">
+      <p className="text-xs font-semibold uppercase tracking-widest text-ink-soft/70">{eyebrow}</p>
+      <h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2>
+      {children ? <p className="mt-3 leading-relaxed text-ink-soft">{children}</p> : null}
+    </div>
   );
 }
 
@@ -185,352 +67,413 @@ export default function OkrsPage() {
   return (
     <div>
       <section className="bg-ink text-chalk">
-        <div className="mx-auto max-w-5xl px-4 py-16 sm:py-20">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
           <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-chalk/60">
-            A Sooner Safer Happier point of view
+            Overview · Sooner Safer Happier
           </p>
           <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
-            The OKR framework
+            <span className="text-sooner">OKRs</span>, the way SSH think about them
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-chalk/80">
             Objectives and Key Results are a tool for shifting the focus from
-            output to outcome — creating clarity on strategic direction, and
-            visibility of the work, without pretending the work is predictable.
+            output to outcome — creating clarity of strategic direction, and
+            visibility of the portfolio of work for disciplined execution.
           </p>
-          <p className="mt-4 max-w-2xl text-sm text-chalk/60">
-            This is a starting-point guide to apply to your context, not a
-            standard to comply with. Take it and make it yours.
-          </p>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-5xl px-4 py-14">
-        <SectionHeading eyebrow="Why" title="Output is not the point" />
-        <div className="mt-6 grid gap-6 md:grid-cols-[1.2fr_1fr]">
-          <div className="space-y-4 text-ink-soft">
-            <p className="leading-relaxed">
-              Too many initiatives, programmes and projects focus on producing
-              stuff without being clear who the customer is or what problem is
-              being solved. Many also define the solution up front — which
-              ignores that the work is complex and uncertain, and that we have to
-              test and learn our way to the answer.
-            </p>
-            <p className="leading-relaxed">
-              OKRs unlock the value hiding inside that work. An OKR is a single
-              objective plus three to five key results that show measurable
-              progress toward the outcome, used from enterprise level all the way
-              to team level.
-            </p>
-          </div>
-          <figure className="rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
-            <blockquote className="text-sm leading-relaxed text-ink-soft">
-              “Outcome is a measurable change in human behavior we see when we
-              give the output to our users and customers. Outcome answers the
-              question: what are people doing differently now that we have
-              delivered the output?”
-            </blockquote>
-            <figcaption className="mt-3 text-xs font-semibold uppercase tracking-widest text-ink-soft/70">
-              Jeff Gothelf
-            </figcaption>
-            <p className="mt-4 border-t border-ink/10 pt-4 text-sm leading-relaxed text-ink-soft">
-              Outcomes are not features. They are metrics. “We shipped the app”
-              is an output; “50% of our audience has upgraded to the new app” is
-              an outcome.
-            </p>
-          </figure>
-        </div>
-      </section>
-
-      <section className="border-y border-ink/10 bg-white">
-        <div className="mx-auto max-w-5xl px-4 py-14">
-          <SectionHeading eyebrow="Format" title="Write the objective as an outcome hypothesis" />
-          <p className="mt-3 max-w-2xl text-ink-soft">
-            The word <em>hypothesis</em> is deliberate. It sets the expectation
-            that the outcome may turn out to be invalid, that there are
-            unknown-unknowns only the work will reveal, and that teams are
-            empowered to discover how best to make progress — and to judge whether
-            the bet is still worth pursuing.
-          </p>
-
-          <div className="mt-8 grid gap-6 lg:grid-cols-2">
-            <div className="rounded-2xl border border-sooner/40 bg-chalk p-6">
-              <div className="flex items-baseline justify-between gap-3">
-                <h3 className="text-xl font-bold text-sooner">Objective</h3>
-                <span className="text-xs font-semibold uppercase tracking-widest text-ink-soft/70">
-                  data + insight + belief = bet
-                </span>
-              </div>
-              <dl className="mt-5 space-y-4">
-                {HYPOTHESIS.map((h) => (
-                  <div key={h.label} className="rounded-xl border border-ink/10 bg-white p-4">
-                    <dt className="font-semibold">{h.label}</dt>
-                    <dd className="mt-1 text-sm text-ink-soft">{h.hint}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-
-            <div className="rounded-2xl border border-safer/40 bg-chalk p-6">
-              <div className="flex items-baseline justify-between gap-3">
-                <h3 className="text-xl font-bold text-safer">3–5 Key Results</h3>
-                <span className="text-xs font-semibold uppercase tracking-widest text-ink-soft/70">
-                  we’ll know we’re successful when
-                </span>
-              </div>
-              <p className="mt-5 rounded-xl border border-ink/10 bg-white p-4 font-mono text-sm">
-                &lt;verb&gt; &lt;measure&gt; from &lt;x&gt; to &lt;y&gt; by &lt;when&gt;
-              </p>
-              <div className="mt-4 space-y-3 text-sm leading-relaxed text-ink-soft">
-                <p>
-                  <strong className="text-ink">3–4 leading indicators.</strong>{" "}
-                  Indicative of future performance — they let you pivot while
-                  there is still time to maximise the outcome.
-                </p>
-                <p>
-                  <strong className="text-ink">1 lagging indicator.</strong>{" "}
-                  Assesses performance that has already happened — revenue,
-                  profit, expense. Also known as an impact metric.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-5xl px-4 py-14">
-        <SectionHeading eyebrow="More than a framework" title="The three Ms" />
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          {THREE_MS.map((m) => (
-            <div key={m.m} className={`rounded-2xl border ${m.border} bg-white p-6 shadow-sm`}>
-              <h3 className={`text-xl font-bold ${m.color}`}>{m.m}</h3>
-              <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-ink-soft/70">
-                {m.lead}
-              </p>
-              <p className="mt-3 text-sm leading-relaxed text-ink-soft">{m.text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="border-y border-ink/10 bg-white">
-        <div className="mx-auto max-w-5xl px-4 py-14">
-          <SectionHeading eyebrow="What good looks like" title="An OK OKR and a NOT OK OKR" />
-          <div className="mt-8 grid gap-6 lg:grid-cols-2">
-            <article className="rounded-2xl border border-sooner/40 bg-chalk p-6">
-              <span className="rounded-full bg-sooner px-3 py-1 text-xs font-bold uppercase tracking-widest text-ink">
-                OK OKR
-              </span>
-              <h3 className="mt-4 text-lg font-bold">
-                Objective: #1 in our market in LATAM
-              </h3>
-              <ul className="mt-4 space-y-2 text-sm text-ink-soft">
-                {OK_KRS.map((kr) => (
-                  <li key={kr} className="rounded-xl border border-ink/10 bg-white px-4 py-2">
-                    {kr}
-                  </li>
-                ))}
-              </ul>
-              <h4 className="mt-6 text-xs font-bold uppercase tracking-widest text-sooner">
-                Patterns
-              </h4>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed text-ink-soft">
-                {OK_PATTERNS.map((p) => (
-                  <li key={p}>{p}</li>
-                ))}
-              </ul>
-            </article>
-
-            <article className="rounded-2xl border border-ink/15 bg-ink/[0.03] p-6">
-              <span className="rounded-full border border-ink/20 bg-white px-3 py-1 text-xs font-bold uppercase tracking-widest text-ink-soft">
-                NOT OK OKR
-              </span>
-              <h3 className="mt-4 text-lg font-bold">
-                Objective: deliver Project Platypus
-              </h3>
-              <ul className="mt-4 space-y-2 text-sm text-ink-soft">
-                {NOTOK_KRS.map((kr) => (
-                  <li key={kr} className="rounded-xl border border-ink/10 bg-white/70 px-4 py-2">
-                    {kr}
-                  </li>
-                ))}
-              </ul>
-              <h4 className="mt-6 text-xs font-bold uppercase tracking-widest text-ink-soft">
-                Antipatterns
-              </h4>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed text-ink-soft">
-                {NOTOK_PATTERNS.map((p) => (
-                  <li key={p}>{p}</li>
-                ))}
-              </ul>
-            </article>
-          </div>
-
-          <div className="mt-10 rounded-2xl border border-ink/10 p-6">
-            <h3 className="font-semibold">The shift OKRs ask for</h3>
-            <p className="mt-1 text-sm text-ink-soft">
-              OKRs grew out of Management by Objectives — Drucker in 1954, Andy
-              Grove’s iMBOs, then John Doerr. What changed is less the paperwork
-              and more the posture.
-            </p>
-            <dl className="mt-5 grid gap-3 sm:grid-cols-2">
-              {SHIFT.map(([from, to]) => (
-                <div key={from} className="flex flex-wrap items-baseline gap-2 rounded-xl bg-chalk px-4 py-3 text-sm">
-                  <dt className="text-ink-soft line-through decoration-ink/30">{from}</dt>
-                  <span aria-hidden className="text-ink-soft/60">→</span>
-                  <dd className="font-semibold">{to}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-5xl px-4 py-14">
-        <SectionHeading eyebrow="Don’t confuse them" title="Strategy vs. OKRs vs. KPIs" />
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          {CAR.map((c) => (
-            <div key={c.thing} className={`rounded-2xl border ${c.border} bg-white p-6 shadow-sm`}>
-              <h3 className={`text-xl font-bold ${c.color}`}>{c.thing}</h3>
-              <p className="mt-1 text-sm font-semibold text-ink">= {c.metaphor}</p>
-              <p className="mt-3 text-sm leading-relaxed text-ink-soft">{c.question}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-ink/10 bg-white p-6">
-            <h3 className="font-semibold">KPIs</h3>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed text-ink-soft">
-              <li>Easier to set — they are based on what we already know</li>
-              <li>Watch the health of the business, with precision</li>
-              <li>Usually delivered by a functional group; clear who and what — efficiency</li>
-              <li>A KPI in an unhealthy state may need to become a short-term OKR</li>
-            </ul>
-          </div>
-          <div className="rounded-2xl border border-ink/10 bg-white p-6">
-            <h3 className="font-semibold">OKRs</h3>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed text-ink-soft">
-              <li>Harder to set — the change is unknown and complex</li>
-              <li>Cross-functional, focused on getting better rather than staying stable</li>
-              <li>Need a network of stakeholders to create value</li>
-              <li>Ambitious: baselines may exist, but how to measure often has to be created</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <section className="border-y border-ink/10 bg-white">
-        <div className="mx-auto max-w-5xl px-4 py-14">
-          <SectionHeading eyebrow="Nesting" title="The golden thread of value" />
-          <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_1.1fr]">
-            <div className="space-y-4 text-ink-soft">
-              <p className="leading-relaxed">
-                Nesting means a different objective at each level of the
-                organisation. As you move down, objectives get more specific and
-                more relevant to that business area — while still contributing to
-                the objective above.
-              </p>
-              <p className="leading-relaxed">
-                A complete set of nested objectives forms the{" "}
-                <strong className="text-ink">golden thread</strong>: every
-                outcome, epic and story is traceable back to the strategy. Some
-                organisations even measure it, tracking the percentage of stories
-                that link all the way up to a strategic objective.
-              </p>
-              <p className="leading-relaxed">
-                Multi-year OKRs act as the North Star. Annual OKRs make that
-                digestible. Quarterly OKRs create the room to pivot within the
-                year — with a feedback loop at every level.
-              </p>
-            </div>
-            <ol className="space-y-3">
-              {LADDER.map((l) => (
-                <li
-                  key={l.horizon}
-                  className={`rounded-2xl border border-ink/10 bg-chalk p-4 ${l.indent}`}
-                >
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <p className="font-semibold">{l.horizon}</p>
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink-soft">
-                      {l.span}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-ink-soft">{l.example}</p>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-5xl px-4 py-14">
-        <SectionHeading eyebrow="Commonly asked" title="Questions, answered" />
-        <div className="mt-6 divide-y divide-ink/10 overflow-hidden rounded-2xl border border-ink/10 bg-white">
-          {QUESTIONS.map((item) => (
-            <details key={item.q} className="group px-6 py-4">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold">
-                {item.q}
-                <span aria-hidden className="text-ink-soft transition group-open:rotate-45">
-                  +
-                </span>
-              </summary>
-              <div className="mt-3 space-y-3 text-sm leading-relaxed text-ink-soft">
-                {item.a.map((p) => (
-                  <p key={p}>{p}</p>
-                ))}
-              </div>
-            </details>
-          ))}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-5xl px-4 pb-16">
-        <div className="rounded-3xl bg-ink px-6 py-12 text-chalk sm:px-12">
-          <h2 className="text-2xl font-bold sm:text-3xl">Use it as your guardrail</h2>
-          <p className="mt-3 max-w-2xl text-chalk/80">
-            This framework is how bettergoals.ai thinks about outcomes. Before you
-            propose an idea, try stating it as an outcome hypothesis — due to,
-            we believe that, will result in — and name the leading indicator you
-            would watch. If you can finish the idea without anything getting
-            better for anyone, it’s an output. To run this with a group, the SSH{" "}
-            <a
-              href="https://www.soonersaferhappier.com/quick-learn-outcome-canvas"
-              target="_blank"
-              rel="noreferrer"
-              className="font-semibold underline underline-offset-2"
-            >
-              Outcome Canvas
-            </a>{" "}
-            gives you a workshop structure.
+          <p className="mt-4 max-w-2xl text-chalk/70">
+            This page is the short version: what an OKR is, how to write one, and
+            how to tell a good one from a task list. It is drawn from the{" "}
+            <span className="font-semibold text-chalk">SSH OKR Pattern</span>{" "}
+            pack — a starting point to apply to your context, not a standard to
+            comply with.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
-              href="/templates/okr-set"
+              href="#write-one"
               className="rounded-full bg-sooner px-6 py-3 font-semibold text-ink hover:bg-sooner/90"
             >
-              Take the OKR template →
+              How to write one ↓
             </Link>
             <Link
               href="/skills"
               className="rounded-full border border-chalk/30 px-6 py-3 font-semibold hover:bg-chalk/10"
             >
-              Get the OKR skill →
+              Get a coaching skill →
             </Link>
-            <a
-              href={NEW_IDEA_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-full border border-chalk/30 px-6 py-3 font-semibold hover:bg-chalk/10"
-            >
-              Propose an outcome ↗
-            </a>
           </div>
         </div>
-        <p className="mt-6 text-xs leading-relaxed text-ink-soft">
-          Adapted from “SSH PoV — OKR Framework” (Sooner Safer Happier, Nov 2023).
-          Output, outcome, impact and KPI definitions from Jeff Gothelf, “Output,
-          Outcomes, Impact and KPIs” (2021). Golden thread measurement example from
-          Tony Caink on Nationwide’s operating model.
+      </section>
+
+      {/* The essence -------------------------------------------------------- */}
+      <section className="mx-auto max-w-6xl px-4 py-16">
+        <SectionHeading eyebrow="In one minute" title="An OKR, in four lines">
+          An Objective without measures is a slogan. Measures without an
+          Objective are a dashboard. You need both halves.
+        </SectionHeading>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {ESSENCE.map((e) => (
+            <div key={e.label} className={`rounded-2xl border ${e.border} bg-white p-6 shadow-sm`}>
+              <h3 className={`font-bold ${e.color}`}>{e.label}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-ink-soft">{e.text}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* The shift ---------------------------------------------------------- */}
+      <section className="border-y border-ink/10 bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-16">
+          <SectionHeading eyebrow="Why" title="From output to outcome">
+            Too many projects focus on producing stuff — outputs — without
+            understanding who the customer is and the problem being solved. Many
+            also define the solution upfront, which ignores that the work is
+            complex and uncertain, and that we need to test and learn to discover
+            the solution.
+          </SectionHeading>
+
+          <dl className="mt-8 grid gap-px overflow-hidden rounded-2xl border border-ink/10 bg-ink/10 sm:grid-cols-2">
+            <div className="bg-chalk px-5 py-3">
+              <dt className="text-xs font-semibold uppercase tracking-widest text-ink-soft/70">
+                From management by objectives
+              </dt>
+            </div>
+            <div className="bg-chalk px-5 py-3">
+              <dt className="text-xs font-semibold uppercase tracking-widest text-sooner">
+                To OKRs
+              </dt>
+            </div>
+            {MBO_TO_OKR.map(([from, to]) => (
+              <div key={from} className="contents">
+                <div className="bg-white px-5 py-3 text-sm text-ink-soft">{from}</div>
+                <div className="bg-white px-5 py-3 text-sm font-medium">{to}</div>
+              </div>
+            ))}
+          </dl>
+
+          <details className="group mt-6 rounded-2xl border border-ink/10 bg-chalk p-6">
+            <summary className="cursor-pointer text-sm font-semibold marker:text-sooner">
+              Six reasons organisations use them
+            </summary>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {WHY_OKRS.map((w) => (
+                <div key={w.title}>
+                  <h3 className="text-sm font-semibold">{w.title}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-ink-soft">{w.text}</p>
+                </div>
+              ))}
+            </div>
+          </details>
+        </div>
+      </section>
+
+      {/* How to write one --------------------------------------------------- */}
+      <section id="write-one" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-16">
+        <SectionHeading eyebrow="The format" title="Write the Objective as an outcome hypothesis">
+          The word “hypothesis” is deliberate: it sets a clear expectation that
+          the outcome may be invalid, and that there are unknown-unknowns only
+          uncovered once the work takes place.
+        </SectionHeading>
+
+        <div className="mt-8 grid gap-6 lg:grid-cols-5">
+          <div className="rounded-2xl border border-sooner/40 bg-white p-6 shadow-sm lg:col-span-2">
+            <p className="text-xs font-semibold uppercase tracking-widest text-ink-soft/70">
+              Objective
+            </p>
+            <p className="mt-1 text-sm text-ink-soft">data + insight + belief = bet</p>
+            <dl className="mt-5 space-y-4 font-mono text-sm">
+              <div>
+                <dt className="font-bold text-sooner">Due to</dt>
+                <dd className="text-ink-soft">&lt;this insight, feedback or belief&gt;</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-sooner">We believe that</dt>
+                <dd className="text-ink-soft">&lt;this bet&gt;</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-sooner">Will result in</dt>
+                <dd className="text-ink-soft">&lt;this outcome&gt;</dd>
+              </div>
+            </dl>
+          </div>
+
+          <div className="rounded-2xl border border-safer/40 bg-white p-6 shadow-sm lg:col-span-3">
+            <p className="text-xs font-semibold uppercase tracking-widest text-ink-soft/70">
+              3–5 Key Results
+            </p>
+            <p className="mt-1 text-sm text-ink-soft">“We’ll know we’re successful when…”</p>
+            <p className="mt-4 overflow-x-auto rounded-xl bg-ink px-4 py-3 font-mono text-sm text-chalk">
+              &lt;verb&gt; &lt;measure&gt; from &lt;x&gt; to &lt;y&gt; by &lt;z&gt;
+            </p>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div>
+                <h3 className="text-sm font-semibold text-safer">3–4 leading indicators</h3>
+                <p className="mt-1 text-sm leading-relaxed text-ink-soft">
+                  Indicative of future performance — they let you pivot to
+                  maximise the outcome while there is still time.
+                </p>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-safer">1 lagging indicator</h3>
+                <p className="mt-1 text-sm leading-relaxed text-ink-soft">
+                  Assesses performance that has already happened — profit,
+                  revenue, expenses. The impact metric.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <h3 className="text-lg font-bold tracking-tight">More than a framework — the 3Ms</h3>
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            {THREE_MS.map((m) => (
+              <div key={m.m} className={`rounded-2xl border ${m.border} bg-white p-6 shadow-sm`}>
+                <h4 className={`text-lg font-bold ${m.color}`}>{m.m}</h4>
+                <p className="text-xs font-semibold uppercase tracking-widest text-ink-soft/70">
+                  {m.scope}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-ink-soft">{m.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="mt-6 max-w-3xl text-sm leading-relaxed text-ink-soft">
+          To get from a blank page to a drafted OKR with a group, SSH use the{" "}
+          <a
+            href={SSH_SOURCES.outcomeCanvas}
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-2"
+          >
+            Outcome Canvas
+          </a>
+          . For the thinking behind the format, read{" "}
+          <a
+            href={SSH_SOURCES.outcomeHypothesis}
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-2"
+          >
+            Outcome hypotheses — a primer
+          </a>
+          .
         </p>
+      </section>
+
+      {/* OK / NOT OK -------------------------------------------------------- */}
+      <section className="border-y border-ink/10 bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-16">
+          <SectionHeading eyebrow="Calibrate" title="An OK OKR and a NOT OK OKR">
+            The quickest way to know whether you have written an OKR or a
+            delivery plan is to put them side by side.
+          </SectionHeading>
+
+          <div className="mt-8 grid gap-6 lg:grid-cols-2">
+            <article className="rounded-2xl border border-sooner/40 bg-chalk p-6">
+              <p className="inline-block rounded-full bg-sooner/15 px-3 py-1 text-xs font-bold uppercase tracking-widest text-sooner">
+                OK
+              </p>
+              <h3 className="mt-4 text-xs font-semibold uppercase tracking-widest text-ink-soft/70">
+                {OK_OKR.objectiveLabel}
+              </h3>
+              <p className="mt-1 text-lg font-bold">{OK_OKR.objective}</p>
+              <ol className="mt-4 list-decimal space-y-1 pl-5 text-sm text-ink-soft">
+                {OK_OKR.keyResults.map((kr) => (
+                  <li key={kr}>{kr}</li>
+                ))}
+              </ol>
+              <ul className="mt-5 space-y-1 border-t border-ink/10 pt-4 text-sm text-ink-soft">
+                {[...OK_OKR.patterns.mission, ...OK_OKR.patterns.measurement].map((p) => (
+                  <li key={p}>
+                    <span aria-hidden>✅</span> {p}
+                  </li>
+                ))}
+              </ul>
+            </article>
+
+            <article className="rounded-2xl border border-ink/15 bg-chalk p-6">
+              <p className="inline-block rounded-full bg-ink/10 px-3 py-1 text-xs font-bold uppercase tracking-widest text-ink-soft">
+                NOT OK
+              </p>
+              <h3 className="mt-4 text-xs font-semibold uppercase tracking-widest text-ink-soft/70">
+                {NOT_OK_OKR.objectiveLabel}
+              </h3>
+              <p className="mt-1 text-lg font-bold">{NOT_OK_OKR.objective}</p>
+              <ol className="mt-4 list-decimal space-y-1 pl-5 text-sm text-ink-soft">
+                {NOT_OK_OKR.keyResults.map((kr) => (
+                  <li key={kr}>{kr}</li>
+                ))}
+              </ol>
+              <ul className="mt-5 space-y-1 border-t border-ink/10 pt-4 text-sm text-ink-soft">
+                {[...NOT_OK_OKR.antipatterns.mission, ...NOT_OK_OKR.antipatterns.measurement].map(
+                  (p) => (
+                    <li key={p}>
+                      <span aria-hidden>⛔</span> {p}
+                    </li>
+                  )
+                )}
+              </ul>
+            </article>
+          </div>
+
+          <p className="mt-6 text-sm text-ink-soft">
+            Jon Smart walks through both in{" "}
+            <a
+              href={SSH_SOURCES.okNotOkOkrs}
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2"
+            >
+              OK and NOT OK OKRs
+            </a>
+            . Want the same check on your own draft? The{" "}
+            <Link href="/skills" className="underline underline-offset-2">
+              skills
+            </Link>{" "}
+            on this site do it conversationally.
+          </p>
+
+          <details className="mt-8 rounded-2xl border border-ink/10 bg-chalk p-6">
+            <summary className="cursor-pointer text-sm font-semibold marker:text-sooner">
+              The full SSH OKR checklist — {CHECKLIST.reduce((n, c) => n + c.items.length, 0)}{" "}
+              questions to run a draft through
+            </summary>
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-ink-soft">
+              If a question has no answer yet, that is the next conversation to
+              have — not a reason to write a vaguer goal.
+            </p>
+            <div className="mt-6 grid gap-6 lg:grid-cols-3">
+              {CHECKLIST.map((col) => (
+                <div key={col.heading}>
+                  <h3 className="font-bold">{col.heading}</h3>
+                  <ul className="mt-2 space-y-2 text-sm leading-relaxed text-ink-soft">
+                    {col.items.map((item) => (
+                      <li key={item} className="flex gap-2">
+                        <span aria-hidden className="text-sooner">
+                          ☐
+                        </span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <p className="mt-6 text-sm text-ink-soft">
+              Adapted from{" "}
+              <a
+                href={SSH_SOURCES.okrChecklist}
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2"
+              >
+                Maria Muir’s OKR checklist
+              </a>
+              .
+            </p>
+          </details>
+        </div>
+      </section>
+
+      {/* Where they sit ----------------------------------------------------- */}
+      <section className="mx-auto max-w-6xl px-4 py-16">
+        <SectionHeading eyebrow="Don’t confuse them" title="Strategy, OKRs and KPIs">
+          Strategy sets the direction. OKRs help you navigate. KPIs show how well
+          the system is performing along the way.
+        </SectionHeading>
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          {NAVIGATION.map((n) => (
+            <div key={n.label} className={`rounded-2xl border ${n.border} bg-white p-6 shadow-sm`}>
+              <h3 className={`text-lg font-bold ${n.color}`}>
+                {n.label} = {n.equals}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-ink-soft">{n.question}</p>
+            </div>
+          ))}
+        </div>
+
+        <h3 className="mt-10 text-lg font-bold tracking-tight">
+          And they nest — the golden thread
+        </h3>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          {CADENCE.map((c) => (
+            <div key={c.horizon} className="rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
+              <h4 className="font-bold text-sooner">{c.horizon}</h4>
+              <p className="mt-2 text-sm leading-relaxed text-ink-soft">{c.text}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-4 max-w-3xl text-sm leading-relaxed text-ink-soft">
+          As you move down the levels, the Objective gets more specific to that
+          business area while still contributing to the level above. A complete
+          set of nested objectives forms the golden thread that links work
+          throughout the organisation back to the strategy.
+        </p>
+      </section>
+
+      {/* Credits ------------------------------------------------------------ */}
+      <section className="mx-auto max-w-6xl px-4 pb-16">
+        <div className="rounded-3xl bg-ink px-6 py-10 text-chalk sm:px-12">
+          <h2 className="text-2xl font-bold">Take it and make it yours</h2>
+          <p className="mt-4 max-w-2xl text-chalk/80">
+            Every organisation adapts how it uses OKRs. Treat this as a starting
+            point, then keep what helps you deliver value sooner, safer and
+            happier — the{" "}
+            <Link href="/principles" className="underline underline-offset-2">
+              principles
+            </Link>{" "}
+            are the tie-breaker when the framework and reality disagree.
+          </p>
+          <p className="mt-8 text-xs font-semibold uppercase tracking-widest text-chalk/60">
+            Attribution
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-chalk/80">
+            Everything on this page is drawn from the{" "}
+            <em>SSH OKR Pattern — input for AI Outcome Coach</em> pack,
+            contributed by the community as{" "}
+            <a
+              href="https://github.com/bettergoals/bettergoals/issues/28"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2"
+            >
+              idea #28
+            </a>
+            . The pattern, its wording and its examples remain ©{" "}
+            <a
+              href={SSH_SOURCES.ssh}
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold underline underline-offset-2"
+            >
+              Sooner Safer Happier
+            </a>
+            , used here with the community’s thanks — keep the credit with it if
+            you adapt or reshare it, as{" "}
+            <Link href="/principles" className="underline underline-offset-2">
+              our principles
+            </Link>{" "}
+            ask. Further reading:{" "}
+            <a
+              href={SSH_SOURCES.okrChecklist}
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2"
+            >
+              the OKR checklist
+            </a>{" "}
+            and{" "}
+            <a
+              href={SSH_SOURCES.strategyDefinition}
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2"
+            >
+              writing strategic choices you can execute
+            </a>
+            .
+          </p>
+        </div>
       </section>
     </div>
   );
