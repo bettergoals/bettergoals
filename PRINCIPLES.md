@@ -20,6 +20,14 @@ Everything on this site — content, features, even these principles — is cont
 
 A first-time contributor should get from thought to board in two minutes. An advanced contributor should be able to ship a voice-coaching agent. Both belong here.
 
+### Accessible to everyone
+
+Better goals are no use to people who can't reach them. Everything we ship — the site itself and the things it helps you produce — is built to work for people using screen readers, keyboard navigation, magnification, or captions. Concretely:
+
+- **The site meets WCAG 2.0 AA.** Sufficient colour contrast, a visible focus state on everything interactive, a sensible heading order, labelled controls, alt text on meaningful images, and never colour alone to carry meaning. Pages work with the keyboard and without JavaScript.
+- **So do the outputs.** Goals, templates, skills and coaching conversations leave here as plain, structured text anyone can read, paste and reuse — no meaning locked inside an image, a diagram, or a colour.
+- **Accessibility is part of "done".** It's always a fair thing to raise in review, and a fair reason to change a design — not a follow-up issue for later.
+
 ### Humans endorse, AI accelerates
 
 AI (Claude Code) builds what the community endorses — it never decides what's worth building. Endorsement, review, and shipping to production are human acts.
