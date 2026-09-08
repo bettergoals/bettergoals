@@ -9,7 +9,7 @@ import {
   coachOutcome,
 } from "@/lib/coachAi";
 import { MAX_INPUT_LENGTH, evaluateOutcome } from "@/lib/outcomeCoach";
-import type { CoachState } from "./state";
+import { INITIAL_STATE, type CoachState } from "./state";
 
 function field(data: FormData, name: string, max: number): string {
   const v = data.get(name);
@@ -50,6 +50,14 @@ function readAnswers(data: FormData): CoachTurn[] {
 
 export async function coachAction(prev: CoachState, data: FormData): Promise<CoachState> {
   const seq = prev.seq + 1;
+
+  // "Start again": throw the whole conversation away and hand back a blank
+  // form. It goes through the action rather than a link because the draft, the
+  // review and the turns all live in this form's state — navigating to /coach
+  // leaves that state exactly where it was, which is why the old link looked
+  // like it did nothing.
+  if (data.get("restart")) return { ...INITIAL_STATE, cleared: true, seq };
+
   const draft = field(data, "outcome", MAX_INPUT_LENGTH);
   const priorTurns = readTurns(data);
 
@@ -63,6 +71,7 @@ export async function coachAction(prev: CoachState, data: FormData): Promise<Coa
       turns: priorTurns,
       notice: "Your draft has been replaced with the candidate. Fill in anything in «guillemets», then check it again.",
       tooShort: false,
+      cleared: false,
       seq,
     };
   }
@@ -75,6 +84,7 @@ export async function coachAction(prev: CoachState, data: FormData): Promise<Coa
     fallbackReason: null,
     notice: null,
     tooShort: false,
+    cleared: false,
     seq,
   };
 
