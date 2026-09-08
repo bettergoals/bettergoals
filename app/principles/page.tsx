@@ -40,7 +40,7 @@ export default async function PrinciplesPage() {
           ✏️ Suggest an edit
         </a>
       </div>
-      <article className="prose-headings:font-bold prose-headings:tracking-tight [&_a]:underline [&_a]:underline-offset-2 [&_h1]:text-3xl [&_h2]:mt-8 [&_h2]:text-xl [&_p]:mt-3 [&_p]:leading-relaxed [&_p]:text-ink-soft">
+      <article className="prose-headings:font-bold prose-headings:tracking-tight [&_a]:underline [&_a]:underline-offset-2 [&_h1]:text-3xl [&_h2]:mt-14 [&_h2]:border-t [&_h2]:border-ink/10 [&_h2]:pt-10 [&_h2]:text-2xl [&_h3]:mt-8 [&_h3]:text-lg [&_li]:leading-relaxed [&_li]:text-ink-soft [&_p]:mt-3 [&_p]:leading-relaxed [&_p]:text-ink-soft [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5">
         <ReactMarkdown>{markdown}</ReactMarkdown>
       </article>
     </div>
