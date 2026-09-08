@@ -8,6 +8,7 @@ export const metadata = {
 
 const QUICK_LEARN_URL =
   "https://www.soonersaferhappier.com/training/quick-learn-outcome-canvas";
+const SSH_URL = "https://soonersaferhappier.com";
 
 /**
  * Exactly two templates, matching the SSH quick learn: the blank canvas and the
@@ -172,6 +173,39 @@ export default function TemplatesPage() {
             really an output wearing a nicer word.
           </li>
         </ol>
+      </div>
+
+      <div className="mt-10 rounded-2xl bg-ink px-6 py-8 text-chalk">
+        <p className="text-xs font-semibold uppercase tracking-widest text-chalk/60">
+          Attribution
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-chalk/80">
+          The Outcome Canvas is the work of{" "}
+          <a
+            href={SSH_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold underline underline-offset-2"
+          >
+            Sooner Safer Happier
+          </a>
+          . Both files here are the PDFs SSH publishes for the{" "}
+          <a
+            href={QUICK_LEARN_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-2"
+          >
+            Outcome Canvas quick learn
+          </a>{" "}
+          — shared with the community’s thanks, not recreated — and the canvas, its
+          structure and its wording remain © Sooner Safer Happier. Keep the credit
+          with it if you adapt or reshare it, as{" "}
+          <Link href="/principles" className="underline underline-offset-2">
+            our principles
+          </Link>{" "}
+          ask.
+        </p>
       </div>
     </div>
   );
