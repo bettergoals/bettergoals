@@ -33,7 +33,35 @@ export default async function CoachPage({
         , the reasons, {ai ? "the questions you most need to answer, and help writing a better one" : "what's missing, and what to do next"}.
       </p>
 
+      <p className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-ink-soft">
+        <span className="rounded-full bg-safer/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink">
+          Zero data retention
+        </span>
+        <span>
+          {ai
+            ? "Your draft goes to a model that keeps nothing and never trains on it — and no account, no database, no copy here."
+            : "This deployment runs the structural check: your draft never leaves this site."}{" "}
+          <Link href="/privacy" className="underline underline-offset-2">
+            How that works
+          </Link>
+          .
+        </span>
+      </p>
+
       <CoachForm initialDraft={initialDraft} aiEnabled={ai} />
+
+      <aside className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-sooner/40 bg-sooner/10 p-6">
+        <div>
+          <h2 className="font-semibold">Setting goals as a team, out loud?</h2>
+          <p className="mt-1 max-w-xl text-sm text-ink-soft">
+            The goal jam is a voice coach for the room: it listens, asks the sharpening questions by name, and
+            chalks the emerging goal onto a live board on the big screen.
+          </p>
+        </div>
+        <Link href="/coach/jam" className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-chalk hover:bg-ink-soft">
+          Start a goal jam →
+        </Link>
+      </aside>
 
       <section className="mt-14 rounded-2xl border border-ink/10 bg-white p-6 text-sm leading-relaxed text-ink-soft">
         <h2 className="font-semibold text-ink">How the coach works, and what it can&rsquo;t do</h2>
@@ -60,10 +88,13 @@ export default async function CoachPage({
             <p className="mt-2">
               On privacy: your draft and your answers are sent to this site and on to an AI model, through
               Vercel&rsquo;s AI Gateway, to write the review. Nothing is stored here — there is no database
-              and no account — and the conversation lives only on this page until you leave it. Web
-              requests do get logged, and the model provider processes the text to generate the reply, so
-              anonymise anything sensitive before you paste it. The coach never needs to know who anyone
-              is, and if personal information turns up it sets it aside and works with the role. More on the{" "}
+              and no account — and the conversation lives only on this page until you leave it. Every call
+              is made under zero data retention and no prompt training: the gateway will only route it to a
+              provider that has agreed to keep nothing once the reply is written and never train on it, and
+              if no such provider can serve the model it refuses the request rather than sending your words
+              somewhere that would keep them. Web requests to this site are still logged by the host, so
+              anonymise anything sensitive before you paste it. The coach never needs to know who anyone is,
+              and if personal information turns up it sets it aside and works with the role. More on the{" "}
               <Link href="/privacy" className="underline underline-offset-2">
                 privacy page
               </Link>

@@ -124,6 +124,20 @@ export default async function Home({
             </p>
           </form>
 
+          <p className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-chalk/70">
+            <span className="rounded-full bg-safer/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-chalk">
+              Zero data retention
+            </span>
+            <span>
+              The coach only uses models that keep nothing and never train on your words, and
+              there&rsquo;s no account and no database here to hold them either.{" "}
+              <Link href="/privacy" className="font-semibold underline underline-offset-2">
+                How that works
+              </Link>
+              .
+            </span>
+          </p>
+
           {!asked && (
             <div className="mt-8">
               <p className="text-sm font-semibold uppercase tracking-widest text-chalk/60">

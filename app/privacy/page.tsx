@@ -4,7 +4,7 @@ import { BUILD_URL, NEW_IDEA_URL, REPO_URL } from "@/lib/config";
 export const metadata = {
   title: "Privacy",
   description:
-    "bettergoals.ai refuses to collect or store personal information: no accounts, no analytics, no tracking cookies, no database.",
+    "bettergoals.ai refuses to collect or store personal information: no accounts, no analytics, no tracking cookies, no database — and every AI call runs under zero data retention.",
 };
 
 /** Things a site like this usually collects, and what we do instead. */
@@ -31,6 +31,25 @@ const NOT_COLLECTED = [
   },
 ];
 
+/** What "zero data retention" actually buys you, in three claims. */
+const ZDR_POINTS = [
+  {
+    thing: "Nothing is kept",
+    detail:
+      "The provider deletes your prompt and the reply once the request completes. There is no transcript to subpoena, leak or hand to anyone later.",
+  },
+  {
+    thing: "Nothing is trained on",
+    detail:
+      "Your goal never becomes training data. Tomorrow’s model will not have learned anything from your strategy.",
+  },
+  {
+    thing: "No fallback to a provider that would",
+    detail:
+      "The gateway only routes to providers under a verified ZDR agreement. If none can serve the model, the request fails rather than quietly going elsewhere.",
+  },
+];
+
 export default function PrivacyPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
@@ -38,7 +57,12 @@ export default function PrivacyPage() {
       <p className="mt-3 text-lg text-ink-soft">
         This tool refuses to collect or store personal information. Not “we
         handle it carefully” — we don’t take it in the first place. The safest
-        place for your data is somewhere it was never collected.
+        place for your data is somewhere it was never collected. Where a model
+        has to see your words to coach you,{" "}
+        <a href="#zero-data-retention" className="underline underline-offset-2">
+          it keeps none of them
+        </a>
+        .
       </p>
 
       <h2 className="mt-10 text-2xl font-bold tracking-tight">
@@ -113,20 +137,15 @@ export default function PrivacyPage() {
         an AI model through Vercel&rsquo;s AI Gateway to write the review. That
         is the one place text you type leaves this site. We store none of it:
         there is no database and no account, and the conversation exists only
-        on the page in front of you until you leave it. The model provider
-        processes the text to generate the reply, under{" "}
-        <a
-          href="https://vercel.com/docs/ai-gateway"
-          target="_blank"
-          rel="noreferrer"
-          className="underline underline-offset-2"
-        >
-          Vercel&rsquo;s AI Gateway terms
+        on the page in front of you until you leave it. Neither does the model
+        &mdash; every call runs under{" "}
+        <a href="#zero-data-retention" className="underline underline-offset-2">
+          zero data retention
         </a>
-        . Anonymise anything sensitive before you paste it &mdash; the coaching
-        is just as good on a redacted version. If the AI coach isn&rsquo;t
-        switched on for a deployment, the page runs a structural check that
-        sends nothing anywhere.
+        . Anonymise anything sensitive anyway &mdash; the coaching is just as
+        good on a redacted version, and a habit beats a promise. If the AI coach
+        isn&rsquo;t switched on for a deployment, the page runs a structural
+        check that sends nothing anywhere.
       </p>
       <p className="mt-3 leading-relaxed text-ink-soft">
         The{" "}
@@ -140,6 +159,82 @@ export default function PrivacyPage() {
         they say so, swap it for the role, and carry on without it. Coaching a
         goal never requires knowing who someone is, and goals aimed at outcomes
         rarely name a person.
+      </p>
+
+      <h2
+        id="zero-data-retention"
+        className="mt-12 scroll-mt-20 text-2xl font-bold tracking-tight"
+      >
+        Zero data retention
+      </h2>
+      <p className="mt-3 leading-relaxed text-ink-soft">
+        A model has to read your goal to coach you on it. What it must not do is
+        keep it. This product only uses models served under a zero data
+        retention agreement: the provider processes your text to generate the
+        reply and then permanently deletes it, and never trains on it. Three
+        things are true of every AI call this site makes.
+      </p>
+      <ul className="mt-4 grid gap-4 sm:grid-cols-3">
+        {ZDR_POINTS.map((point) => (
+          <li
+            key={point.thing}
+            className="rounded-2xl border border-ink/10 bg-white p-6 shadow-sm"
+          >
+            <h3 className="font-semibold">
+              <span aria-hidden="true" className="mr-2 text-safer">
+                ✓
+              </span>
+              {point.thing}
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+              {point.detail}
+            </p>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-4 leading-relaxed text-ink-soft">
+        This isn&rsquo;t a setting on a dashboard you have to take our word for.
+        Every request the coach makes carries{" "}
+        <code className="rounded bg-ink/5 px-1.5 py-0.5 text-sm">
+          zeroDataRetention
+        </code>{" "}
+        and{" "}
+        <code className="rounded bg-ink/5 px-1.5 py-0.5 text-sm">
+          disallowPromptTraining
+        </code>
+        , in{" "}
+        <a
+          href={`${REPO_URL}/blob/main/lib/coachAi.ts`}
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-2"
+        >
+          source anyone can read
+        </a>
+        . Vercel&rsquo;s AI Gateway treats those as filters rather than
+        preferences: it routes only to providers it holds a verified{" "}
+        <a
+          href="https://vercel.com/docs/ai-gateway/security-and-compliance/zdr"
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-2"
+        >
+          ZDR agreement
+        </a>{" "}
+        with, and if none can serve the model it refuses the request outright.
+        So the failure mode is the coach falling back to the structural check
+        and telling you why &mdash; never your words quietly going somewhere
+        that would keep them.
+      </p>
+      <p className="mt-3 leading-relaxed text-ink-soft">
+        What zero data retention doesn&rsquo;t cover, so you know the edges: the
+        web request that carries your draft to this site is still logged by the
+        host, as any web request is; and a{" "}
+        <Link href="/skills" className="underline underline-offset-2">
+          skill you download
+        </Link>{" "}
+        runs in your own AI assistant, under whatever retention terms you have
+        with them, not ours.
       </p>
 
       <h2 className="mt-12 text-2xl font-bold tracking-tight">
