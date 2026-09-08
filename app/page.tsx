@@ -48,9 +48,15 @@ export default function Home() {
             feature on this site started as an idea on the board.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
+            <Link
+              href="/coach"
+              className="rounded-full bg-sooner px-6 py-3 font-semibold text-ink hover:bg-sooner/90"
+            >
+              Check your goal →
+            </Link>
             <a
               href={BUILD_URL}
-              className="rounded-full bg-sooner px-6 py-3 font-semibold text-ink hover:bg-sooner/90"
+              className="rounded-full border border-chalk/30 px-6 py-3 font-semibold hover:bg-chalk/10"
             >
               See the live board ↗
             </a>
@@ -77,7 +83,12 @@ export default function Home() {
           ))}
         </div>
         <p className="mt-6 text-ink-soft">
-          Putting that into practice as Objectives and Key Results?{" "}
+          Got a goal already? Paste it into the{" "}
+          <Link href="/coach" className="font-semibold underline underline-offset-2">
+            Outcome Coach
+          </Link>{" "}
+          — any input, however rough — and it will tell you what&rsquo;s working, where the gaps
+          are, and what to do next. Putting it into practice as Objectives and Key Results?{" "}
           <Link href="/okrs" className="font-semibold underline underline-offset-2">
             OKRs, the way SSH think about them
           </Link>{" "}
