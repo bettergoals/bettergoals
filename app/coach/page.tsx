@@ -35,6 +35,19 @@ export default async function CoachPage({
 
       <CoachForm initialDraft={initialDraft} aiEnabled={ai} />
 
+      <aside className="mt-10 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-sooner/40 bg-sooner/10 p-6">
+        <div>
+          <h2 className="font-semibold">Setting goals as a team, out loud?</h2>
+          <p className="mt-1 max-w-xl text-sm text-ink-soft">
+            The goal jam is a voice coach for the room: it listens, asks the sharpening questions by name, and
+            chalks the emerging goal onto a live board on the big screen.
+          </p>
+        </div>
+        <Link href="/coach/jam" className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-chalk hover:bg-ink-soft">
+          Start a goal jam →
+        </Link>
+      </aside>
+
       <section className="mt-14 rounded-2xl border border-ink/10 bg-white p-6 text-sm leading-relaxed text-ink-soft">
         <h2 className="font-semibold text-ink">How the coach works, and what it can&rsquo;t do</h2>
         {ai ? (
