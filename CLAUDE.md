@@ -33,7 +33,7 @@ You may be running unattended from a GitHub Action. Follow these strictly:
 2. Keep changes scoped to the one idea you were asked to build. No drive-by refactors.
 3. Match the existing visual language: Tailwind utilities, the `ink`/`chalk`/`sooner`/`safer`/`happier` theme colors, rounded-2xl cards, generous whitespace.
 4. Prefer no new dependencies. If one is genuinely needed, it must be well-known and actively maintained.
-5. No secrets in code. Server-only env vars: `GITHUB_TOKEN` (optional, raises API rate limits), `GITHUB_REPO`.
+5. No secrets in code. Server-only env vars: `GITHUB_TOKEN` (optional, raises API rate limits), `GITHUB_REPO`, and for the Outcome Coach `AI_GATEWAY_API_KEY` (Vercel AI Gateway; unset = the coach falls back to the structural check), `AI_GATEWAY_MODEL` (optional, default `anthropic/claude-sonnet-5`), `AI_GATEWAY_BASE_URL` (optional). The key must never reach the browser: only `lib/coachAi.ts` reads it.
 6. Everything must work without JavaScript-heavy client state — server components by default, client components only for interactivity.
 7. `npm run build` must pass before you open a PR.
 8. New pages must be linked from the nav (in `components/SiteChrome.tsx`) or an existing page, and must render sensibly on mobile.

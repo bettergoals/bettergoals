@@ -480,7 +480,7 @@ const BANDS: { min: number; band: Band }[] = [
   },
 ];
 
-function bandFor(score: number): Band {
+export function bandFor(score: number): Band {
   return (BANDS.find((b) => score >= b.min) ?? BANDS[BANDS.length - 1]).band;
 }
 

@@ -24,6 +24,7 @@ Report a vulnerability: open a private security advisory on this repo, or email 
 
 **Data & privacy (C1, P-series)**
 - The only personal data handled today is GitHub's public profile data. The email sign-in feature is designed so emails appear only in signed cookies held by the user's own browser and in Resend's transactional log — never in public GitHub content and never in a database we operate.
+- Zero data retention on inference: every Outcome Coach call sets `zeroDataRetention` and `disallowPromptTraining` in `providerOptions.gateway` (`lib/coachAi.ts`), so the Vercel AI Gateway routes only to providers holding a verified ZDR agreement — prompts and completions are deleted after the request and never used for training. The filter fails closed: if no ZDR provider can serve the model, the gateway returns `no_providers_available` and the page falls back to the local structural check rather than sending user text to a retaining provider. Set per request in code, so it holds regardless of the team-wide dashboard toggle. Documented for users at `/privacy`.
 
 ## Operational controls
 
