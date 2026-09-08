@@ -43,7 +43,11 @@ export default async function SkillsPage() {
         <Link href="/okrs" className="underline underline-offset-2">
           the SSH OKR Pattern
         </Link>
-        .
+        . Want a first read without leaving the site? The{" "}
+        <Link href="/coach" className="underline underline-offset-2">
+          Outcome Coach
+        </Link>{" "}
+        scores a draft in seconds and hands you a prompt to continue with.
       </p>
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         {skills.map((s) => (
