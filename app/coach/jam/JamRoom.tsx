@@ -2,8 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CopyButton } from "@/components/CopyButton";
-import { type BoardItem, applyBoardAction, boardAsMarkdown, runBoardTool } from "@/lib/jamBoard";
-import { Chalkboard } from "./Chalkboard";
+import {
+  KIND_LABEL,
+  type BoardItem,
+  type BoardKind,
+  applyBoardAction,
+  boardAsMarkdown,
+  runBoardTool,
+} from "@/lib/jamBoard";
+import { type Activity, Chalkboard, type ShownItem } from "./Chalkboard";
 
 /**
  * One room, one microphone, one board.
@@ -11,9 +18,12 @@ import { Chalkboard } from "./Chalkboard";
  * The browser talks to the OpenAI Realtime API directly over WebRTC using a
  * ten-minute client secret from `/api/jam/session`. Audio goes both ways on the
  * peer connection; the coach's board edits arrive as function calls on the
- * data channel and are applied here. The board never leaves this browser —
- * except to a second tab on the same machine (`?view=board`, for the room's
- * big screen) over a BroadcastChannel.
+ * data channel and are applied here. People in the room can pick up the chalk
+ * too — their edits are applied locally and mentioned to the coach as a
+ * `[board]` note so it doesn't undo them.
+ *
+ * The board never leaves this browser, except to a second tab on the same
+ * machine (`?view=board`, for the room's big screen) over a BroadcastChannel.
  */
 
 type Status = "idle" | "connecting" | "live" | "ended" | "error";
@@ -21,6 +31,8 @@ type Line = { who: "coach" | "room"; text: string };
 
 const CHANNEL = "bettergoals-goal-jam";
 const MAX_LINES = 12;
+/** How long a rubbed-out item smears before it's gone. Matches `chalk-out` in globals.css. */
+const SCRUB_MS = 550;
 
 type RealtimeEvent = {
   type: string;
@@ -28,34 +40,89 @@ type RealtimeEvent = {
   call_id?: string;
   arguments?: string;
   transcript?: string;
+  delta?: string;
   item?: { type?: string; name?: string; call_id?: string; arguments?: string };
   error?: { message?: string };
 };
 
+type Mirror = { type: "hello" } | { type: "board"; items: ShownItem[]; activity: Activity };
+
+const OFF: Activity = { state: "off", caption: "" };
+
 export function JamRoom({ configured, boardOnly }: { configured: boolean; boardOnly: boolean }) {
-  const [items, setItems] = useState<BoardItem[]>([]);
+  const [shown, setShown] = useState<ShownItem[]>([]);
+  const [activity, setActivity] = useState<Activity>(OFF);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [names, setNames] = useState("");
   const [typed, setTyped] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [pseudoFullscreen, setPseudoFullscreen] = useState(false);
 
+  /** The board as the coach knows it. `shown` = this plus items mid-scrub. */
   const boardRef = useRef<BoardItem[]>([]);
+  const ghostsRef = useRef<Map<string, BoardItem>>(new Map());
+  const activityRef = useRef<Activity>(OFF);
   const channelRef = useRef<BroadcastChannel | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
   const micRef = useRef<MediaStream | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
   const responseActive = useRef(false);
   const responseQueued = useRef(false);
+  const toolsThisResponse = useRef(false);
+  const spokeThisResponse = useRef(false);
+  const captionRef = useRef("");
   const handledCalls = useRef(new Set<string>());
 
-  const setBoard = useCallback((next: BoardItem[]) => {
-    boardRef.current = next;
-    setItems(next);
-    channelRef.current?.postMessage({ type: "board", items: next });
+  // --- Board state -----------------------------------------------------------
+
+  /** The logical board plus anything mid-scrub, in the order it was written. */
+  const computeShown = useCallback((): ShownItem[] => {
+    const ghosts = [...ghostsRef.current.values()].map((g) => ({ ...g, ghost: true }));
+    return [...boardRef.current, ...ghosts].sort(
+      (a, b) => (Number.parseInt(a.id.slice(1), 10) || 0) - (Number.parseInt(b.id.slice(1), 10) || 0)
+    );
   }, []);
+
+  const mirror = useCallback(() => {
+    channelRef.current?.postMessage({ type: "board", items: computeShown(), activity: activityRef.current } satisfies Mirror);
+  }, [computeShown]);
+
+  const render = useCallback(() => {
+    setShown(computeShown());
+    mirror();
+  }, [computeShown, mirror]);
+
+  /** Commit a new logical board. Anything removed lingers as a ghost while it smears out. */
+  const commit = useCallback(
+    (next: BoardItem[]) => {
+      const prev = boardRef.current;
+      boardRef.current = next;
+      const removed = prev.filter((p) => !next.some((n) => n.id === p.id));
+      if (removed.length > 0) {
+        removed.forEach((r) => ghostsRef.current.set(r.id, r));
+        setTimeout(() => {
+          removed.forEach((r) => ghostsRef.current.delete(r.id));
+          render();
+        }, SCRUB_MS);
+      }
+      render();
+    },
+    [render]
+  );
+
+  const setAct = useCallback(
+    (patch: Partial<Activity>) => {
+      activityRef.current = { ...activityRef.current, ...patch };
+      setActivity(activityRef.current);
+      mirror();
+    },
+    [mirror]
+  );
 
   // Second-screen sync: the host tab answers "hello" with the board and
   // broadcasts every change; a board-only tab just listens.
@@ -63,20 +130,22 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
     if (typeof BroadcastChannel === "undefined") return;
     const ch = new BroadcastChannel(CHANNEL);
     channelRef.current = ch;
-    ch.onmessage = (e: MessageEvent) => {
-      const msg = e.data as { type?: string; items?: BoardItem[] };
-      if (boardOnly && msg?.type === "board" && Array.isArray(msg.items)) {
-        boardRef.current = msg.items;
-        setItems(msg.items);
+    ch.onmessage = (e: MessageEvent<Mirror>) => {
+      const msg = e.data;
+      if (boardOnly && msg?.type === "board") {
+        setShown(Array.isArray(msg.items) ? msg.items : []);
+        if (msg.activity) setActivity(msg.activity);
       }
-      if (!boardOnly && msg?.type === "hello") ch.postMessage({ type: "board", items: boardRef.current });
+      if (!boardOnly && msg?.type === "hello") mirror();
     };
-    if (boardOnly) ch.postMessage({ type: "hello" });
+    if (boardOnly) ch.postMessage({ type: "hello" } satisfies Mirror);
     return () => {
       ch.close();
       channelRef.current = null;
     };
-  }, [boardOnly]);
+  }, [boardOnly, mirror]);
+
+  // --- Realtime session ------------------------------------------------------
 
   const send = useCallback((event: Record<string, unknown>) => {
     const dc = dcRef.current;
@@ -93,6 +162,17 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
     send({ type: "response.create" });
   }, [send]);
 
+  /** Tell the coach about something the room did by hand. No reply is asked for; it sees it next turn. */
+  const noteToCoach = useCallback(
+    (text: string) => {
+      send({
+        type: "conversation.item.create",
+        item: { type: "message", role: "user", content: [{ type: "input_text", text: `[board] ${text}` }] },
+      });
+    },
+    [send]
+  );
+
   const addLine = useCallback((who: Line["who"], text: string) => {
     const clean = text.trim();
     if (!clean) return;
@@ -103,6 +183,7 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
     (name?: string, callId?: string, rawArgs?: string) => {
       if (!name || !callId || handledCalls.current.has(callId)) return;
       handledCalls.current.add(callId);
+      toolsThisResponse.current = true;
       let args: Record<string, unknown> = {};
       try {
         args = JSON.parse(rawArgs || "{}") as Record<string, unknown>;
@@ -110,15 +191,13 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
         args = {};
       }
       const { items: next, result } = runBoardTool(boardRef.current, name, args);
-      setBoard(next);
+      commit(next);
       send({
         type: "conversation.item.create",
         item: { type: "function_call_output", call_id: callId, output: JSON.stringify(result) },
       });
-      // The tool ran inside an active response; the follow-up goes out once it finishes.
-      responseQueued.current = true;
     },
-    [send, setBoard]
+    [commit, send]
   );
 
   const handleEvent = useCallback(
@@ -126,14 +205,22 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
       switch (ev.type) {
         case "response.created":
           responseActive.current = true;
+          toolsThisResponse.current = false;
+          spokeThisResponse.current = false;
+          captionRef.current = "";
+          setAct({ state: "thinking" });
           break;
-        case "response.done":
+        case "response.done": {
           responseActive.current = false;
-          if (responseQueued.current) {
-            responseQueued.current = false;
-            requestResponse();
-          }
+          // Speak first, chalk second: if the coach only chalked and said nothing,
+          // ask it to speak now. If it already spoke, don't make it speak twice.
+          const followUp = responseQueued.current || (toolsThisResponse.current && !spokeThisResponse.current);
+          responseQueued.current = false;
+          toolsThisResponse.current = false;
+          if (activityRef.current.state === "thinking") setAct({ state: "listening" });
+          if (followUp) requestResponse();
           break;
+        }
         // The same tool call arrives twice — once as its arguments finish, once
         // as the completed output item (the only one whose `name` is in the
         // published schema). Whichever lands first runs it; the other is ignored.
@@ -143,37 +230,68 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
         case "response.output_item.done":
           if (ev.item?.type === "function_call") runToolCall(ev.item.name, ev.item.call_id, ev.item.arguments);
           break;
-        case "conversation.item.input_audio_transcription.completed":
-          if (ev.transcript) addLine("room", ev.transcript);
+        case "response.output_audio_transcript.delta":
+          spokeThisResponse.current = true;
+          captionRef.current += ev.delta ?? "";
+          setAct({ caption: captionRef.current });
           break;
         case "response.output_audio_transcript.done":
-          if (ev.transcript) addLine("coach", ev.transcript);
+          spokeThisResponse.current = true;
+          if (ev.transcript) {
+            addLine("coach", ev.transcript);
+            setAct({ caption: ev.transcript });
+          }
+          break;
+        case "output_audio_buffer.started":
+          spokeThisResponse.current = true;
+          setAct({ state: "speaking" });
+          break;
+        case "output_audio_buffer.stopped":
+        case "output_audio_buffer.cleared":
+          setAct({ state: "listening" });
+          break;
+        case "input_audio_buffer.speech_started":
+          if (activityRef.current.state === "listening") setAct({ state: "hearing" });
+          break;
+        case "input_audio_buffer.speech_stopped":
+          if (activityRef.current.state === "hearing") setAct({ state: "listening" });
+          break;
+        case "conversation.item.input_audio_transcription.completed":
+          if (ev.transcript) addLine("room", ev.transcript);
           break;
         case "error":
           // A failed response never sends response.done; don't wait for one.
           responseActive.current = false;
           responseQueued.current = false;
+          toolsThisResponse.current = false;
+          setAct({ state: "listening" });
           setError(ev.error?.message ?? "The coach hit an error.");
           break;
       }
     },
-    [addLine, requestResponse, runToolCall]
+    [addLine, requestResponse, runToolCall, setAct]
   );
 
-  const stop = useCallback((ended = true) => {
-    dcRef.current?.close();
-    dcRef.current = null;
-    pcRef.current?.close();
-    pcRef.current = null;
-    micRef.current?.getTracks().forEach((t) => t.stop());
-    micRef.current = null;
-    if (audioRef.current) audioRef.current.srcObject = null;
-    responseActive.current = false;
-    responseQueued.current = false;
-    handledCalls.current.clear();
-    setMuted(false);
-    if (ended) setStatus("ended");
-  }, []);
+  const stop = useCallback(
+    (ended = true) => {
+      dcRef.current?.close();
+      dcRef.current = null;
+      pcRef.current?.close();
+      pcRef.current = null;
+      micRef.current?.getTracks().forEach((t) => t.stop());
+      micRef.current = null;
+      if (audioRef.current) audioRef.current.srcObject = null;
+      responseActive.current = false;
+      responseQueued.current = false;
+      toolsThisResponse.current = false;
+      spokeThisResponse.current = false;
+      handledCalls.current.clear();
+      setMuted(false);
+      setAct({ state: "off" });
+      if (ended) setStatus("ended");
+    },
+    [setAct]
+  );
 
   useEffect(() => () => stop(false), [stop]);
 
@@ -228,12 +346,13 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
       };
       dc.onopen = () => {
         setStatus("live");
+        setAct({ state: "thinking", caption: "" });
         responseActive.current = true;
         send({
           type: "response.create",
           response: {
             instructions:
-              "Open the session in two short sentences: say hello to the room, then ask what change they are hoping to see, and for whom.",
+              "Open the session in two or three short sentences: say hello to the room, then ask everyone for a quick one-liner — their first name and the change they most want to see for someone — and invite whoever wants to go first. Don't explain why you're asking for names.",
           },
         });
       };
@@ -272,15 +391,175 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
     requestResponse();
   }
 
+  // --- The room picks up the chalk --------------------------------------------
+
+  const quote = (text: string) => `"${text}"`;
+
+  function eraseByHand(id: string) {
+    const item = boardRef.current.find((i) => i.id === id);
+    if (!item) return;
+    commit(applyBoardAction(boardRef.current, { type: "erase", id }));
+    noteToCoach(`The room rubbed out ${id} ${quote(item.text)}.`);
+  }
+
+  function editByHand(id: string, text: string) {
+    const item = boardRef.current.find((i) => i.id === id);
+    if (!item) return;
+    commit(applyBoardAction(boardRef.current, { type: "update", id, text }));
+    noteToCoach(`The room rewrote ${id} from ${quote(item.text)} to ${quote(text)}.`);
+  }
+
+  function addByHand(kind: BoardKind, text: string) {
+    const next = applyBoardAction(boardRef.current, { type: "write", kind, text });
+    if (next.length === boardRef.current.length) return;
+    commit(next);
+    const added = next[next.length - 1];
+    noteToCoach(`The room wrote ${added.id} under "${KIND_LABEL[kind]}": ${quote(added.text)}.`);
+  }
+
+  function toggleStarByHand(id: string) {
+    const item = boardRef.current.find((i) => i.id === id);
+    if (!item) return;
+    const starred = !item.starred;
+    commit(applyBoardAction(boardRef.current, { type: "update", id, starred }));
+    noteToCoach(starred ? `The room marked ${id} ${quote(item.text)} as chosen.` : `The room un-starred ${id} ${quote(item.text)}.`);
+  }
+
+  function wipeByHand() {
+    if (boardRef.current.length === 0) return;
+    commit([]);
+    noteToCoach("The room wiped the board clean to start over.");
+  }
+
+  // --- Presenting ---------------------------------------------------------------
+
+  useEffect(() => {
+    const onChange = () => setFullscreen(Boolean(document.fullscreenElement) && document.fullscreenElement === stageRef.current);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  useEffect(() => {
+    if (!pseudoFullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPseudoFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pseudoFullscreen]);
+
+  const presenting = fullscreen || pseudoFullscreen;
+
+  async function togglePresent() {
+    if (fullscreen) {
+      await document.exitFullscreen?.().catch(() => undefined);
+      return;
+    }
+    if (pseudoFullscreen) {
+      setPseudoFullscreen(false);
+      return;
+    }
+    const el = stageRef.current;
+    if (el?.requestFullscreen) {
+      try {
+        // Some embedded browsers never settle this promise; don't leave the room waiting.
+        await Promise.race([
+          el.requestFullscreen({ navigationUI: "hide" }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("fullscreen timed out")), 800)),
+        ]);
+        if (document.fullscreenElement === el) return;
+      } catch {
+        // Fall through to the CSS version (iOS Safari, embedded browsers).
+      }
+    }
+    setPseudoFullscreen(true);
+  }
+
   const live = status === "live";
+
+  const handlers = boardOnly
+    ? {}
+    : { onErase: eraseByHand, onEdit: editByHand, onAdd: addByHand, onToggleStar: toggleStarByHand };
+
+  const statusPill = (
+    <span
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold ${
+        live ? "border-sooner/40 bg-sooner/10" : status === "error" ? "border-red-300 bg-red-50" : "border-ink/15 bg-ink/5"
+      } ${presenting ? "border-chalk/20 bg-chalk/10 text-chalk" : ""}`}
+    >
+      <span
+        aria-hidden="true"
+        className={`h-2 w-2 rounded-full ${live ? "bg-sooner" : status === "connecting" ? "bg-happier" : presenting ? "bg-chalk/40" : "bg-ink/40"}`}
+      />
+      {status === "idle" && "Not started"}
+      {status === "connecting" && "Connecting to the coach…"}
+      {status === "live" && (muted ? "Live — room muted" : "Live — the coach is listening")}
+      {status === "ended" && "Session ended — the board stays"}
+      {status === "error" && "Couldn't connect"}
+    </span>
+  );
+
+  const presentButton = (
+    <button
+      type="button"
+      onClick={togglePresent}
+      className={
+        presenting
+          ? "rounded-full border border-chalk/30 px-4 py-2 text-sm font-semibold text-chalk hover:bg-chalk/10"
+          : "rounded-full border border-ink/15 px-4 py-2 text-sm font-semibold hover:bg-ink/5"
+      }
+    >
+      {presenting ? "Exit full screen" : "Present full screen"}
+    </button>
+  );
+
+  const stage = (
+    <div
+      ref={stageRef}
+      className={presenting ? "fixed inset-0 z-50 flex flex-col overflow-auto bg-ink" : ""}
+    >
+      <Chalkboard items={shown} activity={activity} large={presenting || boardOnly} fill={presenting} {...handlers} />
+      {presenting && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-end gap-2 p-4 opacity-50 transition hover:opacity-100 focus-within:opacity-100">
+          <div className="pointer-events-auto flex flex-wrap items-center gap-2">
+            {!boardOnly && live && (
+              <>
+                <button
+                  type="button"
+                  onClick={toggleMute}
+                  aria-pressed={muted}
+                  className="rounded-full border border-chalk/30 px-4 py-2 text-sm font-semibold text-chalk hover:bg-chalk/10"
+                >
+                  {muted ? "Unmute room" : "Mute room"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => stop()}
+                  className="rounded-full border border-chalk/30 px-4 py-2 text-sm font-semibold text-chalk hover:bg-chalk/10"
+                >
+                  End session
+                </button>
+              </>
+            )}
+            {!boardOnly && statusPill}
+            {presentButton}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   if (boardOnly) {
     return (
       <div>
-        <Chalkboard items={items} large />
-        <p className="mt-4 text-center text-sm text-ink-soft">
-          Mirroring the board from the tab running the coach on this machine. {items.length === 0 && "Waiting for the first chalk mark…"}
-        </p>
+        {stage}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-ink-soft">
+          <p>
+            Mirroring the board from the tab running the coach on this machine.{" "}
+            {shown.length === 0 && "Waiting for the first chalk mark…"}
+          </p>
+          {presentButton}
+        </div>
       </div>
     );
   }
@@ -301,8 +580,10 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
 
       <div className="rounded-2xl border border-ink/10 bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-end gap-4">
-          <label className="flex-1 min-w-[16rem] text-sm">
-            <span className="font-semibold">Who&rsquo;s in the room? <span className="font-normal text-ink-soft">(optional, first names)</span></span>
+          <label className="min-w-[16rem] flex-1 text-sm">
+            <span className="font-semibold">
+              Who&rsquo;s in the room? <span className="font-normal text-ink-soft">(optional, first names)</span>
+            </span>
             <input
               type="text"
               value={names}
@@ -312,7 +593,9 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
               className="mt-1 w-full rounded-xl border border-ink/15 px-3 py-2 disabled:bg-ink/5"
             />
             <span className="mt-1 block text-xs text-ink-soft">
-              So the coach can bring quieter voices in by name.
+              So the coach can bring quieter voices in by name. It hears one microphone and can&rsquo;t recognise
+              voices, so it opens by asking everyone for a one-liner — name and the change they want — and uses
+              what each person said to follow up with them later.
             </span>
           </label>
           <div className="flex flex-wrap gap-2">
@@ -348,41 +631,21 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-          <span
-            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 font-semibold ${
-              live
-                ? "border-sooner/40 bg-sooner/10"
-                : status === "error"
-                  ? "border-red-300 bg-red-50"
-                  : "border-ink/15 bg-ink/5"
-            }`}
-          >
-            <span
-              aria-hidden="true"
-              className={`h-2 w-2 rounded-full ${live ? "bg-sooner" : status === "connecting" ? "bg-happier" : "bg-ink/40"}`}
-            />
-            {status === "idle" && "Not started"}
-            {status === "connecting" && "Connecting to the coach…"}
-            {status === "live" && (muted ? "Live — room muted" : "Live — the coach is listening")}
-            {status === "ended" && "Session ended — the board stays"}
-            {status === "error" && "Couldn't connect"}
-          </span>
+          {statusPill}
           {error && <span className="text-red-700">{error}</span>}
         </div>
       </div>
 
-      <Chalkboard
-        items={items}
-        onErase={(id) => setBoard(applyBoardAction(boardRef.current, { type: "erase", id }))}
-      />
+      {stage}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
-          <CopyButton text={boardAsMarkdown(items)} label="Copy board as markdown" />
+          {presentButton}
+          <CopyButton text={boardAsMarkdown(shown.filter((i) => !i.ghost))} label="Copy board as markdown" />
           <button
             type="button"
-            onClick={() => setBoard([])}
-            disabled={items.length === 0}
+            onClick={wipeByHand}
+            disabled={shown.length === 0}
             className="rounded-full border border-ink/15 px-4 py-2 text-sm font-semibold hover:bg-ink/5 disabled:opacity-40"
           >
             Wipe board
@@ -394,7 +657,7 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
           rel="noreferrer"
           className="text-sm font-semibold underline underline-offset-2"
         >
-          Open board-only view for the big screen ↗
+          Open board-only view for a second screen ↗
         </a>
       </div>
 
@@ -422,7 +685,9 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
 
       {lines.length > 0 && (
         <details className="rounded-2xl border border-ink/10 bg-white p-4 text-sm">
-          <summary className="cursor-pointer font-semibold">What&rsquo;s been said (last {MAX_LINES} turns, this browser only)</summary>
+          <summary className="cursor-pointer font-semibold">
+            What&rsquo;s been said (last {MAX_LINES} turns, this browser only)
+          </summary>
           <ul className="mt-3 space-y-2 text-ink-soft">
             {lines.map((l, i) => (
               <li key={i}>
