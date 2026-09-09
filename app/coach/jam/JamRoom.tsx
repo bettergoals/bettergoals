@@ -21,16 +21,15 @@ import { type Activity, Chalkboard, type ShownItem } from "./Chalkboard";
  * peer connection; the coach's board edits arrive as function calls on the
  * data channel and are applied here. People in the room can pick up the chalk
  * too — their edits are applied locally and mentioned to the coach as a
- * `[board]` note so it doesn't undo them.
+ * `[board]` note so it doesn't undo them. "Present full screen" puts the
+ * board alone on the room's display; the coach keeps running in the same tab.
  *
- * The board never leaves this browser, except to a second tab on the same
- * machine (`?view=board`, for the room's big screen) over a BroadcastChannel.
+ * The board never leaves this browser.
  */
 
 type Status = "idle" | "connecting" | "live" | "ended" | "error";
 type Line = { who: "coach" | "room"; text: string };
 
-const CHANNEL = "bettergoals-goal-jam";
 const MAX_LINES = 12;
 /** A UX guard on the typed box, not a cost boundary — that's the session route's rate limit. */
 const MAX_TYPED = 1000;
@@ -51,11 +50,9 @@ type RealtimeEvent = {
   error?: { code?: string; message?: string };
 };
 
-type Mirror = { type: "hello" } | { type: "board"; items: ShownItem[]; activity: Activity };
-
 const OFF: Activity = { state: "off", caption: "" };
 
-export function JamRoom({ configured, boardOnly }: { configured: boolean; boardOnly: boolean }) {
+export function JamRoom({ configured }: { configured: boolean }) {
   const [shown, setShown] = useState<ShownItem[]>([]);
   const [activity, setActivity] = useState<Activity>(OFF);
   const [status, setStatus] = useState<Status>("idle");
@@ -71,7 +68,6 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
   const boardRef = useRef<BoardItem[]>([]);
   const ghostsRef = useRef<Map<string, BoardItem>>(new Map());
   const activityRef = useRef<Activity>(OFF);
-  const channelRef = useRef<BroadcastChannel | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
   const micRef = useRef<MediaStream | null>(null);
@@ -98,14 +94,9 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
     );
   }, []);
 
-  const mirror = useCallback(() => {
-    channelRef.current?.postMessage({ type: "board", items: computeShown(), activity: activityRef.current } satisfies Mirror);
-  }, [computeShown]);
-
   const render = useCallback(() => {
     setShown(computeShown());
-    mirror();
-  }, [computeShown, mirror]);
+  }, [computeShown]);
 
   /** Commit a new logical board. Anything removed lingers as a ghost while it smears out. */
   const commit = useCallback(
@@ -127,35 +118,10 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
     [render]
   );
 
-  const setAct = useCallback(
-    (patch: Partial<Activity>) => {
-      activityRef.current = { ...activityRef.current, ...patch };
-      setActivity(activityRef.current);
-      mirror();
-    },
-    [mirror]
-  );
-
-  // Second-screen sync: the host tab answers "hello" with the board and
-  // broadcasts every change; a board-only tab just listens.
-  useEffect(() => {
-    if (typeof BroadcastChannel === "undefined") return;
-    const ch = new BroadcastChannel(CHANNEL);
-    channelRef.current = ch;
-    ch.onmessage = (e: MessageEvent<Mirror>) => {
-      const msg = e.data;
-      if (boardOnly && msg?.type === "board") {
-        setShown(Array.isArray(msg.items) ? msg.items : []);
-        if (msg.activity) setActivity(msg.activity);
-      }
-      if (!boardOnly && msg?.type === "hello") mirror();
-    };
-    if (boardOnly) ch.postMessage({ type: "hello" } satisfies Mirror);
-    return () => {
-      ch.close();
-      channelRef.current = null;
-    };
-  }, [boardOnly, mirror]);
+  const setAct = useCallback((patch: Partial<Activity>) => {
+    activityRef.current = { ...activityRef.current, ...patch };
+    setActivity(activityRef.current);
+  }, []);
 
   // --- Realtime session ------------------------------------------------------
 
@@ -541,9 +507,7 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
 
   const live = status === "live";
 
-  const handlers = boardOnly
-    ? {}
-    : { onErase: eraseByHand, onEdit: editByHand, onAdd: addByHand, onToggleStar: toggleStarByHand };
+  const handlers = { onErase: eraseByHand, onEdit: editByHand, onAdd: addByHand, onToggleStar: toggleStarByHand };
 
   const statusPill = (
     <span
@@ -582,11 +546,21 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
       ref={stageRef}
       className={presenting ? "fixed inset-0 z-50 flex flex-col overflow-auto bg-ink" : ""}
     >
-      <Chalkboard items={shown} activity={activity} large={presenting || boardOnly} fill={presenting} {...handlers} />
+      <Chalkboard items={shown} activity={activity} large={presenting} fill={presenting} {...handlers} />
       {presenting && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-end gap-2 p-4 opacity-50 transition hover:opacity-100 focus-within:opacity-100">
           <div className="pointer-events-auto flex flex-wrap items-center gap-2">
-            {!boardOnly && live && (
+            {!live && (
+              <button
+                type="button"
+                onClick={start}
+                disabled={!configured || status === "connecting"}
+                className="rounded-full bg-sooner px-4 py-2 text-sm font-semibold text-ink hover:bg-sooner/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {status === "connecting" ? "Connecting…" : status === "ended" ? "Start again" : "Start the jam"}
+              </button>
+            )}
+            {live && (
               <>
                 <button
                   type="button"
@@ -605,28 +579,13 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
                 </button>
               </>
             )}
-            {!boardOnly && statusPill}
+            {statusPill}
             {presentButton}
           </div>
         </div>
       )}
     </div>
   );
-
-  if (boardOnly) {
-    return (
-      <div>
-        {stage}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-ink-soft">
-          <p>
-            Mirroring the board from the tab running the coach on this machine.{" "}
-            {shown.length === 0 && "Waiting for the first chalk mark…"}
-          </p>
-          {presentButton}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="mt-8 space-y-6">
@@ -715,14 +674,6 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
             Wipe board
           </button>
         </div>
-        <a
-          href="/coach/jam?view=board"
-          target="_blank"
-          rel="noreferrer"
-          className="text-sm font-semibold underline underline-offset-2"
-        >
-          Open board-only view for a second screen ↗
-        </a>
       </div>
 
       {live && (

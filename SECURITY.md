@@ -7,7 +7,9 @@ Report a vulnerability: open a private security advisory on this repo, or email 
 ## Implemented technical controls
 
 **Access control (CC6.1–6.3)**
-- No user database and no stored credentials. GitHub identity gates all contribution writes (issues, comments, reactions, PRs).
+- No user database, no accounts and no stored credentials. GitHub identity gates all contribution writes (issues, comments, reactions, PRs).
+- The one server-side write is the feedback form (`lib/feedbackStore.ts`, Neon Postgres over HTTPS): a single row created when someone reviews their own answers and presses send. It holds the summary they read, an optional contact field they typed, and a timestamp — no IP address, user agent, cookie or identifier linking submissions. Ships dark: unset `DATABASE_URL` and the form offers only the GitHub and copy routes.
+- Reading feedback back is one endpoint, `GET /api/feedback/export`, gated on a bearer token (`FEEDBACK_ADMIN_TOKEN`) compared in constant time. Unset token or unset database = 404, so a half-configured deploy exposes nothing. Best-effort per-IP rate limiting on submissions (same documented in-memory limitation as below).
 - Board card moves require a facilitator passcode: compared in constant time server-side, held as an httpOnly/secure/SameSite cookie, 12-hour expiry.
 - Email sign-in (builder, ships dark until enabled): stateless one-time PINs bound to email + expiry via HMAC-SHA256; 30-day HMAC-signed httpOnly session cookies; no secrets or PII persisted server-side.
 - GitHub API access uses a fine-grained PAT scoped to one repo with least privilege (Issues RW, Contents R), stored only in Vercel env vars.
@@ -23,7 +25,7 @@ Report a vulnerability: open a private security advisory on this repo, or email 
 - No secrets in code; `.env.example` documents required variables. Dependencies: minimal set, `npm audit` clean at time of writing.
 
 **Data & privacy (C1, P-series)**
-- The only personal data handled today is GitHub's public profile data. The email sign-in feature is designed so emails appear only in signed cookies held by the user's own browser and in Resend's transactional log — never in public GitHub content and never in a database we operate.
+- The personal data handled today is GitHub's public profile data, plus the optional free-text contact field someone may type into the feedback form and press send on — the only personal data in a database we operate, deletable on request. The email sign-in feature is designed so emails appear only in signed cookies held by the user's own browser and in Resend's transactional log — never in public GitHub content and never in a database we operate.
 - Zero data retention on inference: every Outcome Coach call sets `zeroDataRetention` and `disallowPromptTraining` in `providerOptions.gateway` (`lib/coachAi.ts`), so the Vercel AI Gateway routes only to providers holding a verified ZDR agreement — prompts and completions are deleted after the request and never used for training. The filter fails closed: if no ZDR provider can serve the model, the gateway returns `no_providers_available` and the page falls back to the local structural check rather than sending user text to a retaining provider. Set per request in code, so it holds regardless of the team-wide dashboard toggle. Documented for users at `/privacy`.
 
 ## Operational controls
