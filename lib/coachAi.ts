@@ -46,6 +46,7 @@ import {
   type OrgContext,
   contextHandoffBlock,
   contextPromptBlock,
+  hasContext,
   sanitiseContext,
 } from "./orgContext";
 import { type Band, type Check, type CheckStatus, bandFor } from "./outcomeCoach";
@@ -539,7 +540,7 @@ export async function coachOutcome(
   const safeContext = context ? sanitiseContext(context) : null;
 
   const reply = await chat([
-    { role: "system", content: systemPrompt(asked, Boolean(contextPromptBlock(safeContext))) },
+    { role: "system", content: systemPrompt(asked, hasContext(safeContext)) },
     { role: "user", content: userMessage(text, safeTurns, asked, safeContext) },
   ]);
   const raw = parseJson(reply);
