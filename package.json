@@ -7,9 +7,11 @@
     "dev:live": "GITHUB_TOKEN=$(gh auth token) next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:check": "node scripts/check-feedback-db.mjs"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "next": "16.3.4",
     "qrcode": "^1.5.4",
     "react": "19.2.8",

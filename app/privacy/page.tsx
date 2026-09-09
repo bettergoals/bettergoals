@@ -4,7 +4,7 @@ import { BUILD_URL, NEW_IDEA_URL, REPO_URL } from "@/lib/config";
 export const metadata = {
   title: "Privacy",
   description:
-    "bettergoals.ai refuses to collect or store personal information: no accounts, no analytics, no tracking cookies, no database — and every AI call runs under zero data retention.",
+    "bettergoals.ai refuses to collect or store personal information: no accounts, no analytics, no tracking cookies, and nothing stored server-side except feedback you write and press send on — with every AI call under zero data retention.",
 };
 
 /** Things a site like this usually collects, and what we do instead. */
@@ -25,9 +25,9 @@ const NOT_COLLECTED = [
       "No newsletter, no “enter your email to download” — every template and skill downloads straight away. The feedback form asks for contact details only as an optional field you can leave blank.",
   },
   {
-    thing: "A database",
+    thing: "Anything you didn’t press send on",
     detail:
-      "There isn’t one. Content is markdown files in the repository; ideas are GitHub issues. Nothing about you is stored server-side.",
+      "Content is markdown files in the repository; ideas are GitHub issues. The one database here holds feedback people chose to send us, and nothing else — no visits, no page views, no profile built from either.",
   },
 ];
 
@@ -133,12 +133,24 @@ export default function PrivacyPage() {
         <Link href="/feedback" className="underline underline-offset-2">
           feedback form
         </Link>{" "}
-        has no server behind it. Your answers travel in the page address so the page
-        can show you a summary, and the last tap posts that summary to GitHub from
-        your own browser — we never receive it, and there is nowhere here for it to
-        be stored. Every question is optional, none of them asks who you are, and
-        the contact field is yours to leave blank; copying the summary and pasting it
-        elsewhere sends it with no identity attached at all.
+        is the one thing on this site that writes anything down, and only when you
+        ask it to. Your answers travel in the page address so the page can show you
+        a summary first, and nothing leaves the page until you press send. Every
+        question is optional, none of them asks who you are, and the contact field
+        is yours to leave blank.
+      </p>
+      <p className="mt-3 leading-relaxed text-ink-soft">
+        Then you pick where it goes. <strong className="text-ink">Sending it to
+        us</strong> stores one row in our database: the summary you just read, the
+        contact details only if you typed some, and the time. Nothing else about the
+        visit is stored with it — no IP address, no browser, no cookie, no
+        identifier that would let two submissions be tied to the same person — so
+        there is no profile here to build, breach or hand over.{" "}
+        <strong className="text-ink">Posting it on GitHub</strong> sends it publicly
+        from your own browser, under your GitHub name, where you can edit or delete
+        it yourself. <strong className="text-ink">Copying the summary</strong> and
+        pasting it elsewhere sends it with no identity attached at all. Ask us and
+        we will delete anything you sent.
       </p>
 
       <h2 className="mt-12 text-2xl font-bold tracking-tight">
@@ -152,8 +164,9 @@ export default function PrivacyPage() {
         on this site sends the goal you paste, and any answers you give it, to
         an AI model through Vercel&rsquo;s AI Gateway to write the review. That
         is the one place text you type leaves this site. We store none of it:
-        there is no database and no account, and the conversation exists only
-        on the page in front of you until you leave it. Neither does the model
+        there is no account, nothing about it is written to our database, and
+        the conversation exists only on the page in front of you until you
+        leave it. Neither does the model
         &mdash; every call runs under{" "}
         <a href="#zero-data-retention" className="underline underline-offset-2">
           zero data retention

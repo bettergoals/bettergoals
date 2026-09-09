@@ -1,15 +1,19 @@
 /**
  * The feedback form.
  *
- * Deliberately backend-free. There is no database here and no server-side
- * write: your answers travel in the page address, this module composes them
- * into a readable summary, and the last tap posts that summary as a GitHub
- * issue under your own account — the same route every idea takes, and the same
- * control SECURITY.md claims ("GitHub identity gates all contribution writes").
+ * This module is the reading and the wording: your answers travel in the page
+ * address, and it composes them into a summary the person reads before
+ * anything is sent. It writes nothing anywhere.
+ *
+ * From that summary there are three ways out, and the person picks. Sending it
+ * to us stores one row via lib/feedbackStore.ts — the summary and nothing else
+ * about the visit. Posting it on GitHub opens a prefilled issue under their own
+ * account, the same route every idea takes, and the same control SECURITY.md
+ * claims ("GitHub identity gates all contribution writes"). Copying it sends it
+ * wherever they like with no identity attached at all.
  *
  * Nothing here asks who you are. Contact details are one optional field you
- * type yourself, and the copy-and-paste route means someone with no GitHub
- * account can send feedback with no identity attached to it at all.
+ * type yourself, and every question is optional.
  */
 
 import { REPO_URL, SITE } from "@/lib/config";
@@ -132,6 +136,9 @@ export const COACH_FEEDBACK_HREF = `/feedback?intent=${encodeURIComponent(
 
 export type Answer = { question: string; value: string; free: boolean };
 
+/** One name/value pair as it travels in the page address or a form field. */
+export type Field = { name: string; value: string };
+
 export type Feedback = {
   answers: Answer[];
   contact: string | null;
@@ -144,7 +151,7 @@ export type Feedback = {
   issueUrl: string;
 };
 
-type RawParams = Record<string, string | string[] | undefined>;
+export type RawParams = Record<string, string | string[] | undefined>;
 
 function first(raw: string | string[] | undefined): string {
   return (Array.isArray(raw) ? raw[0] : raw) ?? "";
@@ -257,4 +264,52 @@ export function readFeedback(params: RawParams): Feedback | null {
     title,
     issueUrl: `${REPO_URL}/issues/new?${query.toString()}`,
   };
+}
+
+/**
+ * The answers as validated name/value pairs — the same reading `readFeedback`
+ * does, without the formatting.
+ *
+ * Two callers need this. The review step turns them into hidden inputs so the
+ * summary somebody just read is exactly what the send button posts, and the
+ * error path turns them back into a query string so a failed send returns the
+ * form with every answer still in it. Both go through the same validation, so
+ * neither can widen what a hand-edited address is able to submit.
+ */
+export function readFields(params: RawParams): Field[] {
+  const fields: Field[] = [];
+
+  for (const question of CHOICE_QUESTIONS) {
+    for (const raw of all(params[question.id])) {
+      const value = clean(raw, 120);
+      if (question.options.includes(value)) fields.push({ name: question.id, value });
+    }
+  }
+
+  for (const question of TEXT_QUESTIONS) {
+    const value = clean(first(params[question.id]), MAX_TEXT_LENGTH);
+    if (value) fields.push({ name: question.id, value });
+  }
+
+  const contact = clean(first(params.contact), MAX_CONTACT_LENGTH);
+  if (contact) fields.push({ name: "contact", value: contact });
+
+  return fields;
+}
+
+/** Those fields as a query string, for returning somebody to their answers. */
+export function fieldsToQuery(fields: Field[]): string {
+  const query = new URLSearchParams();
+  for (const field of fields) query.append(field.name, field.value);
+  return query.toString();
+}
+
+/** Form submissions arrive as FormData; read it the same way as a URL. */
+export function paramsFromFormData(form: FormData): RawParams {
+  const params: Record<string, string[]> = {};
+  for (const [name, value] of form.entries()) {
+    if (typeof value !== "string") continue;
+    (params[name] ??= []).push(value);
+  }
+  return params;
 }
