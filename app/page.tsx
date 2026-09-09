@@ -130,7 +130,7 @@ export default async function Home({
             </span>
             <span>
               The coach only uses models that keep nothing and never train on your words, and
-              there&rsquo;s no account and no database here to hold them either.{" "}
+              there&rsquo;s no account here and nothing of yours written down either.{" "}
               <Link href="/privacy" className="font-semibold underline underline-offset-2">
                 How that works
               </Link>
