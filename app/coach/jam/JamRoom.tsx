@@ -55,7 +55,16 @@ type Mirror = { type: "hello" } | { type: "board"; items: ShownItem[]; activity:
 
 const OFF: Activity = { state: "off", caption: "" };
 
-export function JamRoom({ configured, boardOnly }: { configured: boolean; boardOnly: boolean }) {
+/** How long the mirror waits to hear from a coach tab before saying none was found. */
+const NO_HOST_MS = 4000;
+/** Host heartbeat, so a mirror opened late (or reloaded) always catches up. */
+const HEARTBEAT_MS = 3000;
+
+export function JamRoom({ configured, boardOnly: initialBoardOnly }: { configured: boolean; boardOnly: boolean }) {
+  /** The `?view=board` mirror can take over and run the coach itself. */
+  const [boardOnly, setBoardOnly] = useState(initialBoardOnly);
+  const [hostSeen, setHostSeen] = useState(false);
+  const [noHost, setNoHost] = useState(false);
   const [shown, setShown] = useState<ShownItem[]>([]);
   const [activity, setActivity] = useState<Activity>(OFF);
   const [status, setStatus] = useState<Status>("idle");
@@ -145,13 +154,21 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
     ch.onmessage = (e: MessageEvent<Mirror>) => {
       const msg = e.data;
       if (boardOnly && msg?.type === "board") {
+        setHostSeen(true);
+        setNoHost(false);
         setShown(Array.isArray(msg.items) ? msg.items : []);
         if (msg.activity) setActivity(msg.activity);
       }
       if (!boardOnly && msg?.type === "hello") mirror();
     };
-    if (boardOnly) ch.postMessage({ type: "hello" } satisfies Mirror);
+    // A mirror keeps asking until a coach tab answers; a host keeps telling.
+    const hello = () => ch.postMessage({ type: "hello" } satisfies Mirror);
+    if (boardOnly) hello();
+    const tick = setInterval(boardOnly ? hello : mirror, boardOnly ? 2000 : HEARTBEAT_MS);
+    const giveUp = boardOnly ? setTimeout(() => setNoHost(true), NO_HOST_MS) : undefined;
     return () => {
+      clearInterval(tick);
+      if (giveUp) clearTimeout(giveUp);
       ch.close();
       channelRef.current = null;
     };
@@ -541,6 +558,13 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
 
   const live = status === "live";
 
+  /** From the mirror: become the coach tab right here, full screen. */
+  function runCoachHere() {
+    setBoardOnly(false);
+    void togglePresent();
+    void start();
+  }
+
   const handlers = boardOnly
     ? {}
     : { onErase: eraseByHand, onEdit: editByHand, onAdd: addByHand, onToggleStar: toggleStarByHand };
@@ -618,11 +642,31 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
       <div>
         {stage}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-ink-soft">
-          <p>
-            Mirroring the board from the tab running the coach on this machine.{" "}
-            {shown.length === 0 && "Waiting for the first chalk mark…"}
-          </p>
-          {presentButton}
+          {hostSeen ? (
+            <p>
+              Mirroring the coach tab in this browser. {shown.length === 0 && "Waiting for the first chalk mark…"}
+            </p>
+          ) : noHost && !hostSeen ? (
+            <p className="max-w-2xl">
+              <span className="font-semibold text-ink">No coach tab found in this browser.</span> This view mirrors a
+              jam running in another tab on the same machine. Start one there, or run the coach on this screen.
+            </p>
+          ) : (
+            <p>Looking for the coach tab in this browser…</p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {!hostSeen && (
+              <button
+                type="button"
+                onClick={runCoachHere}
+                disabled={!configured}
+                className="rounded-full bg-sooner px-5 py-2 text-sm font-semibold text-ink hover:bg-sooner/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Run the coach on this screen
+              </button>
+            )}
+            {presentButton}
+          </div>
         </div>
       </div>
     );
