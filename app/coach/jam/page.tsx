@@ -7,18 +7,8 @@ export const metadata = {
     "A voice coach for goal-setting sessions: it listens to the room, asks the questions that sharpen a goal — by name — and chalks the emerging outcome onto a live shared board.",
 };
 
-export default async function JamPage({ searchParams }: { searchParams: Promise<{ view?: string | string[] }> }) {
-  const { view } = await searchParams;
-  const boardOnly = (Array.isArray(view) ? view[0] : view) === "board";
+export default async function JamPage() {
   const configured = Boolean(process.env.OPENAI_API_KEY);
-
-  if (boardOnly) {
-    return (
-      <div className="mx-auto max-w-6xl px-4 py-8">
-        <JamRoom configured={configured} boardOnly />
-      </div>
-    );
-  }
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
@@ -40,7 +30,7 @@ export default async function JamPage({ searchParams }: { searchParams: Promise<
         close the tab.
       </p>
 
-      <JamRoom configured={configured} boardOnly={false} />
+      <JamRoom configured={configured} />
 
       <section className="mt-14 rounded-2xl border border-ink/10 bg-white p-6 text-sm leading-relaxed text-ink-soft">
         <h2 className="font-semibold text-ink">Running a good jam</h2>
@@ -48,7 +38,7 @@ export default async function JamPage({ searchParams }: { searchParams: Promise<
           <li>One laptop, one microphone, the board on the big screen. Give the coach first names so it can call on people.</li>
           <li>Start with the change you want in the world, not the thing you want to build. The coach will push back on outputs dressed as outcomes.</li>
           <li>Aim to leave with one to three goals in the form <em>For [who], [what gets better], seen by [early signal]</em>, each with a guardrail.</li>
-          <li>Presenting? <em>Present full screen</em> drops everything but the board; the board-only link mirrors it into a second window for the room&rsquo;s display.</li>
+          <li>Presenting? <em>Present full screen</em> drops everything but the board — the coach keeps running, and Start, mute and end sit in a toolbar at the bottom.</li>
           <li>Anyone can write on the board, rewrite an item, star a candidate or rub it out. Copy it as markdown when you&rsquo;re done — nothing is saved for you.</li>
         </ol>
         <p className="mt-3">
