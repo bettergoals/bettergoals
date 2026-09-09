@@ -89,7 +89,9 @@ function ChalkInput({
           e.preventDefault();
           commit();
         } else if (e.key === "Escape") {
+          // Cancel the edit only — don't let Escape also drop full screen.
           e.preventDefault();
+          e.stopPropagation();
           onCancel();
         }
       }}
@@ -110,6 +112,8 @@ function Chalk({
   const [editing, setEditing] = useState(false);
   const sizeClass = size === "lg" ? "text-2xl sm:text-3xl" : "text-xl";
   const canEdit = editable && !item.ghost;
+  /** An open editor closes the moment the coach rubs the item out from under it. */
+  const showEditor = editing && canEdit && Boolean(onEdit);
 
   return (
     <li className={`group relative flex items-start gap-2 ${tilt(item.id)} ${sizeClass} leading-snug ${item.ghost ? "chalk-out" : ""}`}>
@@ -134,7 +138,7 @@ function Chalk({
           )
         ))}
 
-      {editing && onEdit ? (
+      {showEditor && onEdit ? (
         <ChalkInput
           initial={item.text}
           className={sizeClass}
@@ -144,12 +148,14 @@ function Chalk({
           }}
           onCancel={() => setEditing(false)}
         />
-      ) : canEdit && onEdit ? (
+      ) : editable && onEdit ? (
+        // Stays a <button> even while fading out, so the text doesn't remount and re-animate.
         <button
           type="button"
+          disabled={item.ghost}
           onClick={() => setEditing(true)}
           title="Click to rewrite"
-          className={`min-w-0 text-left hover:bg-chalk/5 focus-visible:outline-2 focus-visible:outline-chalk ${
+          className={`min-w-0 text-left hover:bg-chalk/5 focus-visible:outline-2 focus-visible:outline-chalk disabled:hover:bg-transparent ${
             item.starred ? "text-happier" : ""
           }`}
         >
@@ -165,7 +171,7 @@ function Chalk({
         </span>
       )}
 
-      {canEdit && onErase && !editing && (
+      {canEdit && onErase && !showEditor && (
         <button
           type="button"
           onClick={() => onErase(item.id)}
@@ -203,7 +209,7 @@ function AddChalk({ kind, onAdd, size }: { kind: BoardKind; onAdd: (kind: BoardK
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded px-1 font-sans text-xs text-chalk/30 opacity-60 transition hover:bg-chalk/10 hover:text-chalk hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-chalk"
+        className="rounded px-1 font-sans text-xs text-chalk/60 transition hover:bg-chalk/10 hover:text-chalk focus-visible:outline-2 focus-visible:outline-chalk"
       >
         + pick up the chalk
       </button>
@@ -240,7 +246,6 @@ export function Chalkboard({
   return (
     <section
       aria-label="Shared chalkboard"
-      aria-live="polite"
       className={`${chalk.className} relative flex flex-col overflow-hidden bg-ink text-chalk ${
         fill
           ? "min-h-full flex-1 p-6 sm:p-10"
@@ -268,10 +273,10 @@ export function Chalkboard({
             <h2 className={`font-sans text-sm font-bold uppercase tracking-widest ${HEADING_COLOR.candidate} opacity-60`}>
               {KIND_LABEL.candidate}
             </h2>
-            <ul className="mt-3 space-y-3">
+            <ul className="mt-3 space-y-3" aria-live="polite">
               {candidates.map((item) => (
                 <Chalk
-                  key={item.id}
+                  key={item.ghost ? `ghost:${item.id}` : item.id}
                   item={item}
                   size="lg"
                   editable={editable}
@@ -291,9 +296,16 @@ export function Chalkboard({
                     <h3 className={`font-sans text-xs font-bold uppercase tracking-widest ${HEADING_COLOR[c.kind]}`}>
                       {KIND_LABEL[c.kind]}
                     </h3>
-                    <ul className="mt-2 space-y-2">
+                    <ul className="mt-2 space-y-2" aria-live="polite">
                       {c.items.map((item) => (
-                        <Chalk key={item.id} item={item} size="md" editable={editable} onErase={onErase} onEdit={onEdit} />
+                        <Chalk
+                          key={item.ghost ? `ghost:${item.id}` : item.id}
+                          item={item}
+                          size="md"
+                          editable={editable}
+                          onErase={onErase}
+                          onEdit={onEdit}
+                        />
                       ))}
                       {onAdd && <AddChalk kind={c.kind} onAdd={onAdd} size="md" />}
                     </ul>
@@ -312,7 +324,7 @@ export function Chalkboard({
             {act.label}
           </span>
           {activity?.caption && (
-            <p className={`min-w-0 truncate ${large ? "text-2xl" : "text-lg"} text-chalk/70`} aria-label="Coach, live">
+            <p className={`min-w-0 truncate ${large ? "text-2xl" : "text-lg"} text-chalk/70`} aria-live="off" aria-label="Coach, live">
               “{activity.caption}”
             </p>
           )}

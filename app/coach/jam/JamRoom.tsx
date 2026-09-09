@@ -8,6 +8,7 @@ import {
   type BoardKind,
   applyBoardAction,
   boardAsMarkdown,
+  boardSummary,
   runBoardTool,
 } from "@/lib/jamBoard";
 import { type Activity, Chalkboard, type ShownItem } from "./Chalkboard";
@@ -31,6 +32,8 @@ type Line = { who: "coach" | "room"; text: string };
 
 const CHANNEL = "bettergoals-goal-jam";
 const MAX_LINES = 12;
+/** A UX guard on the typed box, not a cost boundary — that's the session route's rate limit. */
+const MAX_TYPED = 1000;
 /** How long a rubbed-out item smears before it's gone. Matches `chalk-out` in globals.css. */
 const SCRUB_MS = 550;
 
@@ -41,8 +44,11 @@ type RealtimeEvent = {
   arguments?: string;
   transcript?: string;
   delta?: string;
-  item?: { type?: string; name?: string; call_id?: string; arguments?: string };
-  error?: { message?: string };
+  /** Output items. gpt-realtime-2.x tags each with a phase: "commentary" (preamble, tool calls) or "final_answer". */
+  item?: { type?: string; name?: string; call_id?: string; arguments?: string; phase?: string; status?: string };
+  /** On response.done: completed | cancelled | failed | incomplete. */
+  response?: { status?: string };
+  error?: { code?: string; message?: string };
 };
 
 type Mirror = { type: "hello" } | { type: "board"; items: ShownItem[]; activity: Activity };
@@ -74,9 +80,13 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
   const responseActive = useRef(false);
   const responseQueued = useRef(false);
   const toolsThisResponse = useRef(false);
+  /** Any audio at all — drives the indicator. */
   const spokeThisResponse = useRef(false);
+  /** A proper reply, not just a "let me note that" preamble before tool calls. */
+  const answeredThisResponse = useRef(false);
   const captionRef = useRef("");
   const handledCalls = useRef(new Set<string>());
+  const mountedRef = useRef(true);
 
   // --- Board state -----------------------------------------------------------
 
@@ -102,6 +112,8 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
     (next: BoardItem[]) => {
       const prev = boardRef.current;
       boardRef.current = next;
+      // An id that comes back (erase then write, or clear then write) must not also be a ghost.
+      next.forEach((n) => ghostsRef.current.delete(n.id));
       const removed = prev.filter((p) => !next.some((n) => n.id === p.id));
       if (removed.length > 0) {
         removed.forEach((r) => ghostsRef.current.set(r.id, r));
@@ -207,20 +219,28 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
           responseActive.current = true;
           toolsThisResponse.current = false;
           spokeThisResponse.current = false;
+          answeredThisResponse.current = false;
           captionRef.current = "";
           setAct({ state: "thinking" });
           break;
         case "response.done": {
           responseActive.current = false;
-          // Speak first, chalk second: if the coach only chalked and said nothing,
-          // ask it to speak now. If it already spoke, don't make it speak twice.
-          const followUp = responseQueued.current || (toolsThisResponse.current && !spokeThisResponse.current);
+          // Speak first, chalk second: if the coach only chalked (or only said a
+          // preamble before chalking), ask it to answer now; if it already
+          // answered, don't make it speak twice. A response the room interrupted
+          // (status "cancelled") gets no follow-up — their speech is the next turn,
+          // and asking for a response now would race the turn detector.
+          const cancelled = ev.response?.status === "cancelled";
+          const followUp = !cancelled && (responseQueued.current || (toolsThisResponse.current && !answeredThisResponse.current));
           responseQueued.current = false;
           toolsThisResponse.current = false;
           if (activityRef.current.state === "thinking") setAct({ state: "listening" });
           if (followUp) requestResponse();
           break;
         }
+        case "response.output_item.added":
+          if (ev.item?.type === "message" && ev.item.phase !== "commentary") answeredThisResponse.current = true;
+          break;
         // The same tool call arrives twice — once as its arguments finish, once
         // as the completed output item (the only one whose `name` is in the
         // published schema). Whichever lands first runs it; the other is ignored.
@@ -229,6 +249,7 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
           break;
         case "response.output_item.done":
           if (ev.item?.type === "function_call") runToolCall(ev.item.name, ev.item.call_id, ev.item.arguments);
+          if (ev.item?.type === "message" && ev.item.phase !== "commentary") answeredThisResponse.current = true;
           break;
         case "response.output_audio_transcript.delta":
           spokeThisResponse.current = true;
@@ -260,6 +281,13 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
           if (ev.transcript) addLine("room", ev.transcript);
           break;
         case "error":
+          if (ev.error?.code === "conversation_already_has_active_response") {
+            // The server started a response itself (turn detection) just as we asked
+            // for one. Not a fault: it's busy, so ask again when it finishes.
+            responseActive.current = true;
+            responseQueued.current = true;
+            break;
+          }
           // A failed response never sends response.done; don't wait for one.
           responseActive.current = false;
           responseQueued.current = false;
@@ -285,6 +313,7 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
       responseQueued.current = false;
       toolsThisResponse.current = false;
       spokeThisResponse.current = false;
+      answeredThisResponse.current = false;
       handledCalls.current.clear();
       setMuted(false);
       setAct({ state: "off" });
@@ -293,7 +322,13 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
     [setAct]
   );
 
-  useEffect(() => () => stop(false), [stop]);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      stop(false);
+    };
+  }, [stop]);
 
   async function start() {
     setError(null);
@@ -313,12 +348,18 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
         throw new Error(body.message || "Couldn't start a session.");
       }
       const { clientSecret } = (await res.json()) as { clientSecret: string };
+      if (!mountedRef.current) return;
 
       let mic: MediaStream;
       try {
         mic = await navigator.mediaDevices.getUserMedia({ audio: true });
       } catch {
         throw new Error("The coach needs the room's microphone. Allow microphone access in the browser and try again.");
+      }
+      if (!mountedRef.current) {
+        // Navigated away while the permission prompt was up — don't leave a hot mic.
+        mic.getTracks().forEach((t) => t.stop());
+        return;
       }
       micRef.current = mic;
 
@@ -347,6 +388,19 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
       dc.onopen = () => {
         setStatus("live");
         setAct({ state: "thinking", caption: "" });
+        // Anything the room wrote before the coach joined (or before "Start again").
+        if (boardRef.current.length > 0) {
+          send({
+            type: "conversation.item.create",
+            item: {
+              type: "message",
+              role: "user",
+              content: [
+                { type: "input_text", text: `[board] Already on the board when you joined:\n${boardSummary(boardRef.current)}` },
+              ],
+            },
+          });
+        }
         responseActive.current = true;
         send({
           type: "response.create",
@@ -380,7 +434,7 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
   }
 
   function sendTyped() {
-    const text = typed.trim();
+    const text = typed.trim().slice(0, MAX_TYPED);
     if (!text) return;
     send({
       type: "conversation.item.create",
@@ -405,8 +459,11 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
   function editByHand(id: string, text: string) {
     const item = boardRef.current.find((i) => i.id === id);
     if (!item) return;
-    commit(applyBoardAction(boardRef.current, { type: "update", id, text }));
-    noteToCoach(`The room rewrote ${id} from ${quote(item.text)} to ${quote(text)}.`);
+    const next = applyBoardAction(boardRef.current, { type: "update", id, text });
+    const updated = next.find((i) => i.id === id);
+    if (!updated || updated.text === item.text) return;
+    commit(next);
+    noteToCoach(`The room rewrote ${id} from ${quote(item.text)} to ${quote(updated.text)}.`);
   }
 
   function addByHand(kind: BoardKind, text: string) {
@@ -434,7 +491,12 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
   // --- Presenting ---------------------------------------------------------------
 
   useEffect(() => {
-    const onChange = () => setFullscreen(Boolean(document.fullscreenElement) && document.fullscreenElement === stageRef.current);
+    const onChange = () => {
+      const native = Boolean(document.fullscreenElement) && document.fullscreenElement === stageRef.current;
+      setFullscreen(native);
+      // If the native request settles after our timeout, don't run both modes at once.
+      if (native) setPseudoFullscreen(false);
+    };
     document.addEventListener("fullscreenchange", onChange);
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
@@ -442,6 +504,8 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
   useEffect(() => {
     if (!pseudoFullscreen) return;
     const onKey = (e: KeyboardEvent) => {
+      // Escape inside an inline edit cancels the edit, not the presentation.
+      if (e.target instanceof HTMLElement && e.target.closest("input, textarea")) return;
       if (e.key === "Escape") setPseudoFullscreen(false);
     };
     window.addEventListener("keydown", onKey);
@@ -674,6 +738,7 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
             placeholder="Or type something to the coach…"
+            maxLength={MAX_TYPED}
             className="flex-1 rounded-xl border border-ink/15 px-3 py-2 text-sm"
             aria-label="Type a message to the coach"
           />
