@@ -6,6 +6,20 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev:live"],
       "port": 3000
+    },
+    {
+      "name": "idea-62-worktree",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "/private/tmp/claude-501/-Users-samuelyeats-AI-bettergoals/ecc95f52-54ec-4001-b7bb-095b0ada61eb/scratchpad/pr66",
+        "run",
+        "dev",
+        "--",
+        "-p",
+        "3010"
+      ],
+      "port": 3010
     }
   ]
 }
