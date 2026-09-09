@@ -9,12 +9,29 @@ import {
   coachAiEnabled,
   coachOutcome,
 } from "@/lib/coachAi";
+import {
+  CONTEXT_FIELDS,
+  type OrgContext,
+  contextFieldName,
+  sanitiseContext,
+} from "@/lib/orgContext";
 import { MAX_INPUT_LENGTH, evaluateOutcome } from "@/lib/outcomeCoach";
 import { INITIAL_STATE, type CoachState } from "./state";
 
 function field(data: FormData, name: string, max: number): string {
   const v = data.get(name);
   return typeof v === "string" ? v.trim().slice(0, max) : "";
+}
+
+/**
+ * The context panel posts ordinary fields, so it arrives here whether or not
+ * the browser has JavaScript. It is echoed back in the state so a no-script
+ * round trip doesn't empty the boxes the author just filled in.
+ */
+function readContext(data: FormData): OrgContext {
+  const raw: Record<string, unknown> = {};
+  for (const f of CONTEXT_FIELDS) raw[f.id] = data.get(contextFieldName(f.id));
+  return sanitiseContext(raw);
 }
 
 function readTurns(data: FormData): CoachTurn[] {
@@ -57,10 +74,14 @@ export async function coachAction(prev: CoachState, data: FormData): Promise<Coa
   // review and the turns all live in this form's state — navigating to /coach
   // leaves that state exactly where it was, which is why the old link looked
   // like it did nothing.
-  if (data.get("restart")) return { ...INITIAL_STATE, cleared: true, seq };
+  // Starting again clears the goal and the conversation, not who you are: the
+  // context survives, because it describes your organisation rather than this
+  // draft. "Clear my context" in the panel is the button that forgets it.
+  if (data.get("restart")) return { ...INITIAL_STATE, context: readContext(data), cleared: true, seq };
 
   const draft = field(data, "outcome", MAX_INPUT_LENGTH);
   const priorTurns = readTurns(data);
+  const context = readContext(data);
   // "Skip the questions" is a submit button; the page carries the answer to it
   // forward in a hidden field so a later pass doesn't ask all over again.
   const skipped = field(data, "skipped", 4) === "1" || field(data, "skip", 4) === "1";
@@ -74,6 +95,7 @@ export async function coachAction(prev: CoachState, data: FormData): Promise<Coa
       draft: adopt,
       turns: priorTurns,
       skipped,
+      context,
       notice: "Your draft has been replaced with the candidate. Fill in anything in «guillemets», then check it again.",
       tooShort: false,
       cleared: false,
@@ -85,6 +107,7 @@ export async function coachAction(prev: CoachState, data: FormData): Promise<Coa
     draft,
     turns: [...priorTurns, ...readAnswers(data)],
     skipped,
+    context,
     review: null,
     fallback: null,
     fallbackReason: null,
@@ -95,7 +118,7 @@ export async function coachAction(prev: CoachState, data: FormData): Promise<Coa
   };
 
   // The structural check is the honest floor: too thin to score is too thin to coach.
-  const structural = evaluateOutcome(draft);
+  const structural = evaluateOutcome(draft, context);
   if (!structural) return { ...base, tooShort: true };
 
   if (!coachAiEnabled()) {
@@ -112,7 +135,7 @@ export async function coachAction(prev: CoachState, data: FormData): Promise<Coa
   const stage: CoachStage = base.turns.length === 0 && !skipped ? "clarify" : "review";
 
   try {
-    const review = await coachOutcome(draft, base.turns, stage);
+    const review = await coachOutcome(draft, base.turns, stage, context);
     return { ...base, review };
   } catch (err) {
     const message = err instanceof CoachAiError ? err.message : "The AI coach hit an unexpected error";

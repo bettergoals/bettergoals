@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { JAM_TOOLS, coachInstructions } from "@/lib/jamBoard";
+import { type OrgContext, hasContext, sanitiseContext } from "@/lib/orgContext";
 
 /**
  * Mints a short-lived client secret for the OpenAI Realtime API, so the
@@ -81,14 +82,22 @@ export async function POST(req: Request) {
   }
 
   let names: string[] = [];
+  // Where the room works, if whoever set the laptop up has saved it in their
+  // browser (see lib/orgContext.ts). It shapes how the coach talks; it is never
+  // stored here, and it is sanitised again before it reaches the model.
+  let context: OrgContext | null = null;
   try {
-    const body = (await req.json()) as { names?: unknown };
+    const body = (await req.json()) as { names?: unknown; context?: unknown };
     if (Array.isArray(body?.names)) {
       names = body.names
         .filter((n): n is string => typeof n === "string")
         .map((n) => n.replace(/\s+/g, " ").trim().slice(0, 40))
         .filter(Boolean)
         .slice(0, MAX_NAMES);
+    }
+    if (body?.context) {
+      const cleaned = sanitiseContext(body.context);
+      context = hasContext(cleaned) ? cleaned : null;
     }
   } catch {
     // No body is fine — the coach will ask for names itself.
@@ -102,7 +111,7 @@ export async function POST(req: Request) {
       session: {
         type: "realtime",
         model: MODEL(),
-        instructions: coachInstructions(names),
+        instructions: coachInstructions(names, context),
         tools: JAM_TOOLS,
         tool_choice: "auto",
         audio: {

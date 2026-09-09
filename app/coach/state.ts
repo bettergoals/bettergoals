@@ -1,4 +1,5 @@
 import type { CoachReview, CoachTurn } from "@/lib/coachAi";
+import { EMPTY_CONTEXT, type OrgContext } from "@/lib/orgContext";
 import type { Evaluation } from "@/lib/outcomeCoach";
 
 /**
@@ -13,6 +14,12 @@ export type CoachState = {
   turns: CoachTurn[];
   /** The author asked the coach to skip the clarifying round and just review. */
   skipped: boolean;
+  /**
+   * Where the author works, as it arrived with this submission. Echoed back so
+   * a browser without JavaScript keeps what it typed; with JavaScript the panel
+   * holds it too, in this browser's storage.
+   */
+  context: OrgContext;
   /** The AI review, when the coach could run. */
   review: CoachReview | null;
   /** The structural check, shown when the coach can't run (no key, or an error). */
@@ -33,6 +40,7 @@ export const INITIAL_STATE: CoachState = {
   draft: "",
   turns: [],
   skipped: false,
+  context: { ...EMPTY_CONTEXT },
   review: null,
   fallback: null,
   fallbackReason: null,

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CopyButton } from "@/components/CopyButton";
 import { type BoardItem, applyBoardAction, boardAsMarkdown, runBoardTool } from "@/lib/jamBoard";
+import { readStoredContext } from "@/lib/contextStore";
+import { hasContext } from "@/lib/orgContext";
 import { Chalkboard } from "./Chalkboard";
 
 /**
@@ -185,10 +187,13 @@ export function JamRoom({ configured, boardOnly }: { configured: boolean; boardO
         .split(/[,\n]/)
         .map((n) => n.trim())
         .filter(Boolean);
+      // Where this browser says it works, if anything is saved there — the
+      // coach speaks the room's language instead of asking them to explain it.
+      const context = readStoredContext();
       const res = await fetch("/api/jam/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ names: roster }),
+        body: JSON.stringify({ names: roster, context: hasContext(context) ? context : undefined }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { message?: string };

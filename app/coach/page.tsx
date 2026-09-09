@@ -91,10 +91,22 @@ export default async function CoachPage({
               «placeholders» instead.
             </p>
             <p className="mt-2">
-              It can still be wrong. It reads a sentence, not your organisation, so it can miss context
-              your team would take for granted, and it can be charmed by a bad goal in good vocabulary.
+              It can still be wrong. By default it reads a sentence, not your organisation, so it can miss
+              what your team takes for granted, and it can be charmed by a bad goal in good vocabulary.
               Treat the score as a prompt for a conversation, never a verdict. You stay accountable for the
               goal.
+            </p>
+            <p className="mt-2">
+              You can close half of that gap yourself.{" "}
+              <Link href="/context" className="underline underline-offset-2">
+                Your context
+              </Link>{" "}
+              — your organisation, your role, how goals are set where you work, the language your people use
+              — is written once, kept in your browser, and frames every review after it: your acronyms are
+              read rather than flagged, the questions are pitched at what you can actually influence, and the
+              wording comes back sounding like your place. It is framing, never evidence: it never supplies a
+              customer, a baseline, a target or a fact about your goal, and a check that&rsquo;s missing is
+              still missing.
             </p>
             <p className="mt-2">
               On privacy: your draft and your answers are sent to this site and on to an AI model, through

@@ -50,6 +50,15 @@ export default async function JamPage({ searchParams }: { searchParams: Promise<
           <li>Anyone can rub an item off the board. Copy it as markdown when you&rsquo;re done — nothing is saved for you.</li>
         </ol>
         <p className="mt-3">
+          If you&rsquo;ve set up{" "}
+          <Link href="/context" className="underline underline-offset-2">
+            your context
+          </Link>{" "}
+          on this browser, the coach starts the session already speaking your language — your acronyms, your
+          cadence, the words your organisation avoids — instead of making the room explain itself out loud.
+          Nothing about it is stored here either.
+        </p>
+        <p className="mt-3">
           Prefer to work a single goal in writing? That&rsquo;s the{" "}
           <Link href="/coach" className="underline underline-offset-2">Outcome Coach</Link>. Running the session
           yourself? Download the{" "}

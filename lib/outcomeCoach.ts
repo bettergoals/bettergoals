@@ -12,6 +12,8 @@
  * really did see in your words — the findings quote them back to you.
  */
 
+import { type OrgContext, contextHandoffBlock } from "./orgContext";
+
 export type CheckStatus = "strong" | "partial" | "missing";
 
 export type Check = {
@@ -484,7 +486,7 @@ export function bandFor(score: number): Band {
   return (BANDS.find((b) => score >= b.min) ?? BANDS[BANDS.length - 1]).band;
 }
 
-function buildHandoffPrompt(text: string, gaps: Check[]): string {
+function buildHandoffPrompt(text: string, gaps: Check[], context: OrgContext | null): string {
   const gapLines = gaps.length
     ? gaps.map((g) => `- ${g.title}: ${g.question}`).join("\n")
     : "- No structural gaps were flagged. Push me on whether this is bold enough, and whether the measure is the right one.";
@@ -492,6 +494,7 @@ function buildHandoffPrompt(text: string, gaps: Check[]): string {
   return [
     "I'm working on a goal and I want coaching, not a rewrite.",
     "",
+    ...contextHandoffBlock(context),
     "My draft:",
     '"""',
     text,
@@ -513,8 +516,12 @@ function buildHandoffPrompt(text: string, gaps: Check[]): string {
 /**
  * Review a goal statement. Returns `null` when there isn't enough text to say
  * anything honest about — better to ask for more than to score a fragment.
+ *
+ * The check itself is context-blind on purpose: it reads structure, and
+ * structure doesn't change with the org chart. `context` only travels into the
+ * handoff prompt, so a conversation carried on elsewhere knows where you work.
  */
-export function evaluateOutcome(input: string): Evaluation | null {
+export function evaluateOutcome(input: string, context: OrgContext | null = null): Evaluation | null {
   const text = input.trim().slice(0, MAX_INPUT_LENGTH);
   if (wordCount(text) < MIN_WORDS) return null;
 
@@ -541,7 +548,7 @@ export function evaluateOutcome(input: string): Evaluation | null {
     checks,
     strengths: checks.filter((c) => c.status === "strong"),
     gaps,
-    handoffPrompt: buildHandoffPrompt(text, gaps.slice(0, 4)),
+    handoffPrompt: buildHandoffPrompt(text, gaps.slice(0, 4), context),
   };
 }
 
