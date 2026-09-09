@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { coachAiEnabled } from "@/lib/coachAi";
+import { COACH_FEEDBACK_HREF } from "@/lib/feedback";
 import { CoachForm } from "./CoachForm";
 
 export const metadata = {
@@ -25,12 +26,13 @@ export default async function CoachPage({
     <div className="mx-auto max-w-4xl px-4 py-10">
       <h1 className="text-3xl font-bold tracking-tight">Outcome Coach</h1>
       <p className="mt-2 max-w-2xl text-ink-soft">
-        Write the outcome — any input. A rough thought, an objective, a whole OKR, or the sentence your
-        exec team argued about this morning. You&rsquo;ll get a score against the{" "}
+        Write the outcome — any input. A rough thought, an objective, a whole OKR, the sentence your
+        exec team argued about this morning, or a photo of the whiteboard they argued at. You&rsquo;ll
+        get a score against the{" "}
         <Link href="/principles" className="underline underline-offset-2">
           outcome definition principles
         </Link>
-        , the reasons, {ai ? "the questions you most need to answer, and help writing a better one" : "what's missing, and what to do next"}.
+        , the reasons, {ai ? "the questions you most need to answer — and once you have, help writing a better one" : "what's missing, and what to do next"}.
       </p>
 
       <p className="mt-4 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-ink-soft">
@@ -80,6 +82,15 @@ export default async function CoachPage({
               «guillemets» for you to fill in.
             </p>
             <p className="mt-2">
+              It asks before it writes. On a first draft you get the score and two or three clarifying
+              questions — who you are in this, who the outcome is for, what you hope changes for them — and
+              no suggested wording yet, because a phrasing built on the coach&rsquo;s guesses about your
+              organisation teaches you nothing. Answer what you can and the wording comes next; rough,
+              rounded and anonymised answers are enough, and none of the questions need a commercially
+              confidential number. If you&rsquo;d rather not answer, skip them and it will offer wording with
+              «placeholders» instead.
+            </p>
+            <p className="mt-2">
               It can still be wrong. It reads a sentence, not your organisation, so it can miss context
               your team would take for granted, and it can be charmed by a bad goal in good vocabulary.
               Treat the score as a prompt for a conversation, never a verdict. You stay accountable for the
@@ -122,6 +133,23 @@ export default async function CoachPage({
             </p>
           </>
         )}
+        <p className="mt-2">
+          Pictures are different, and deliberately so. When you hand it a photo or a screenshot, the
+          text recognition runs inside your own browser: the image is never uploaded, never reaches
+          this site, and is forgotten when you close the tab. Only the words it finds go into the
+          box, where you can edit or delete them before anything is submitted — so a face, a name or
+          a colleague&rsquo;s handwriting caught in the corner of a whiteboard shot never leaves your
+          device. The first picture you read downloads the recognition engine to your browser, which
+          takes a few seconds.
+        </p>
+        <p className="mt-4 border-t border-ink/10 pt-4">
+          <strong className="text-ink">Did it get your goal wrong?</strong> That is the most useful
+          thing you can tell us, and it is how the coach improves.{" "}
+          <Link href={COACH_FEEDBACK_HREF} className="font-semibold underline underline-offset-2">
+            Say what it missed
+          </Link>{" "}
+          — ninety seconds, anonymous if you like.
+        </p>
       </section>
     </div>
   );

@@ -18,3 +18,26 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/* Goal jam chalkboard — chalk goes on with a stroke, comes off with a smear. */
+@keyframes chalk-in {
+  from { opacity: 0; clip-path: inset(0 100% 0 0); transform: translateY(2px) rotate(-0.4deg); }
+  60% { opacity: 1; }
+  to { opacity: 1; clip-path: inset(0 0 0 0); transform: none; }
+}
+@keyframes chalk-out {
+  from { opacity: 1; filter: blur(0); }
+  40% { opacity: 0.6; filter: blur(1px); transform: translateX(-3px) skewX(-6deg); }
+  to { opacity: 0; filter: blur(3px); transform: translateX(8px) skewX(8deg); }
+}
+@keyframes chalk-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+.chalk-in { display: inline-block; animation: chalk-in 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.chalk-out { animation: chalk-out 0.55s ease-in both; pointer-events: none; }
+.chalk-pulse { animation: chalk-pulse 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .chalk-in, .chalk-out, .chalk-pulse { animation-duration: 0.01ms; animation-iteration-count: 1; }
+}
+

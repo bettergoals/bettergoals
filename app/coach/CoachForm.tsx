@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { CopyButton } from "@/components/CopyButton";
+import { ImageToText } from "@/components/ImageToText";
 import type { CoachReview } from "@/lib/coachAi";
 import {
   EXAMPLES,
@@ -90,6 +91,26 @@ function SubmitButton({ idle, busy }: { idle: string; busy: string }) {
 }
 
 /**
+ * The clarifying round's escape hatch. A plain submit button, so it works with
+ * JavaScript off: "create clarity, preserve autonomy" — the author decides when
+ * they've said enough, not the coach.
+ */
+function SkipButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      name="skip"
+      value="1"
+      disabled={pending}
+      className="text-sm font-semibold underline underline-offset-2 hover:text-ink-soft disabled:opacity-50"
+    >
+      Skip the questions and write it anyway
+    </button>
+  );
+}
+
+/**
  * Start again submits the form with `restart`, so the server action can hand
  * back a blank state. `useFormStatus().data` tells us whether the submission
  * in flight is this button's, so a coaching run doesn't relabel it.
@@ -108,6 +129,54 @@ function RestartButton() {
     >
       {restarting ? "Starting again…" : "Start again"}
     </button>
+  );
+}
+
+/**
+ * The coach's questions with a box under each. In the clarifying round this
+ * renders above the score and is the only thing asked of the author; later it
+ * sits under the review as the next pass.
+ */
+function Questions({ questions, seq, clarifying }: { questions: string[]; seq: number; clarifying: boolean }) {
+  if (!questions.length) return null;
+  return (
+    <section aria-labelledby="questions-heading">
+      <h2 id="questions-heading" className="text-2xl font-bold tracking-tight">
+        {clarifying ? "First, a few questions" : "The coach asks"}
+      </h2>
+      <p className="mt-2 max-w-2xl text-ink-soft">
+        {clarifying
+          ? "Before it offers you any wording, the coach wants the context only you have — who you are in this, who the outcome is for, and what you hope changes for them. Answer what you can: rough, rounded and anonymised is fine, “don’t know” is a real answer, and nothing here needs a confidential number."
+          : "Answer what you can — rough, rounded and anonymised is fine, and “don’t know” is a real answer. Edit the draft above too if you want. Then send it back for another pass."}
+      </p>
+      <ol className="mt-4 space-y-4">
+        {questions.map((q, i) => (
+          <li key={`${seq}-${i}`} className="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
+            <input type="hidden" name={`q${i}`} value={q} />
+            <label htmlFor={`a${i}`} className="block font-semibold">
+              <span className="mr-2 text-sooner" aria-hidden="true">
+                {i + 1}
+              </span>
+              {q}
+            </label>
+            <textarea
+              id={`a${i}`}
+              name={`a${i}`}
+              rows={3}
+              maxLength={1500}
+              className="mt-3 w-full rounded-2xl border border-ink/15 bg-white p-3 text-sm leading-relaxed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            />
+          </li>
+        ))}
+      </ol>
+      <div className="mt-4 flex flex-wrap items-center gap-4">
+        <SubmitButton
+          idle={clarifying ? "Answer and write my outcome" : "Send my answers"}
+          busy="Coaching — this takes a few seconds…"
+        />
+        {clarifying && <SkipButton />}
+      </div>
+    </section>
   );
 }
 
@@ -334,6 +403,8 @@ export function CoachForm({ initialDraft, aiEnabled }: { initialDraft: string; a
   const scored: Scored | null = review ?? state.fallback;
   const hasResult = Boolean(scored);
   const questions = review?.questions ?? [];
+  /** The coach has asked and is holding back the wording until it hears back. */
+  const clarifying = review?.stage === "clarify" && questions.length > 0;
 
   function adopt(text: string) {
     setDraft(text);
@@ -344,12 +415,14 @@ export function CoachForm({ initialDraft, aiEnabled }: { initialDraft: string; a
   return (
     <form action={formAction} className="mt-8">
       <input type="hidden" name="turns" value={JSON.stringify(state.turns)} />
+      {state.skipped && <input type="hidden" name="skipped" value="1" />}
 
       <label htmlFor="outcome" className="block font-semibold">
         Your goal, objective or outcome
       </label>
       <p id="outcome-hint" className="mt-1 text-sm text-ink-soft">
-        Plain text, up to {MAX_INPUT_LENGTH.toLocaleString()} characters.{" "}
+        Type it, paste it, or read it off a picture. Up to {MAX_INPUT_LENGTH.toLocaleString()}{" "}
+        characters.{" "}
         {aiEnabled
           ? "It goes to an AI model to write the review and nothing is kept, but anonymise anything confidential first — the coaching is just as good on a redacted version, and it never needs to know who anyone is."
           : "Leave confidential detail out and paste an anonymised version — the check works just as well on one."}
@@ -366,6 +439,9 @@ export function CoachForm({ initialDraft, aiEnabled }: { initialDraft: string; a
         placeholder="e.g. Reduce the time it takes a new customer to get set up, from 12 days to 3 days by Q3, so they stop giving up on us part-way through."
         className="mt-3 w-full rounded-2xl border border-ink/15 bg-white p-4 font-sans text-base leading-relaxed shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
       />
+      {/* The textarea is controlled, so the picture's words arrive through
+          setDraft rather than by writing to the DOM behind React's back. */}
+      <ImageToText textareaId="outcome" maxLength={MAX_INPUT_LENGTH} onText={setDraft} />
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <SubmitButton
           idle={hasResult ? "Check it again" : aiEnabled ? "Coach my outcome" : "Check my outcome"}
@@ -433,6 +509,11 @@ export function CoachForm({ initialDraft, aiEnabled }: { initialDraft: string; a
             </p>
           )}
 
+          {/* The clarifying round leads: questions before the wording, and
+              before the score, so the first thing asked of the author is the
+              context only they have. */}
+          {clarifying && <Questions questions={questions} seq={state.seq} clarifying />}
+
           <Verdict scored={scored} review={review} />
 
           {state.turns.length > 0 && (
@@ -463,38 +544,25 @@ export function CoachForm({ initialDraft, aiEnabled }: { initialDraft: string; a
             </section>
           )}
 
-          {review && questions.length > 0 && (
-            <section aria-labelledby="questions-heading">
-              <h2 id="questions-heading" className="text-2xl font-bold tracking-tight">
-                The coach asks
+          {review && !clarifying && <Questions questions={questions} seq={state.seq} clarifying={false} />}
+
+          {clarifying && (
+            <section
+              aria-labelledby="wording-heading"
+              className="rounded-3xl border border-dashed border-ink/25 bg-white p-6 sm:p-8"
+            >
+              <h2 id="wording-heading" className="text-2xl font-bold tracking-tight">
+                Ways you might write it
               </h2>
               <p className="mt-2 max-w-2xl text-ink-soft">
-                Answer what you can — rough, rounded and anonymised is fine, and &ldquo;don&rsquo;t know&rdquo; is
-                a real answer. Edit the draft above too if you want. Then send it back for another pass.
+                These arrive once you&rsquo;ve answered the questions above. The coach won&rsquo;t phrase your
+                outcome around facts it doesn&rsquo;t have: a confident sentence built on its guesses is worse
+                than the rough one you already own.
               </p>
-              <ol className="mt-4 space-y-4">
-                {questions.map((q, i) => (
-                  <li key={`${state.seq}-${i}`} className="rounded-2xl border border-ink/10 bg-white p-5 shadow-sm">
-                    <input type="hidden" name={`q${i}`} value={q} />
-                    <label htmlFor={`a${i}`} className="block font-semibold">
-                      <span className="mr-2 text-sooner" aria-hidden="true">
-                        {i + 1}
-                      </span>
-                      {q}
-                    </label>
-                    <textarea
-                      id={`a${i}`}
-                      name={`a${i}`}
-                      rows={3}
-                      maxLength={1500}
-                      className="mt-3 w-full rounded-2xl border border-ink/15 bg-white p-3 text-sm leading-relaxed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                    />
-                  </li>
-                ))}
-              </ol>
-              <div className="mt-4">
-                <SubmitButton idle="Send my answers" busy="Coaching — this takes a few seconds…" />
-              </div>
+              <p className="mt-2 max-w-2xl text-sm text-ink-soft">
+                In a hurry? Skip the questions and it will offer wording anyway, with «placeholders» wherever
+                you haven&rsquo;t told it something.
+              </p>
             </section>
           )}
 
