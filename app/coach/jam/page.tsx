@@ -29,8 +29,9 @@ export default async function JamPage({ searchParams }: { searchParams: Promise<
       <p className="mt-2 max-w-2xl text-ink-soft">
         A voice coach for goal-setting sessions. Put this page on the room&rsquo;s screen and talk. The coach
         listens, asks the questions that turn an ambition into an outcome — inviting quieter voices in by name —
-        and chalks the emerging goal onto the board as you go. The board is the artefact; the conversation is
-        the work.
+        and chalks the emerging goal onto the board as you go. Anyone can pick up the chalk too: write, rewrite,
+        star or rub out, and the coach takes it as the group&rsquo;s decision. The board is the artefact; the
+        conversation is the work.
       </p>
       <p className="mt-3 max-w-2xl text-sm text-ink-soft">
         Your audio streams to OpenAI&rsquo;s Realtime API for the length of the session and this site keeps
@@ -47,7 +48,8 @@ export default async function JamPage({ searchParams }: { searchParams: Promise<
           <li>One laptop, one microphone, the board on the big screen. Give the coach first names so it can call on people.</li>
           <li>Start with the change you want in the world, not the thing you want to build. The coach will push back on outputs dressed as outcomes.</li>
           <li>Aim to leave with one to three goals in the form <em>For [who], [what gets better], seen by [early signal]</em>, each with a guardrail.</li>
-          <li>Anyone can rub an item off the board. Copy it as markdown when you&rsquo;re done — nothing is saved for you.</li>
+          <li>Presenting? <em>Present full screen</em> drops everything but the board; the board-only link mirrors it into a second window for the room&rsquo;s display.</li>
+          <li>Anyone can write on the board, rewrite an item, star a candidate or rub it out. Copy it as markdown when you&rsquo;re done — nothing is saved for you.</li>
         </ol>
         <p className="mt-3">
           Prefer to work a single goal in writing? That&rsquo;s the{" "}

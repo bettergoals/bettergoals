@@ -7,23 +7,44 @@ import { JAM_TOOLS, coachInstructions } from "@/lib/jamBoard";
  * real key ever leaving the server.
  *
  * Configuration (server-only environment, never exposed to the browser):
- *   OPENAI_API_KEY          required — unset = the jam page says it isn't switched on.
- *   OPENAI_REALTIME_MODEL   optional — default gpt-realtime.
- *   OPENAI_REALTIME_VOICE   optional — default marin.
+ *   OPENAI_API_KEY             required — unset = the jam page says it isn't switched on.
+ *   OPENAI_REALTIME_MODEL      optional — default gpt-realtime-2.1 (reasoning + tool use).
+ *   OPENAI_REALTIME_REASONING  optional — reasoning effort for gpt-realtime-2.x; default low.
+ *                              Higher raises quality on hard turns and adds latency; a
+ *                              room waiting on a reply notices latency first. Ignored for
+ *                              models that don't reason (gpt-realtime, gpt-realtime-1.5).
+ *   OPENAI_REALTIME_VOICE      optional — default marin.
  *
  * Nothing about the session is stored here: no audio, no transcript, no board.
  */
 
 export const runtime = "nodejs";
 
-const MODEL = () => process.env.OPENAI_REALTIME_MODEL || "gpt-realtime";
+const MODEL = () => process.env.OPENAI_REALTIME_MODEL || "gpt-realtime-2.1";
 const VOICE = () => process.env.OPENAI_REALTIME_VOICE || "marin";
+
+/**
+ * `reasoning` is only accepted by the reasoning models (gpt-realtime-2 and later).
+ * Match a one- or two-digit major version so the dated snapshot of the
+ * non-reasoning model, gpt-realtime-2025-08-28, isn't mistaken for one.
+ */
+function isReasoningModel(model: string): boolean {
+  const m = /^gpt-realtime-(\d{1,2})(?:\.\d+)?(?:-|$)/.exec(model);
+  return m !== null && Number(m[1]) >= 2;
+}
+
+function reasoning(model: string): { effort: string } | undefined {
+  if (!isReasoningModel(model)) return undefined;
+  return { effort: process.env.OPENAI_REALTIME_REASONING || "low" };
+}
 const MAX_NAMES = 20;
 
 /**
- * Cost guard. Every secret this route hands out can stream ten minutes of
- * real-time audio on the site's account, so it only serves requests that a
- * browser on this site would make, and only so many of them.
+ * Cost guard. Every secret this route hands out can start one call on the
+ * site's account, and OpenAI lets a call run for up to an hour — the 600s
+ * expiry below only bounds how long the secret can be used to *start* it. So
+ * the route only serves requests a browser on this site would make, and only
+ * so many of them.
  *
  * The counters live in memory, per serverless instance, and reset on a cold
  * start — a brake, not a wall. A malicious client can forge an Origin header
@@ -105,11 +126,13 @@ export async function POST(req: Request) {
         instructions: coachInstructions(names),
         tools: JAM_TOOLS,
         tool_choice: "auto",
+        reasoning: reasoning(MODEL()),
         audio: {
           input: {
             transcription: { model: "gpt-4o-mini-transcribe" },
-            // A room talks among itself; low eagerness keeps the coach from jumping in on every pause.
-            turn_detection: { type: "semantic_vad", eagerness: "low", create_response: true, interrupt_response: true },
+            // "auto" balances letting a room finish a thought against replying promptly.
+            // "low" waited noticeably longer before every reply; "high" would talk over people.
+            turn_detection: { type: "semantic_vad", eagerness: "auto", create_response: true, interrupt_response: true },
           },
           output: { voice: VOICE() },
         },
@@ -121,7 +144,10 @@ export async function POST(req: Request) {
     const detail = await upstream.text().catch(() => "");
     console.error(`[jam] OpenAI refused the session: ${upstream.status} ${detail.slice(0, 400)}`);
     return NextResponse.json(
-      { error: "upstream", message: `OpenAI wouldn't start a session (HTTP ${upstream.status}). Check the key and model.` },
+      {
+        error: "upstream",
+        message: `OpenAI wouldn't start a session (HTTP ${upstream.status}). Check the key, model and reasoning settings.`,
+      },
       { status: 502 }
     );
   }
