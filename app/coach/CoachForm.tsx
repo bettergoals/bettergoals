@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { ContextPanel } from "@/components/ContextPanel";
 import { CopyButton } from "@/components/CopyButton";
 import { ImageToText } from "@/components/ImageToText";
 import type { CoachReview } from "@/lib/coachAi";
@@ -442,6 +443,11 @@ export function CoachForm({ initialDraft, aiEnabled }: { initialDraft: string; a
       {/* The textarea is controlled, so the picture's words arrive through
           setDraft rather than by writing to the DOM behind React's back. */}
       <ImageToText textareaId="outcome" maxLength={MAX_INPUT_LENGTH} onText={setDraft} />
+
+      {/* Sits inside the form on purpose: the context posts with the draft, so
+          the coaching is framed by where you work even with JavaScript off. */}
+      <ContextPanel initial={state.context} variant="coach" aiEnabled={aiEnabled} />
+
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <SubmitButton
           idle={hasResult ? "Check it again" : aiEnabled ? "Coach my outcome" : "Check my outcome"}

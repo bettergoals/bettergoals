@@ -164,6 +164,21 @@ export default function PrivacyPage() {
         check that sends nothing anywhere.
       </p>
       <p className="mt-3 leading-relaxed text-ink-soft">
+        <Link href="/context" className="underline underline-offset-2">
+          Your context
+        </Link>{" "}
+        &mdash; the few lines you can write about your organisation, your role,
+        how goals are set where you work and the language your people use &mdash;
+        is kept by your own browser and nowhere else. There is no account to
+        attach it to and no database to put it in, so it never syncs, never
+        follows you to another device, and disappears the moment you clear it or
+        clear your browser storage. It is sent only when you actually coach a
+        goal or start a goal jam: it goes with that draft, under the same zero
+        data retention terms, to frame that one piece of coaching. Write it like
+        a briefing for a new colleague &mdash; enough to be useful, nothing
+        commercially confidential, and no names.
+      </p>
+      <p className="mt-3 leading-relaxed text-ink-soft">
         The{" "}
         <Link href="/skills" className="underline underline-offset-2">
           coaching skills

@@ -41,6 +41,14 @@
  * idle timeouts kill.
  */
 
+import {
+  CONTEXT_RULES,
+  type OrgContext,
+  contextHandoffBlock,
+  contextPromptBlock,
+  hasContext,
+  sanitiseContext,
+} from "./orgContext";
 import { type Band, type Check, type CheckStatus, bandFor } from "./outcomeCoach";
 
 const BASE_URL = () => process.env.AI_GATEWAY_BASE_URL || "https://ai-gateway.vercel.sh/v1";
@@ -284,7 +292,19 @@ This is the author's first draft and they have told you nothing else yet. Do not
 The author has answered your questions, or asked you to get on with it. Review the draft as clarified by whatever they gave you, and now help them write it — the "candidates" rules above are in force. Carry their answers into the wording, keep asking only for what is still genuinely missing, and leave a «placeholder» wherever you would otherwise be guessing.`,
 };
 
-const systemPrompt = (stage: CoachStage): string => `${SYSTEM_PROMPT}\n\n${STAGE_PROMPT[stage]}`;
+/**
+ * The rules for using the author's context are only worth sending when there
+ * is context to use — a call from someone who never filled it in is exactly
+ * the same call it always was.
+ */
+const systemPrompt = (stage: CoachStage, hasAuthorContext: boolean): string =>
+  [
+    SYSTEM_PROMPT,
+    STAGE_PROMPT[stage],
+    hasAuthorContext ? `## Where the author works\n\n${CONTEXT_RULES}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
 /* ------------------------------------------------------------------------ */
 /* The call                                                                   */
@@ -430,7 +450,13 @@ function normaliseChecks(raw: unknown): Check[] {
   });
 }
 
-function buildHandoffPrompt(text: string, turns: CoachTurn[], gaps: Check[], questions: string[]): string {
+function buildHandoffPrompt(
+  text: string,
+  turns: CoachTurn[],
+  gaps: Check[],
+  questions: string[],
+  context: OrgContext | null
+): string {
   const answered = turns.length
     ? ["What I've already clarified:", ...turns.map((t) => `- Q: ${t.question}\n  A: ${t.answer}`), ""]
     : [];
@@ -438,6 +464,7 @@ function buildHandoffPrompt(text: string, turns: CoachTurn[], gaps: Check[], que
   return [
     "I'm working on a goal and I want coaching, not a rewrite.",
     "",
+    ...contextHandoffBlock(context),
     "My draft:",
     '"""',
     text,
@@ -461,8 +488,10 @@ function buildHandoffPrompt(text: string, turns: CoachTurn[], gaps: Check[], que
 /* Public entry point                                                          */
 /* ------------------------------------------------------------------------ */
 
-function userMessage(draft: string, turns: CoachTurn[], stage: CoachStage): string {
+function userMessage(draft: string, turns: CoachTurn[], stage: CoachStage, context: OrgContext | null): string {
   const parts = ["The author's draft:", '"""', draft, '"""'];
+  const contextBlock = contextPromptBlock(context);
+  if (contextBlock) parts.push("", contextBlock);
   if (turns.length) {
     parts.push("", "Questions you asked earlier, and the author's answers (review the draft as clarified by these):");
     turns.forEach((t, i) => {
@@ -484,13 +513,21 @@ function userMessage(draft: string, turns: CoachTurn[], stage: CoachStage): stri
  * the important questions, no wording yet) or "review" once there are answers
  * or the author has skipped ahead. The stage on the reply is the one that was
  * honoured — a draft the model finds already strong is never held back for
- * questions. Throws `CoachAiError` when the gateway isn't configured or fails;
- * the caller decides what to show instead (the structural check).
+ * questions.
+ *
+ * `context` is what the author told the site about where they work (see
+ * lib/orgContext.ts). It frames the coaching — their language, their cadence,
+ * questions pitched at their role — and is never treated as a fact about the
+ * goal. Omitted, the call is exactly the one it always was.
+ *
+ * Throws `CoachAiError` when the gateway isn't configured or fails; the caller
+ * decides what to show instead (the structural check).
  */
 export async function coachOutcome(
   draft: string,
   turns: CoachTurn[],
   stage: CoachStage = "review",
+  context: OrgContext | null = null,
 ): Promise<CoachReview> {
   const text = draft.trim();
   const safeTurns = turns.slice(-MAX_TURNS * 3).map((t) => ({
@@ -498,10 +535,13 @@ export async function coachOutcome(
     answer: str(t.answer, MAX_ANSWER_LENGTH),
   }));
   const asked: CoachStage = safeTurns.length ? "review" : stage;
+  // Clamped here as well as at the form's edge: this is the last point before
+  // the author's words leave the building.
+  const safeContext = context ? sanitiseContext(context) : null;
 
   const reply = await chat([
-    { role: "system", content: systemPrompt(asked) },
-    { role: "user", content: userMessage(text, safeTurns, asked) },
+    { role: "system", content: systemPrompt(asked, hasContext(safeContext)) },
+    { role: "user", content: userMessage(text, safeTurns, asked, safeContext) },
   ]);
   const raw = parseJson(reply);
 
@@ -554,6 +594,6 @@ export async function coachOutcome(
     candidates,
     personalInfo: str(raw.personalInfo, 400) || null,
     done,
-    handoffPrompt: buildHandoffPrompt(text, safeTurns, gaps.slice(0, 4), questions),
+    handoffPrompt: buildHandoffPrompt(text, safeTurns, gaps.slice(0, 4), questions, safeContext),
   };
 }

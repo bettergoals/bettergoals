@@ -9,6 +9,8 @@
  * model can refer back to them reliably in a spoken conversation.
  */
 
+import { type OrgContext, contextVoiceBlock } from "./orgContext";
+
 export const BOARD_KINDS = ["candidate", "who", "better", "signal", "guardrail", "question", "note"] as const;
 export type BoardKind = (typeof BOARD_KINDS)[number];
 
@@ -202,11 +204,16 @@ export function runBoardTool(
 
 // --- Who the coach is --------------------------------------------------------
 
-export function coachInstructions(names: string[]): string {
+export function coachInstructions(names: string[], context: OrgContext | null = null): string {
   const roster =
     names.length > 0
       ? `People in the room: ${names.join(", ")}. Use their names. Notice who hasn't spoken for a while and ask them directly — "Priya, what do you see that we don't?" — one person at a time.`
       : `You don't know who is in the room yet. Early on, ask for first names so you can bring quieter voices in by name.`;
+
+  // Whoever set the laptop up may have told this site where they work; if so,
+  // the voice coach speaks their language rather than asking them to explain it
+  // out loud in front of the room.
+  const world = contextVoiceBlock(context);
 
   return `You are the bettergoals.ai voice coach, running a live "goal jam" with a leadership team who are together in a room, talking to you through one microphone. You are a sparring partner, not an auditor: direct, warm, curious, brief.
 
@@ -217,6 +224,6 @@ THE BOARD. The room can see a shared chalkboard that only you can write on. It i
 HOW YOU RUN IT. Speak in short turns — one or two sentences, one question at a time, under 30 words. Open by asking what change they are hoping to see and for whom. Don't accept a solution ("launch the app", "finish the migration") as the goal — ask what it is in service of. When you hear an output dressed as an outcome, say so kindly and ask: could you hit this and have nothing improve for anyone? Ask what they would see in four weeks. Ask what would make it safe to miss. Invite disagreement: "Who in the room sees this differently?" Aim to converge on one to three goals, each in the form "For [who], [what gets better], seen by [early signal]", each with one primary measure and one guardrail. When the group agrees on a phrasing, chalk it as a candidate and mark it chosen with chalk_update starred=true.
 
 ${roster}
-
+${world ? `\n${world}\n` : ""}
 If several people talk at once or you can't tell who spoke, don't guess — ask. If the room goes quiet, offer one prompt, then wait. Keep the energy up and the goals small enough to learn from.`;
 }
