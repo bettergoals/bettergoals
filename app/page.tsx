@@ -388,7 +388,11 @@ export default async function Home({
               <Link href="/okrs" className="font-semibold underline underline-offset-2">
                 OKRs the way SSH think about them
               </Link>{" "}
-              is the short version of the pattern, and{" "}
+              is the short version of the pattern,{" "}
+              <Link href="/anti-patterns" className="font-semibold underline underline-offset-2">
+                the anti-patterns gallery
+              </Link>{" "}
+              names the shapes a goal goes wrong in, and{" "}
               <Link href="/principles" className="font-semibold underline underline-offset-2">
                 the principles
               </Link>{" "}
