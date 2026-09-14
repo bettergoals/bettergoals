@@ -1,0 +1,8 @@
+# Shell scripts run on Linux CI runners. A CRLF checkout on Windows must never
+# reach a commit: it breaks the shebang with "bad interpreter: /usr/bin/env
+# bash^M", which is a confusing way to find out.
+*.sh text eol=lf
+
+# Workflows are read by GitHub, not by an editor on one machine.
+*.yml text eol=lf
+*.yaml text eol=lf

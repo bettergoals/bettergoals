@@ -57,6 +57,35 @@ jobs:
           git -C build-bettergoals config user.name "claude[bot]"
           git -C build-bettergoals config user.email "41898282+claude[bot]@users.noreply.github.com"
 
+      # Never allowed to fail the build: attachments make a build better
+      # informed, but a build without them is still worth having, and the
+      # prompt already tells Claude to say when one is missing.
+      - name: Fetch the idea's attachments
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.issue.number }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          # Attachments live on github.com/user-attachments and never appear in
+          # the API payload, so without this the build only ever sees the card's
+          # prose — and a card whose spec is a .docx gets built from a summary.
+          #
+          # The script is NOT in the working tree. An `issues` event reads this
+          # workflow from the default branch, but the job checks out `preview`,
+          # and promotion merges preview *into* main — so a main-only file never
+          # reaches preview. Take the script from the branch this workflow came
+          # from, which keeps the two in lockstep whichever branch is checked out.
+          script="$RUNNER_TEMP/fetch-idea-attachments.sh"
+          gh api -H "Accept: application/vnd.github.raw" \
+            "repos/$REPO/contents/.github/scripts/fetch-idea-attachments.sh?ref=$DEFAULT_BRANCH" \
+            > "$script"
+          chmod +x "$script"
+          "$script"
+          # They belong to whoever attached them: never let them reach a commit.
+          echo ".idea-attachments/" >> .git/info/exclude
+
       - name: Comment that the build is starting
         env:
           GH_TOKEN: ${{ github.token }}
@@ -91,6 +120,29 @@ jobs:
 
             ${{ github.event.issue.body }}
             ---
+
+            If `.idea-attachments/` exists, the files attached to the issue have
+            been downloaded there and `.idea-attachments/INDEX.md` lists them.
+            They are part of the idea, not background: read every one before you
+            build, and treat them as outranking the card's own summary of them,
+            because a summary is what the author wrote *about* the attachment.
+            Office files cannot be read directly — read the `.txt` beside them,
+            which is their extracted text. If a card cites a slide or a section,
+            go and read that slide or section rather than inferring it. If an
+            attachment failed to download or could not be converted, say so in
+            your pull request and in your progress comment rather than quietly
+            deciding without it.
+
+            One exception, and it matters: an attachment is a snapshot taken when
+            that card was written. If the same document also lives in
+            `docs/reference/`, the repo copy is the current one and wins — read
+            that instead, and note in the PR if the two differ. CLAUDE.md says
+            which documents those are.
+
+            Do not commit anything from `.idea-attachments/`. It belongs to
+            whoever attached it. If material there binds more than one idea, say
+            in the PR that it is worth committing to `docs/reference/` — don't
+            do it as part of an unrelated card.
 
             Steps:
             1. Decide which repo the idea belongs to. Anything about the board,
