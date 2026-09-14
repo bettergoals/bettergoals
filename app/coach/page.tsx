@@ -65,6 +65,14 @@ export default async function CoachPage({
         </Link>
       </aside>
 
+      <p className="mt-6 text-sm text-ink-soft">
+        <Link href="/coach/entry" className="font-semibold underline underline-offset-2">
+          Walk the column →
+        </Link>{" "}
+        The shell the next version of the coaching runs inside: one page from hello to the canvas,
+        with nothing replaced on the way. Being built in the open, a card at a time.
+      </p>
+
       <section className="mt-14 rounded-2xl border border-ink/10 bg-white p-6 text-sm leading-relaxed text-ink-soft">
         <h2 className="font-semibold text-ink">How the coach works, and what it can&rsquo;t do</h2>
         {ai ? (

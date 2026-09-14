@@ -25,6 +25,10 @@ The seam 05
 Coaching 06–11
 Leaving 12–13
 
+### Speaker notes, slide 1
+
+1a's transcript column stitched into 2b's spotlit canvas, with no threshold between them. Thirteen steps, desktop and mobile.
+
 ## Slide 2
 
 Thirteen steps, one spine, two off-ramps
@@ -62,6 +66,10 @@ The triage chips stay above the canvas, greyed. The canvas reads as something th
 No progress bar, anywhere.
 The only orientation is the canvas filling in. Step numbers here are my annotation of the coach's route, not UI.
 
+### Speaker notes, slide 2
+
+Thirteen steps down one spine, with two off-ramps: the can't-share handover at step 4, and room mode running the same spine on a big screen.
+
 ## Slide 3
 
 01
@@ -91,6 +99,10 @@ Open source · built by the community
 the moment before anyone speaks
 Unchanged from 1a. The column that starts here is the same column the canvas eventually appears inside — nothing in this screen gets replaced later.
 
+### Speaker notes, slide 3
+
+the moment before anyone speaks
+
 ## Slide 4
 
 02
@@ -114,6 +126,10 @@ There's a room of us
 listening · or tap one
 answered → becomes the first chip
 Room answer forks the whole run onto the big-screen spine — same thirteen steps, score suppressed.
+
+### Speaker notes, slide 4
+
+answered → becomes the first chip
 
 ## Slide 5
 
@@ -146,6 +162,10 @@ from work
 my own draft
 two chips now — no counter anywhere
 
+### Speaker notes, slide 5
+
+two chips now — no counter anywhere
+
 ## Slide 6
 
 04
@@ -172,6 +192,10 @@ I'll set you up in there
 the fork · the one place the data line is said
 Both answers leave this screen forward. “Yes” continues down the column into step 05; “no” leaves the spine for the handover you already have.
 
+### Speaker notes, slide 6
+
+the fork · the one place the data line is said
+
 ## Slide 7
 
 The off-ramp, and what makes the seam work
@@ -186,6 +210,10 @@ The column never closes.
 The triage chips stay in place, greyed, above the canvas — so the canvas reads as something the conversation produced, not a new tool you've been handed. That's the whole trick, and it's why 1a and 2b stitch cleanly: both are one continuous downward column.
 The cost: on desktop the canvas wants to be wide and the column wants to be narrow. I've let the canvas break out to the full column width and pushed the transcript above it — which means the coach's earlier turns scroll out of sight as the canvas grows.
 This is the flow's biggest open question: a whole half of the product is gated behind one answer at step 04.
+
+### Speaker notes, slide 7
+
+The can't-share off-ramp leaves the spine at step 4 and never reaches the canvas. The seam works because the column never closes - but the transcript scrolls away.
 
 ## Slide 8
 
@@ -216,6 +244,10 @@ can share
 I'll put your canvas up as we go. I ask, you talk — it fills itself.
 canvas ▾ we'll start in the centre
 tap to open
+no transition, no “start” button, no new page
+
+### Speaker notes, slide 8
+
 no transition, no “start” button, no new page
 
 ## Slide 9
@@ -256,6 +288,10 @@ listening · or type
 district managers
 the box the conversation lives inside
 
+### Speaker notes, slide 9
+
+the box the conversation lives inside
+
 ## Slide 10
 
 07
@@ -285,6 +321,10 @@ jumping to ③ lagging
 why? ▸
 the coach says why it's skipping the hypothesis
 The jump is narrated in one sentence, in the flow of talk — no diagram, no “step 3 of 5”.
+
+### Speaker notes, slide 10
+
+the coach says why it's skipping the hypothesis
 
 ## Slide 11
 
@@ -317,6 +357,10 @@ blue = an open question you take back to your team. a legitimate output.
 the most interesting answer, not a blank to skip
 Standing still has to look like progress: the box growing is the only visual cue that the conversation is going deeper rather than stalling.
 
+### Speaker notes, slide 11
+
+the most interesting answer, not a blank to skip
+
 ## Slide 12
 
 09
@@ -348,6 +392,10 @@ back to ①
 What would they actually be doing, on a Tuesday?
 the fix is upstream, and nothing reads as an error
 
+### Speaker notes, slide 12
+
+the fix is upstream, and nothing reads as an error
+
 ## Slide 13
 
 10
@@ -375,6 +423,10 @@ that's it
 let me redo it
 the bet, written against a measure that already exists
 
+### Speaker notes, slide 13
+
+the bet, written against a measure that already exists
+
 ## Slide 14
 
 11
@@ -399,6 +451,10 @@ not now
 no score on screen · in a room this is off entirely
 the gap in words · never a number · off in room mode
 A full canvas of woolly answers shows more empty bars than this half-full one — that asymmetry is the only defence against people optimising wording to chase completeness.
+
+### Speaker notes, slide 14
+
+the gap in words · never a number · off in room mode
 
 ## Slide 15
 
@@ -433,6 +489,10 @@ Stop here — this is good enough
 better than most
 Take the questions away
 two aren't in this room
+what's sharp, what's open, then the doors
+
+### Speaker notes, slide 15
+
 what's sharp, what's open, then the doors
 
 ## Slide 16
@@ -475,6 +535,10 @@ a prompt with your canvas in it
 nothing is stored — if they don't take it here, it's gone
 Download-first, and pushed again if they linger — this is the one place I'd allow a mild interruption, because there is no “come back later”.
 
+### Speaker notes, slide 16
+
+nothing is stored — if they don't take it here, it's gone
+
 ## Slide 17
 
 Where the stitch strains
@@ -487,6 +551,10 @@ Say “I can't share” and you never see the canvas, the nudge, or the takeaway
 Triage answers are chips; coaching answers are sticky notes. That's a deliberate signal — chips are facts about you, stickies are your thinking — but it needs saying out loud or it reads as inconsistency.
 4 · Thirteen steps, no progress bar
 This is the longest thing here and it deliberately never tells you how far through you are. The only orientation is the canvas filling. If testing says people feel lost, the fix is more narration from the coach, not a bar.
+
+### Speaker notes, slide 17
+
+Four things this pairing creates that neither pack had on its own.
 
 ## Slide 18
 
@@ -504,3 +572,6 @@ Same thirteen steps on a big screen with the nudge suppressed — or a shorter f
 The seam itself is the part I'd protect. Everything else here can move without breaking the feeling that one conversation is still running.
 bettergoals.ai · 1a + 2b · low-fidelity · September 2026
 
+### Speaker notes, slide 18
+
+Three calls: whether the canvas pins, whether the can't-share path gets a local canvas, and whether room mode runs this spine.
