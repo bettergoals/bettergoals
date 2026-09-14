@@ -18,6 +18,8 @@
  *    it is gone.
  */
 
+import { COLUMN_PATH } from "./config";
+
 export type Mode = "speak" | "type";
 export type Who = "me" | "room";
 export type Share = "yes" | "no";
@@ -164,7 +166,7 @@ export function runHref(run: Run, next: Partial<Run>, hash = "#live"): string {
   if (merged.brought) q.set("brought", merged.brought);
   if (merged.share) q.set("share", merged.share);
   const s = q.toString();
-  return `/coach/entry${s ? `?${s}` : ""}${hash}`;
+  return `${COLUMN_PATH}${s ? `?${s}` : ""}${hash}`;
 }
 
 function chipFor(answers: readonly TriageAnswer[], value: string): string {

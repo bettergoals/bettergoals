@@ -8,6 +8,17 @@ export const SITE = {
 };
 
 export const REPO_URL = `https://github.com/${SITE.repo}`;
+
+/**
+ * Where the coaching column is served from. The conversation is the site's
+ * front door, so it lives at `/`. Every link into the column — each triage
+ * answer, each form, each way back — routes through here, so moving the column
+ * is this one constant rather than a hunt through the markup. It lives in
+ * config because both `lib/triage.ts` and `lib/coaching.ts` need it, and
+ * coaching already imports triage.
+ */
+export const COLUMN_PATH = "/";
+
 /** The separate builder app where ideas are proposed, endorsed, and moved to Doing */
 export const BUILD_URL = process.env.NEXT_PUBLIC_BUILD_URL ?? "https://build.bettergoals.ai";
 export const NEW_IDEA_URL = `${REPO_URL}/issues/new?template=idea.yml`;
