@@ -79,6 +79,13 @@ import { PrintCanvas, TakeIt } from "./Takeaway";
  *    conversation · the live turn.
  *  - nothing is replaced. Answered triage turns grey; their chips stay above
  *    the canvas for good.
+ *  - the conversation stays short. A question stays once it is answered; the
+ *    help that came with it does not — see `Turn`'s `aside`. Decision 0001
+ *    named the one thing that would reopen the scrolling canvas — the
+ *    conversation running long enough that the canvas sits two screens above
+ *    the live turn — and said the answer is a shorter conversation rather than
+ *    a pinned panel. Idea #134 is that answer being taken, and
+ *    `docs/decisions/0004-the-conversation-quietens.md` records it.
  *  - no progress bar, no step numbers, no count, no score. The canvas filling
  *    in is the only orientation there is.
  *  - no persistence. The whole run is in the query string; close the tab and
@@ -106,11 +113,32 @@ import { PrintCanvas, TakeIt } from "./Takeaway";
  * said — which meant a paragraph rewriting itself, at question size, in the
  * middle of the column, every time it spoke. The question is the steady thing
  * on the page; what the coach said belongs in the quiet line by the controls.
+ *
+ * `aside` is the help that comes with a question — what "customer" means here,
+ * why the coach asked in this order, what happens to either answer. It is on
+ * screen while the question is live and gone once the question is spent, which
+ * is idea #134: by then it is a paragraph of help with something that already
+ * has an answer above it, and six of those are what put the canvas and the
+ * question you are answering two screens apart. Rule 4 still holds — nothing
+ * you said is removed and no question is removed, they grey and they stay. What
+ * goes is the coach's own scaffolding, and decision 0001 is explicit that a
+ * conversation that has grown too long is shortened rather than pinned.
  */
-function Turn({ spent = false, children }: { spent?: boolean; children: React.ReactNode }) {
+function Turn({
+  spent = false,
+  aside,
+  children,
+}: {
+  spent?: boolean;
+  aside?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <div className={spent ? "text-ink-soft/70" : "text-ink"}>
       <div className="space-y-2 text-lg leading-relaxed sm:text-xl">{children}</div>
+      {aside && !spent ? (
+        <div className="mt-2 space-y-2 text-base text-ink-soft sm:text-lg">{aside}</div>
+      ) : null}
     </div>
   );
 }
@@ -543,18 +571,24 @@ export default function Column({
 
   return (
     <div className="mx-auto max-w-3xl px-4 pt-8 pb-20">
-      {/* Idea #135. The first thing anyone reads, so it says what this is and
-          what happens to what they type — and nothing else. The old wording
-          described the column to someone who had not seen it yet ("the chips
-          they leave behind", "the canvas"), which only makes sense once you
-          are further down the page than this box. */}
-      <p className="no-print mb-10 rounded-2xl border border-safer/40 bg-safer/10 px-4 py-3 text-sm text-ink-soft">
-        <strong className="text-ink">
+      {/* The first thing anyone reads, so it says what this is and what happens
+          to what they type — and nothing else (idea #135). The wording before
+          that described the column to someone who had not seen it yet ("the
+          chips they leave behind", "the canvas"), which only makes sense once
+          you are further down the page than this box.
+
+          Idea #134 takes the coloured panel it was down to one quiet line. It
+          sits above the canvas for the whole run, and as a panel it held the
+          canvas and the question you were answering further apart — which is
+          the complaint #134 was raised about. The words are #135's; the weight
+          is #134's. */}
+      <p className="no-print mb-8 text-sm text-ink-soft/75">
+        <strong className="font-semibold text-ink-soft">
           This is the AI Outcome Coach, being built in the open by the Sooner Safer Happier
           community.
         </strong>{" "}
-        Nothing you say here is stored anywhere — the whole conversation lives in the address bar,
-        and closing the tab ends it.
+        Nothing you say here is stored anywhere — the conversation lives in this tab&rsquo;s address
+        bar, and closing the tab ends it.
       </p>
 
       {/* One column. One scroller. Everything below is appended in order and
@@ -635,14 +669,18 @@ export default function Column({
         {/* 04 Can you share it. Slide 6 — the fork, and the one place the data
             line is said. It is not repeated anywhere else in the column. */}
         {brought ? (
-          <Turn spent={Boolean(share)}>
+          <Turn
+            spent={Boolean(share)}
+            aside={
+              <p>
+                Before you answer — there&rsquo;s no account here, no database, and I keep nothing
+                when you close the tab. Even so, some things can only be talked about inside your
+                own organisation, and if that&rsquo;s this, I&rsquo;ll set you up to run this same
+                conversation in there. Your call, and either answer is a good one.
+              </p>
+            }
+          >
             <p>{shareQuestion(run)}</p>
-            <p className="text-base text-ink-soft sm:text-lg">
-              Before you answer — there&rsquo;s no account here, no database, and I keep nothing when
-              you close the tab. Even so, some things can only be talked about inside your own
-              organisation, and if that&rsquo;s this, I&rsquo;ll set you up to run this same
-              conversation in there. Your call, and either answer is a good one.
-            </p>
           </Turn>
         ) : null}
 
@@ -662,8 +700,11 @@ export default function Column({
             </ul>
             {/* Slide 8's footnote, said once, at the moment the canvas arrives
                 and the worry it answers actually exists. It points up at the
-                chips because that is what it is about. */}
-            {share === "yes" ? (
+                chips because that is what it is about — and it goes once the
+                coaching has started, because by then you have watched three
+                turns grey and stay put and the sentence is telling you
+                something the page is already doing (idea #134). */}
+            {share === "yes" && !coaching.centre ? (
               <p className="mt-3 text-sm text-ink-soft/75">
                 <span aria-hidden>↑ </span>
                 What you told me stays up there, greyed. Nothing has been cleared away.
@@ -676,26 +717,33 @@ export default function Column({
             simply rises into the column the conversation was already in. */}
         {share === "yes" ? (
           <>
-            <Turn spent={Boolean(coaching.centre)}>
+            <Turn
+              spent={Boolean(coaching.centre)}
+              aside={
+                <>
+                  <p>
+                    I&rsquo;m going to put your canvas up as we go. You don&rsquo;t have to fill it
+                    in — I&rsquo;ll ask, you talk, and it fills itself.
+                  </p>
+                  {/* Idea #131. The canvas used to simply appear, and the next
+                      thing that happened was a question — which is the hand-off
+                      reading as harsh. So here is the shape of it first, in the
+                      order we actually work, said once before anything is asked
+                      of anyone.
+
+                      It is the boxes' own names and their own clauses, from
+                      `CANVAS_ORDER`, so this can never describe a canvas the
+                      coach isn't running. It is not a plan and not a count: no
+                      total, no "five steps", no how-long-this-takes, nothing
+                      here reports progress and nothing ticks. */}
+                  <Tour />
+                </>
+              }
+            >
               <p>
                 {you ? `Good, ${you} — ` : "Good — "}then I&rsquo;ve got everything I need to be
                 useful.
               </p>
-              <p>
-                I&rsquo;m going to put your canvas up as we go. You don&rsquo;t have to fill it in —
-                I&rsquo;ll ask, you talk, and it fills itself.
-              </p>
-              {/* Idea #131. The canvas used to simply appear, and the next thing
-                  that happened was a question — which is the hand-off reading as
-                  harsh. So here is the shape of it first, in the order we
-                  actually work, said once before anything is asked of anyone.
-
-                  It is the boxes' own names and their own clauses, from
-                  `CANVAS_ORDER`, so this can never describe a canvas the coach
-                  isn't running. It is not a plan and not a count: no total, no
-                  "five steps", no how-long-this-takes, nothing here reports
-                  progress and nothing ticks. */}
-              {!coaching.centre ? <Tour /> : null}
             </Turn>
             <Seam state={canvas} started={Boolean(coaching.centre)} />
             {/* Slide 9's footnote, said once, at the one moment it is exactly
@@ -734,12 +782,16 @@ export default function Column({
                 PRINCIPLES.md means it in the widest sense, and plenty of people
                 on this site have patients, residents or colleagues rather than
                 customers. Their word wins. */}
-            <Turn spent={Boolean(coaching.centre)}>
+            <Turn
+              spent={Boolean(coaching.centre)}
+              aside={
+                <p>
+                  Customer, colleague or citizen — whoever&rsquo;s on the other end of this and
+                  would notice it got better. Use your word for them, not mine.
+                </p>
+              }
+            >
               <p>{COACH_ASKS.centre}</p>
-              <p className="text-base text-ink-soft sm:text-lg">
-                Customer, colleague or citizen — whoever&rsquo;s on the other end of this and would
-                notice it got better. Use your word for them, not mine.
-              </p>
             </Turn>
 
             {/* 07 · problem ②. Slide 10. The deck gives box ② its label and its
@@ -756,12 +808,16 @@ export default function Column({
                 follow and box ④ says "not yet — see below" in its own words, so
                 nothing up there reads as skipped. */}
             {coaching.problem ? (
-              <Turn spent={Boolean(coaching.lagging)}>
+              <Turn
+                spent={Boolean(coaching.lagging)}
+                aside={
+                  <Why>
+                    I do it this way round on purpose: write the clever sentence first and
+                    we&rsquo;ll pick measures that flatter it.
+                  </Why>
+                }
+              >
                 <p>Now — before we write the bet, tell me how you&rsquo;d know it landed.</p>
-                <Why>
-                  I do it this way round on purpose: write the clever sentence first and we&rsquo;ll
-                  pick measures that flatter it.
-                </Why>
               </Turn>
             ) : null}
 
@@ -773,13 +829,17 @@ export default function Column({
                 wording. It asks, because it is written as a question, and both
                 answers are real ones. */}
             {settled ? (
-              <Turn spent={Boolean(coaching.back)}>
+              <Turn
+                spent={Boolean(coaching.back)}
+                aside={
+                  <p>
+                    Your lagging measure can only be as sharp as the behaviour underneath it — so
+                    let&rsquo;s sharpen that, and this box will write itself. Nothing you&rsquo;ve
+                    said is wrong. We&rsquo;re fixing it upstream.
+                  </p>
+                }
+              >
                 <p>Can I take you back a step? I don&rsquo;t think the problem is here.</p>
-                <p>
-                  Your lagging measure can only be as sharp as the behaviour underneath it — so
-                  let&rsquo;s sharpen that, and this box will write itself. Nothing you&rsquo;ve said
-                  is wrong. We&rsquo;re fixing it upstream.
-                </p>
               </Turn>
             ) : null}
 
@@ -800,13 +860,22 @@ export default function Column({
 
             {/* 10 · leading ⑤. The bet said back, and the reason it came second
                 — that is the deck's "that's it", and "let me redo it" is beside
-                the field below. */}
+                the field below.
+
+                The question is first and the reflection is the aside under it,
+                so that what stays on screen once this turn is spent is the
+                question that was asked (idea #134). Both are said either way;
+                this is only which of the two the column keeps. */}
             {coaching.hypothesis ? (
-              <Turn spent={Boolean(coaching.leading)}>
-                <p>
-                  That&rsquo;s the bet, and it&rsquo;s written against a measure that already exists
-                  — which is why I asked you for the measure first.
-                </p>
+              <Turn
+                spent={Boolean(coaching.leading)}
+                aside={
+                  <p>
+                    That&rsquo;s the bet, and it&rsquo;s written against a measure that already
+                    exists — which is why I asked you for the measure first.
+                  </p>
+                }
+              >
                 <p>Last one. What tells us in weeks?</p>
               </Turn>
             ) : null}
@@ -874,6 +943,26 @@ export default function Column({
                 column. The canvas stays on screen behind all of it. */}
             {atTheDoors ? (
               <section aria-labelledby="standing-heading" className="space-y-4">
+                {/* The hand-over into it — idea #134. "Where this stands,
+                    honestly" used to arrive as a heading, straight after the
+                    last answer, with nothing to say the questions had finished
+                    or what the next thing was for. Two sentences in the coach's
+                    voice: the questions are over, and what follows is an
+                    opinion offered rather than a verdict handed down. It says
+                    what it isn't, too, because a heading with two columns under
+                    it can read as a mark if nobody says otherwise. */}
+                <Turn>
+                  <p>
+                    {you
+                      ? `That's the last of my questions, ${you}.`
+                      : "That's the last of my questions."}
+                  </p>
+                  <p>
+                    Before you pick what happens next, here&rsquo;s what I make of it — what&rsquo;s
+                    sharp, and what I&rsquo;d still be uneasy about. No score and no mark: just what
+                    I&rsquo;d say if we were sat looking at this together.
+                  </p>
+                </Turn>
                 <Turn>
                   <h2 id="standing-heading" className="text-lg leading-relaxed sm:text-xl">
                     Where this stands, honestly.
@@ -914,15 +1003,40 @@ export default function Column({
               </section>
             ) : null}
 
-            {/* The first door, answered. The conversation carries on in the
-                same column — no new page, nothing cleared away, and the other
-                two doors still open below. */}
+            {/* The door you took, answered in the coach's voice before
+                anything else happens.
+
+                Idea #134: only the first door had a reply. "Stop here" and
+                "take the questions away" went from a card you tapped straight
+                to a heading about downloads, which is the one moment in the run
+                where a sentence of warmth costs nothing and its absence is
+                felt. All three carry on in the same column — no new page,
+                nothing cleared away, and the other two doors still open
+                below. */}
             {out === "refine" ? (
               <Turn>
                 <p>{standing?.start ? `Right — ${standing.start}, then.` : "Right. Let's keep going."}</p>
                 <p>
                   Nothing&rsquo;s going anywhere. Change what you want to change and we&rsquo;ll pick
                   it up from there; the other two doors are still open underneath.
+                </p>
+              </Turn>
+            ) : out === "stop" ? (
+              <Turn>
+                <p>{you ? `Then we'll leave it there, ${you}.` : "Then we'll leave it there."}</p>
+                <p>
+                  You&rsquo;ve written the bet down and said what would tell you in weeks.
+                  Here&rsquo;s everything to take with you — and if you change your mind, the other
+                  two doors are still open underneath.
+                </p>
+              </Turn>
+            ) : out === "questions" ? (
+              <Turn>
+                <p>Good — then we pack it up as it stands.</p>
+                <p>
+                  What&rsquo;s still open travels with you as a question rather than a gap, which is
+                  the whole point of taking them. It&rsquo;s all below, and the other two doors are
+                  still open underneath.
                 </p>
               </Turn>
             ) : null}
@@ -1070,6 +1184,19 @@ export default function Column({
                   <TakeIt href={takeawayHref(carried(run, coaching))} />
                   <CopyButton text={file} label="⧉ Copy as text" />
                   <PrintCanvas />
+                  {/* Idea #134 made the download a PDF, because that is what
+                      gets put in front of other people. The same file as plain
+                      text stays one link away and is not hidden: it is the
+                      lossless copy, it pastes into anything, and an untagged
+                      PDF is the poorer document of the two for anyone reading
+                      with a screen reader. Same words, same route. */}
+                  <a
+                    href={takeawayHref(carried(run, coaching), { as: "text" })}
+                    download
+                    className="text-sm text-ink-soft underline underline-offset-4 sm:basis-full"
+                  >
+                    …or take the same thing as a plain text file
+                  </a>
                 </div>
               </section>
             ) : null}
@@ -1438,37 +1565,56 @@ export default function Column({
                   never closes the other two. There is no finish button beside
                   them and no fourth control that ends the run. */}
               {atTheDoors ? (
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <Door
-                    href={columnHref(run, coaching, { out: "refine" })}
-                    label="Keep refining"
-                    aside={
-                      standing?.start
-                        ? `I'd start with ${standing.start}`
-                        : "there's more in this if you want it"
-                    }
-                    go="Carry on"
-                    taken={out === "refine"}
-                  />
-                  <Door
-                    href={columnHref(run, coaching, { out: "stop" }, "#takeaway")}
-                    label="Stop here"
-                    aside="this is already sharper than most"
-                    go="Take it and go"
-                    taken={out === "stop"}
-                  />
-                  <Door
-                    href={columnHref(run, coaching, { out: "questions" }, "#takeaway")}
-                    label="Take the questions away"
-                    aside={
-                      takeaway && takeaway.open.length > 0
-                        ? `${takeaway.open.length === 1 ? "one answer lives" : `${takeaway.open.length} answers live`} with your team, not with me`
-                        : "nothing's open right now — this still packs the canvas up"
-                    }
-                    go="Pack them up"
-                    taken={out === "questions"}
-                  />
-                </div>
+                <>
+                  {/* The hand-over into next steps — idea #134. The three
+                      doors used to arrive as three cards with nothing said
+                      above them, so the moment the conversation turned into a
+                      decision was something you had to notice for yourself.
+
+                      One sentence, and it is careful to stay even: it says
+                      out loud that none of the three is the recommended one,
+                      which is the promise the cards themselves keep by being
+                      identically weighted. It goes once a door is taken —
+                      the coach's reply to that door is on screen by then,
+                      and it says the same thing better. */}
+                  {!out ? (
+                    <p className="text-lg leading-relaxed sm:text-xl">
+                      So — three ways to go from here, and none of them is the one I&rsquo;d have you
+                      pick. Take whichever matches how you feel about it.
+                    </p>
+                  ) : null}
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <Door
+                      href={columnHref(run, coaching, { out: "refine" })}
+                      label="Keep refining"
+                      aside={
+                        standing?.start
+                          ? `I'd start with ${standing.start}`
+                          : "there's more in this if you want it"
+                      }
+                      go="Carry on"
+                      taken={out === "refine"}
+                    />
+                    <Door
+                      href={columnHref(run, coaching, { out: "stop" }, "#takeaway")}
+                      label="Stop here"
+                      aside="this is already sharper than most"
+                      go="Take it and go"
+                      taken={out === "stop"}
+                    />
+                    <Door
+                      href={columnHref(run, coaching, { out: "questions" }, "#takeaway")}
+                      label="Take the questions away"
+                      aside={
+                        takeaway && takeaway.open.length > 0
+                          ? `${takeaway.open.length === 1 ? "one answer lives" : `${takeaway.open.length} answers live`} with your team, not with me`
+                          : "nothing's open right now — this still packs the canvas up"
+                      }
+                      go="Pack them up"
+                      taken={out === "questions"}
+                    />
+                  </div>
+                </>
               ) : null}
 
               {/* Carrying on. The two answers that can be reopened without

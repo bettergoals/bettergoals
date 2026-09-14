@@ -200,16 +200,21 @@ function carryOnPrompt(
 /* The file                                                                   */
 /* ------------------------------------------------------------------------ */
 
-/** What the download is called. One file, three artefacts, plain markdown. */
+/**
+ * What the plain-text copy is called. One file, three artefacts, markdown.
+ * Since idea #134 the download itself is a PDF rendered from these same words
+ * (`lib/takeawayPdf.ts`); this is the lossless copy beside it.
+ */
 export const TAKEAWAY_FILENAME = "better-goal.md";
 
 /** A blank line, named so the assembly below reads as the file it produces. */
 const BLANK = "";
 
 /**
- * All three artefacts as one piece of plain text — what "download all three"
- * downloads and what "copy as text" copies. The same bytes either way, so
- * nothing depends on which button the reader reached for.
+ * All three artefacts as one piece of plain text — what "copy as text" copies,
+ * what the plain-text file contains, and the words the PDF is rendered from.
+ * The same words however the reader takes it, so nothing depends on which
+ * button they reached for.
  *
  * Markdown, because PRINCIPLES.md asks that what leaves here is plain,
  * structured text anyone can read, paste and reuse — no meaning locked inside a
@@ -297,10 +302,17 @@ export function takeawayText(run: Run, state: CanvasState): string {
 /**
  * The link the download hangs off. It carries the whole run, because the run is
  * the only place any of this lives — there is nothing on a server to ask for.
+ *
+ * `as: "text"` asks for this same file as markdown rather than the PDF the
+ * download became in idea #134. Same words, same route, one parameter.
  */
-export function takeawayHref(params: { name: string; value: string }[]): string {
+export function takeawayHref(
+  params: { name: string; value: string }[],
+  { as }: { as?: "text" } = {},
+): string {
   const q = new URLSearchParams();
   for (const { name, value } of params) q.set(name, value);
+  if (as) q.set("as", as);
   const s = q.toString();
   return `/coach/entry/takeaway${s ? `?${s}` : ""}`;
 }

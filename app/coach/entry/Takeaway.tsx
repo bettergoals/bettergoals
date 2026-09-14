@@ -58,6 +58,7 @@ export function TakeIt({ href }: { href: string }) {
         className="rounded-2xl bg-ink px-5 py-4 text-center font-semibold text-chalk transition-colors hover:bg-ink-soft"
       >
         <span aria-hidden>⤓ </span>Download all three
+        <span className="font-normal"> (PDF)</span>
       </a>
       {/* Polite, not assertive: it waits its turn in a screen reader rather
           than cutting across whatever is being read. */}
@@ -65,7 +66,7 @@ export function TakeIt({ href }: { href: string }) {
         {lingering && !taken
           ? "Still here? Take it before you go — there's no copy of this anywhere, and I can't send it to you later."
           : taken
-            ? "That's it, in your downloads. It's the only copy there is."
+            ? "That's it, in your downloads — one PDF, and it's the only copy there is."
             : ""}
       </p>
     </>
