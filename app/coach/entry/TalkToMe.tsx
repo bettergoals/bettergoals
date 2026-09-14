@@ -474,9 +474,11 @@ export function TalkToMe({ run, coaching }: { run: Run; coaching: Coaching }) {
       ) : null}
 
       <p className="mt-2 text-sm text-ink-soft/75">
-        {live && turn.kind === "ask" ? (
-          <>Answer out loud, or tap and type below — it&rsquo;s the same conversation either way. </>
-        ) : null}
+        {/* Idea #134: this panel sits between the canvas and the question, so
+            every line in it is a line pushing the two apart. What was three
+            sentences is one — the disclosure is still whole, because it has to
+            be, and the rest was said before the press. */}
+        {live && turn.kind === "ask" ? <>Answer out loud, or tap and type below. </> : null}
         {status === "error" || status === "ended" ? (
           <>
             <Link href={columnHref(run, coaching, { voice: "off" })} className="underline underline-offset-2">
@@ -485,8 +487,8 @@ export function TalkToMe({ run, coaching }: { run: Run; coaching: Coaching }) {
             and the questions below still work exactly as they are.{" "}
           </>
         ) : null}
-        Your voice goes to OpenAI for as long as we&rsquo;re talking and nothing is kept here — no recording, no
-        transcript. <Link href="/privacy" className="underline underline-offset-2">Privacy</Link>.
+        Your voice goes to OpenAI while we talk; nothing is recorded or kept.{" "}
+        <Link href="/privacy" className="underline underline-offset-2">Privacy</Link>.
       </p>
     </div>
   );

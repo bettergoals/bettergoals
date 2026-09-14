@@ -344,8 +344,12 @@ export function turnFor(run: Run, c: Coaching): Turn {
       kind: "ask",
       field: "out",
       question: COACH_ASKS.out,
+      /* Idea #134: the printed column hands over into the doors warmly — the
+         questions are finished, here is what I make of it, and now three ways
+         to go. The spoken coach does the same handover, in the same order, or
+         the two are having different conversations. */
       preamble:
-        "Three ways out, on screen, and none of them is the recommended one: keep refining, stop here, or take the open questions away to their team. Offer all three evenly and don't push one.",
+        "Hand over properly before you offer anything. Say that's the last of your questions; then, briefly and in your own words, where you think this stands — what's sharp and what you'd still be uneasy about. No score, no number, no mark: an opinion offered, not a verdict. Then the three ways out that are on screen, and none of them is the recommended one: keep refining, stop here, or take the open questions away to their team. Offer all three evenly, don't push one, and say there's no wrong door.",
       choices: OUT_CHOICES,
       freeText: false,
       max: ANSWER_MAX,
@@ -403,7 +407,7 @@ export function columnNote(run: Run, coaching: Coaching): string {
     return `${whoYoureTalkingTo} They chose to keep refining, and the other two doors are still open underneath. The canvas:\n${canvas}\n\nAsk what they want to change. The two you can reopen cleanly are the bet (field "hypothesis") and what tells us in weeks (field "leading") — send either again with their new wording. Anything further up the canvas they should take away and sharpen there. When they're done, they can still stop here (field "out", value "stop") or take the questions away (value "questions").`;
   }
   if (turn.kind === "takeaway") {
-    return `${whoYoureTalkingTo} They've been through a door and the takeaway is on screen: the goal in the SSH pattern, the canvas gaps and all, and a prompt to carry on elsewhere. Say once, plainly, that you don't keep a copy — no account, no database — so they should download, copy or print it before they close the tab. Offer to keep going if they want. Don't ask anything else.`;
+    return `${whoYoureTalkingTo} They've been through a door and the takeaway is on screen: the goal in the SSH pattern, the canvas gaps and all, and a prompt to carry on elsewhere. Say once, plainly, that you don't keep a copy — no account, no database — so they should take it before they close the tab: the download is a PDF, and there's a plain-text copy and a print beside it. Say something warm about where they got to, in one sentence and without flattering it. Offer to keep going if they want. Don't ask anything else.`;
   }
 
   const parts = [`${whoYoureTalkingTo} The canvas as they can see it:\n${canvas}`];
