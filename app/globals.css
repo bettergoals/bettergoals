@@ -26,6 +26,29 @@ body {
   html:has(.the-column) { scroll-behavior: smooth; }
 }
 
+/* The seam (CARD 4, slide 8). On a wide screen the canvas is simply there, so
+   both halves are visible at once mid-scroll. On a narrow one it arrives
+   collapsed — one line in the conversation you tap to open — because five
+   full-width boxes dumped between the coach's line and your turn read as a tool
+   you have been handed rather than something the conversation produced.
+
+   It is a native <details>, so it works with JavaScript off, takes keyboard
+   focus, and announces itself as a disclosure. The wide-screen override is
+   wrapped in @supports on purpose: a browser that cannot be told to force the
+   disclosure open keeps its summary, so the canvas is one tap away rather than
+   unreachable.
+
+   Once open it is the full-size canvas — five boxes, one per row, real type.
+   Never a thumbnail, never a map, and nothing anywhere that says how full it
+   is. See docs/decisions/0002-the-canvas-arrives-collapsed-on-mobile.md. */
+@media (min-width: 768px) {
+  @supports selector(::details-content) {
+    .canvas-arrives > summary { display: none; }
+    .canvas-arrives::details-content { content-visibility: visible; }
+  }
+}
+.canvas-arrives > summary::-webkit-details-marker { display: none; }
+
 /* Goal jam chalkboard — chalk goes on with a stroke, comes off with a smear. */
 @keyframes chalk-in {
   from { opacity: 0; clip-path: inset(0 100% 0 0); transform: translateY(2px) rotate(-0.4deg); }
