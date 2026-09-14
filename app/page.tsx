@@ -55,10 +55,15 @@ export default async function Home({
   // `mode` is the first thing the reader chooses — speaking or typing. Until
   // then nothing has been said, and the site can still introduce itself.
   const started = Boolean(readRun(params).mode);
+  /* Idea #124. Whether "◉ Talk to me" reaches the coach itself or the browser's
+     own voice reading the questions out. Decided here because it is a
+     server-side key (`app/api/jam/session`), and never told to the browser as
+     anything but the shape of the column it gets. */
+  const voiceConfigured = Boolean(process.env.OPENAI_API_KEY);
 
   return (
     <div>
-      <Column params={params} />
+      <Column params={params} voiceConfigured={voiceConfigured} />
 
       {!started && (
         <>

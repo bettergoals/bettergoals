@@ -34,8 +34,10 @@ import {
   type Run,
   type TriageAnswer,
 } from "@/lib/triage";
+import { COACH_ASKS } from "@/lib/voiceColumn";
 import { Canvas } from "./Canvas";
 import { SayIt } from "./SayIt";
+import { TalkToMe } from "./TalkToMe";
 import { PrintCanvas, TakeIt } from "./Takeaway";
 
 /**
@@ -80,10 +82,12 @@ import { PrintCanvas, TakeIt } from "./Takeaway";
  *  - it works as a plain document. Every answer is a real link or a real GET
  *    form, so the run works with JavaScript off. Speaking an answer is an
  *    enhancement on top of that and never the only way through.
- *  - nothing makes a sound on arrival. Idea #121 gives the coach a voice and
- *    opens the microphone on its own, but only inside speaking mode, which only
- *    a press on "◉ Talk to me" can reach. While it is talking there is a
- *    control that stops it, and `voice=off` stops it for the rest of the run.
+ *  - nothing makes a sound on arrival. Idea #121 gave the coach a voice and
+ *    opened the microphone on its own; idea #124 made that voice the coach
+ *    itself, live (`TalkToMe`). Either way it is only inside speaking mode,
+ *    which only a press on "◉ Talk to me" can reach. While it is talking there
+ *    is a control that stops it, and `voice=off` stops it for the rest of the
+ *    run.
  */
 
 /**
@@ -216,7 +220,12 @@ function Why({ children }: { children: React.ReactNode }) {
 /** The two switches above the live turn share a shape: quiet, always there. */
 const SWITCH = "rounded-full border border-ink/15 px-3 py-1.5 text-sm text-ink-soft hover:bg-ink/5";
 
-/** Available at any point, in both directions, at every step of the run. */
+/**
+ * Available at any point, in both directions, at every step of the run. In
+ * speaking mode it is also the way out of a conversation that is happening out
+ * loud — so switching to typing ends the coach's call, because `TalkToMe` only
+ * exists inside speaking mode and unmounts with it.
+ */
 function ModeSwitch({ run, coaching }: { run: Run; coaching: Coaching }) {
   const to = run.mode === "speak" ? "type" : "speak";
   return (
@@ -237,12 +246,17 @@ function ModeSwitch({ run, coaching }: { run: Run; coaching: Coaching }) {
  * the query string with the rest of the run.
  *
  * Only offered in speaking mode. Typing was never going to read itself out.
+ *
+ * Since idea #124 this is also the switch that ends a live call with the coach,
+ * so it says which of the two it is about to turn off. Both readings are the
+ * same promise: the audio stops, for the rest of the run, from one control that
+ * is always on screen.
  */
-function VoiceSwitch({ run, coaching }: { run: Run; coaching: Coaching }) {
+function VoiceSwitch({ run, coaching, talking }: { run: Run; coaching: Coaching; talking: boolean }) {
   const quiet = run.voice === "off";
   return (
     <Link href={columnHref(run, coaching, { voice: quiet ? null : "off" })} className={SWITCH}>
-      {quiet ? "♪ read the questions out to me" : "◼ stop reading the questions out"}
+      {quiet ? "♪ talk to me out loud again" : talking ? "◼ stop talking, I'll answer here" : "◼ stop reading the questions out"}
     </Link>
   );
 }
@@ -408,8 +422,15 @@ function Label({ children }: { children: React.ReactNode }) {
 
 export default function Column({
   params,
+  voiceConfigured = false,
 }: {
   params: Record<string, string | string[] | undefined>;
+  /**
+   * Whether this deployment can put the reader through to the coach itself.
+   * It needs a server-side key (see `app/api/jam/session`), so it is decided on
+   * the server and handed down — a browser is never told either way.
+   */
+  voiceConfigured?: boolean;
 }) {
   const run = readRun(params);
   const { mode, who, brought, share } = run;
@@ -420,6 +441,16 @@ export default function Column({
      out loud and the microphone opens when it stops, at every turn, until the
      reader asks it to be quiet. Nothing speaks before that press. */
   const aloud = readsAloud(run);
+
+  /* Idea #124. Where the coach can actually be reached, "talk to me" is a call
+     to the coach rather than the browser reading the page out: `TalkToMe` runs
+     the same questions, in the same order, and lands each answer exactly where
+     tapping it would have.
+     The two never run at once — two microphones and two voices in one column
+     would be neither. Without the key, `localVoice` is idea #121 unchanged, and
+     that is also what `voice=off` leaves behind. */
+  const talking = speaking && voiceConfigured && aloud;
+  const localVoice = speaking && !talking;
 
   /* CARD 5. Where the coach is, and everything that has landed on the canvas so
      far. `canvasFor` is the only thing that decides either, and it decides them
@@ -1009,22 +1040,40 @@ export default function Column({
                   worth knowing about a moment before your browser asks you for
                   the microphone rather than a moment after. */}
               <p className="text-sm text-ink-soft/75">
-                Talk to me and I&rsquo;ll ask them out loud, then listen for your answer &mdash; your
-                browser will ask you for the microphone. You can tell me to stop reading them out at
-                any point, and typing is always there.
+                {voiceConfigured ? (
+                  <>
+                    Talk to me and we&rsquo;ll have the conversation out loud &mdash; your browser will ask
+                    you for the microphone, and your voice goes to OpenAI while we talk. Nothing is
+                    recorded or kept. You can stop me at any point, tap an answer instead mid-sentence,
+                    and typing is always there.
+                  </>
+                ) : (
+                  <>
+                    Talk to me and I&rsquo;ll ask them out loud, then listen for your answer &mdash; your
+                    browser will ask you for the microphone. You can tell me to stop reading them out at
+                    any point, and typing is always there.
+                  </>
+                )}
               </p>
             </>
           ) : (
             <>
               <div className="flex flex-wrap items-center gap-2">
                 <ModeSwitch run={run} coaching={coaching} />
-                {speaking ? <VoiceSwitch run={run} coaching={coaching} /> : null}
+                {speaking ? <VoiceSwitch run={run} coaching={coaching} talking={talking} /> : null}
               </div>
+
+              {/* The coach, on the line. It runs the same questions in the same
+                  order and lands every answer through the same links, so
+                  everything below stays live while it talks: tap an answer or
+                  type one mid-sentence and the coach picks the conversation up
+                  from wherever the column went. */}
+              {talking ? <TalkToMe run={run} coaching={coaching} /> : null}
 
               {!who ? (
                 <>
                   <Answers answers={WHO_ANSWERS} hrefs={hrefsFor(run, "who", WHO_ANSWERS)} />
-                  {speaking ? (
+                  {localVoice ? (
                     <SayIt
                       answers={WHO_ANSWERS}
                       hrefs={hrefsFor(run, "who", WHO_ANSWERS)}
@@ -1039,7 +1088,7 @@ export default function Column({
               {who && !brought ? (
                 <>
                   <Answers answers={BROUGHT_ANSWERS} hrefs={hrefsFor(run, "brought", BROUGHT_ANSWERS)} />
-                  {speaking ? (
+                  {localVoice ? (
                     <SayIt
                       answers={BROUGHT_ANSWERS}
                       hrefs={hrefsFor(run, "brought", BROUGHT_ANSWERS)}
@@ -1080,7 +1129,7 @@ export default function Column({
               {brought && !share ? (
                 <>
                   <Answers answers={SHARE_ANSWERS} hrefs={hrefsFor(run, "share", SHARE_ANSWERS)} />
-                  {speaking ? (
+                  {localVoice ? (
                     <SayIt
                       answers={SHARE_ANSWERS}
                       hrefs={hrefsFor(run, "share", SHARE_ANSWERS)}
@@ -1109,9 +1158,9 @@ export default function Column({
                   run={run}
                   coaching={coaching}
                   name="centre"
-                  label="Who is this for, and what would they be doing differently?"
+                  label={COACH_ASKS.centre}
                   placeholder="district managers, counting in daylight…"
-                  speaking={speaking}
+                  speaking={localVoice}
                   aloud={aloud}
                 />
               ) : null}
@@ -1121,9 +1170,9 @@ export default function Column({
                   run={run}
                   coaching={coaching}
                   name="problem"
-                  label="Due to what? What's in their way today?"
+                  label={COACH_ASKS.problem}
                   placeholder="counts take three hours and happen at night…"
-                  speaking={speaking}
+                  speaking={localVoice}
                   aloud={aloud}
                 />
               ) : null}
@@ -1136,9 +1185,9 @@ export default function Column({
                   run={run}
                   coaching={coaching}
                   name="lagging"
-                  label="How would you know it landed? What would convince a sceptic?"
+                  label={COACH_ASKS.lagging}
                   placeholder="what would convince a sceptic…"
-                  speaking={speaking}
+                  speaking={localVoice}
                   aloud={aloud}
                   spoken={[DONT_KNOW_ANSWER]}
                   spokenHrefs={{ [DONT_KNOW]: columnHref(run, coaching, { lagging: DONT_KNOW }) }}
@@ -1157,9 +1206,9 @@ export default function Column({
                   run={run}
                   coaching={coaching}
                   name="whoKnows"
-                  label="Who would know? And has anyone ever been able to tell whether this got better?"
+                  label={COACH_ASKS.whoKnows}
                   placeholder="ask Priya's team…"
-                  speaking={speaking}
+                  speaking={localVoice}
                   aloud={aloud}
                   showLabel
                 />
@@ -1181,9 +1230,9 @@ export default function Column({
                   run={run}
                   coaching={coaching}
                   name="centreAgain"
-                  label="What would they actually be doing, on a Tuesday?"
+                  label={COACH_ASKS.centreAgain}
                   placeholder="counting a shelf in minutes, before lunch…"
-                  speaking={speaking}
+                  speaking={localVoice}
                   aloud={aloud}
                 />
               ) : null}
@@ -1193,9 +1242,9 @@ export default function Column({
                   run={run}
                   coaching={coaching}
                   name="hypothesis"
-                  label="What's the bet, and which of those numbers should move?"
+                  label={COACH_ASKS.hypothesis}
                   placeholder="we believe that…"
-                  speaking={speaking}
+                  speaking={localVoice}
                   aloud={aloud}
                 />
               ) : null}
@@ -1208,9 +1257,9 @@ export default function Column({
                   run={run}
                   coaching={coaching}
                   name="leading"
-                  label="What tells us in weeks?"
+                  label={COACH_ASKS.leading}
                   placeholder="what tells us in weeks…"
-                  speaking={speaking}
+                  speaking={localVoice}
                   aloud={aloud}
                 >
                   <p className="text-sm">
