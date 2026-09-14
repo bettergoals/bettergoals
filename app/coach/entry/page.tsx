@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CANVAS_ORDER, type CanvasBoxId } from "@/lib/canvas";
+import { CANVAS_OPENS_ON, CANVAS_ORDER, type CanvasBoxId } from "@/lib/canvas";
 import { REPO_URL } from "@/lib/config";
 import {
   BROUGHT_ANSWERS,
@@ -26,11 +26,14 @@ export const metadata = {
 /*
  * CARD 1 — The column. The shell everything else lives inside.
  * CARD 2 — Triage, steps 01–04. The four questions that fill it in.
+ * CARD 4 — The seam, step 05. The canvas rises into the column.
  *
  * Binding: `docs/decisions/0001-the-canvas-scrolls.md` (the canvas is a block
- * in ordinary document flow at every width), `docs/reference/card-a.md`, and
- * slides 1–8 of `docs/reference/voice-coach-deck.md`. The wording of the four
- * triage questions and their answers is the deck's; the layout is not.
+ * in ordinary document flow at every width),
+ * `docs/decisions/0002-the-canvas-arrives-collapsed-on-mobile.md`,
+ * `docs/reference/card-a.md`, and slides 1–8 of
+ * `docs/reference/voice-coach-deck.md`. The wording of the four triage
+ * questions and their answers is the deck's; the layout is not.
  *
  * The rules this file exists to keep:
  *  - one scroller. Nothing here is sticky, fixed, or given a height, an
@@ -125,33 +128,77 @@ const PLACE: Record<CanvasBoxId, string> = {
 
 /**
  * All five boxes, always all five, empty ones visibly present and labelled.
- * Full width at every breakpoint — no thumbnail, no map, no accordion, per the
- * CARD 0 decision. Boxes are sized by their content and never scroll.
+ * Full size at every breakpoint — no thumbnail, no map, per the CARD 0
+ * decision. Boxes are sized by their content and never scroll.
+ *
+ * One of them is lit: the box the conversation is in, or — at the seam, before
+ * a word of coaching — the box it is about to start in. Lighting is a heavier
+ * border, not a colour, and the box says in words what it is waiting for, so
+ * nothing here depends on seeing a difference in shade.
  */
-function Canvas() {
+function Canvas({ lit }: { lit: CanvasBoxId }) {
   return (
-    <section aria-labelledby="canvas-heading">
-      <h2 id="canvas-heading" className="sr-only">
-        Your canvas
-      </h2>
-      <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
-        {CANVAS_ORDER.map((box) => (
+    <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
+      {CANVAS_ORDER.map((box) => {
+        const isLit = box.id === lit;
+        return (
           <div
             key={box.id}
-            className={`rounded-2xl border border-ink/15 bg-white p-5 ${PLACE[box.id]}`}
+            aria-current={isLit ? "true" : undefined}
+            className={`rounded-2xl bg-white p-5 ${PLACE[box.id]} ${
+              isLit ? "border-2 border-ink/45 shadow-sm" : "border border-ink/15"
+            }`}
           >
             <p className="flex items-baseline gap-2">
               <span aria-hidden className="text-lg text-ink-soft/60">
                 {box.numeral}
               </span>
-              <span className="text-xs font-semibold uppercase tracking-widest text-ink-soft/80">
+              <span
+                className={`text-xs font-semibold uppercase tracking-widest ${
+                  isLit ? "text-ink" : "text-ink-soft/80"
+                }`}
+              >
                 {box.label}
               </span>
             </p>
-            <p className="mt-3 text-ink-soft/70">{box.waiting}</p>
+            <p className={`mt-3 ${isLit ? "text-ink-soft" : "text-ink-soft/70"}`}>{box.waiting}</p>
           </div>
-        ))}
-      </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * CARD 4 — the seam. The canvas rises into the column the conversation was
+ * already in: no transition, no "start" button, no new page, and nothing above
+ * it cleared away.
+ *
+ * Slide 8 gives it two arrivals. On a wide screen it is simply there, under the
+ * coach's line, both halves in view at once. On a narrow one it arrives
+ * collapsed to a single line you tap to open — which is a native disclosure,
+ * not a thumbnail of itself, and never a report of how much of it is done.
+ * Which of the two you get is decided in CSS by the width of the screen, so the
+ * markup, the DOM order and the plain-document reading are the same either way.
+ */
+function Seam() {
+  const opening = CANVAS_OPENS_ON;
+  return (
+    <section aria-labelledby="canvas-heading">
+      <h2 id="canvas-heading" className="sr-only">
+        Your canvas
+      </h2>
+      <details className="canvas-arrives">
+        <summary className="mb-3 flex cursor-pointer list-none items-baseline gap-2 rounded-2xl border border-dashed border-ink/25 bg-white/60 px-5 py-4 text-ink-soft hover:bg-white">
+          <span aria-hidden>▾</span>
+          <span>
+            <span className="font-semibold text-ink">canvas</span> — we&rsquo;ll start in{" "}
+            {opening.short}
+            <span className="mt-0.5 block text-sm text-ink-soft/75">tap to open</span>
+          </span>
+        </summary>
+        <Canvas lit={opening.id} />
+      </details>
     </section>
   );
 }
@@ -184,8 +231,9 @@ export default async function ColumnPage({
     <div className="mx-auto max-w-3xl px-4 pt-8 pb-20">
       <p className="mb-10 rounded-2xl border border-safer/40 bg-safer/10 px-4 py-3 text-sm text-ink-soft">
         <strong className="text-ink">This is the column, being built in the open.</strong> The four
-        questions below are real and so are the chips they leave behind. What comes after them — the
-        coaching itself, and the canvas filling in as you talk — arrives in later cards.
+        questions below are real, so are the chips they leave behind, and so is the canvas they hand
+        you on to. What is not here yet is the coaching — the boxes filling in as you talk arrives in
+        later cards.
       </p>
 
       {/* One column. One scroller. Everything below is appended in order and
@@ -277,6 +325,15 @@ export default async function ColumnPage({
                 <Chip key={`${i}-${chip}`}>{chip}</Chip>
               ))}
             </ul>
+            {/* Slide 8's footnote, said once, at the moment the canvas arrives
+                and the worry it answers actually exists. It points up at the
+                chips because that is what it is about. */}
+            {share === "yes" ? (
+              <p className="mt-3 text-sm text-ink-soft/75">
+                <span aria-hidden>↑ </span>
+                What you told me stays up there, greyed. Nothing has been cleared away.
+              </p>
+            ) : null}
           </section>
         ) : null}
 
@@ -291,7 +348,7 @@ export default async function ColumnPage({
                 I&rsquo;ll ask, you talk, and it fills itself.
               </p>
             </Turn>
-            <Canvas />
+            <Seam />
           </>
         ) : null}
 
@@ -401,7 +458,7 @@ export default async function ColumnPage({
                   <p className="text-sm text-ink-soft">
                     {speaking ? "◉ Speaking." : "⌨ Typing."}{" "}
                     {share === "yes"
-                      ? "The coach's first question lands here, and the canvas above fills itself in as you answer. That's a later card — this one is the four questions that got you to it."
+                      ? "The canvas is up. The coach's first question lands here — in the centre, the box that's lit — and the boxes fill themselves in as you answer. That part is a later card."
                       : "The handover above is where this run goes next. The column stays open behind it."}
                   </p>
                 </div>

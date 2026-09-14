@@ -11,6 +11,7 @@ than working it out during build.
 | # | Decision | Status | Binds |
 | - | -------- | ------ | ----- |
 | [0001](0001-the-canvas-scrolls.md) | **The canvas scrolls** — it is a block in the one continuous column, never pinned, at every width | Decided, 14 Sep 2026 | Card 1 onwards |
+| [0002](0002-the-canvas-arrives-collapsed-on-mobile.md) | **The canvas arrives collapsed on mobile** — one line you tap once to open, never a thumbnail. Narrows 0001's rule 4 | Decided, 14 Sep 2026 | Card 4 onwards |
 
 Each file states the decision, the option not taken and why, the consequence we
 accept, what the affected card must now do, and what would reopen it.
