@@ -18,6 +18,29 @@ When running from the build Action, that repo is also checked out at `./build-be
 - `lib/config.ts` — site constants (repo, builder URL, endorse threshold)
 - `public/skills/*.md` — downloadable skills; the Skills page auto-lists them (frontmatter `name:` and `description:` required)
 - `PRINCIPLES.md` — rendered at `/principles`, fetched live from GitHub with local fallback
+- `docs/reference/` — source documents that bind a whole series of cards
+- `docs/decisions/` — decisions already taken, binding on later cards
+
+## Reference material
+
+`docs/reference/` holds documents that bind more than one idea — currently
+**CARD A** and the **entry deck** for the voice-coach series. If a card cites
+CARD A, "the deck", or a slide number, read them there **before** building and
+again before calling the card done. Cards cite the deck by slide number, and
+`voice-coach-deck.md` is split `## Slide 1` … `## Slide 18` so a citation can be
+looked up rather than inferred. See `docs/reference/README.md` for the full
+precedence rule.
+
+These files are versioned and will change as later cards refine them. **The repo
+copy is always the current one.** Where an idea attaches a copy of a document
+that also lives in `docs/reference/`, the attachment is a snapshot from when
+that card was written — read the repo copy instead, and say in the PR that the
+two differed if they do.
+
+Precedence when they conflict: `PRINCIPLES.md` first, then the OKRs page, then
+the deck. The wireframes describe an interface; they do not override how the
+product is meant to behave. Where the deck appears to conflict with either, the
+deck is wrong — raise it rather than building it.
 
 ## Commands
 
