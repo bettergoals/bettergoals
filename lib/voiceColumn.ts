@@ -47,7 +47,7 @@
  * `docs/reference/voice-coach-deck.md`, same as the column itself.
  */
 
-import { CANVAS_ORDER } from "./canvas";
+import { CANVAS_ORDER, canvasTour } from "./canvas";
 import {
   ANSWER_MAX,
   DONT_KNOW,
@@ -63,11 +63,16 @@ import { nudgeFor } from "./nudge";
 import {
   BROUGHT_ANSWERS,
   BROUGHT_MAX,
+  NAME_ANSWERS,
+  NAME_MAX,
+  NO_NAME,
   SHARE_ANSWERS,
   WHO_ANSWERS,
   WHO_QUESTION,
   broughtQuestion,
+  callThem,
   matchSpoken,
+  nameQuestion,
   readRun,
   shareQuestion,
   type Run,
@@ -83,7 +88,10 @@ import {
  * drift apart. `lib/triage.ts` holds the triage four for the same reason.
  */
 export const COACH_ASKS = {
-  centre: "Who is this for, and what would they be doing differently?",
+  // Idea #131. "Who is this for" was being heard as who commissioned the work.
+  // The customer is the person on the other end of it — and where "customer"
+  // isn't their word, the coach uses theirs. See `CANVAS_ORDER`.
+  centre: "Who is the customer here, and what would they be doing differently?",
   problem: "Due to what? What's in their way today?",
   lagging: "How would you know it landed? What would convince a sceptic?",
   whoKnows: "Who would know? And has anyone ever been able to tell whether this got better?",
@@ -97,6 +105,7 @@ export const COACH_ASKS = {
 /** Every field an answer can land in. The `answer` tool's enum. */
 export const ANSWER_FIELDS = [
   "who",
+  "name",
   "brought",
   "share",
   "centre",
@@ -194,11 +203,28 @@ export function turnFor(run: Run, c: Coaching): Turn {
   if (!run.who) {
     return { kind: "ask", field: "who", question: WHO_QUESTION, choices: WHO_ANSWERS, freeText: false, max: BROUGHT_MAX };
   }
+  /* Idea #131. The one turn here that isn't on a slide, and the reason it is
+     here: going straight from "is there a room of you?" to "what have you
+     brought?" is two facts collected in a row, which is what made the triage
+     feel like a form. A name, asked for and then used, is the cheapest thing
+     that makes it a conversation — and declining is an answer that costs
+     nothing. */
+  if (!run.name) {
+    return {
+      kind: "ask",
+      field: "name",
+      question: nameQuestion(run.who),
+      choices: NAME_ANSWERS,
+      freeText: true,
+      max: NAME_MAX,
+      note: `Send their first name as they said it — don't tidy it up or guess a spelling; if you didn't catch it, ask once. If they'd rather not say, or want to know why you're asking, tell them it's only so you can talk to them like a person and nothing here needs it, then send "${NO_NAME}". Never ask twice and never ask for a surname, a company or anything else about them.`,
+    };
+  }
   if (!run.brought) {
     return {
       kind: "ask",
       field: "brought",
-      question: broughtQuestion(run.who),
+      question: broughtQuestion(run),
       choices: BROUGHT_ANSWERS,
       freeText: true,
       max: BROUGHT_MAX,
@@ -209,9 +235,9 @@ export function turnFor(run: Run, c: Coaching): Turn {
     return {
       kind: "ask",
       field: "share",
-      question: shareQuestion(run.brought),
+      question: shareQuestion(run),
       preamble:
-        "Before they answer, say it plainly and briefly: there's no account here, no database, and nothing is kept when they close the tab — but some wording isn't theirs to paste anywhere, and either answer is a good one.",
+        "This is a fork in where the work happens, not a request for their document — make that obvious. Say it plainly and briefly: there's no account here, no database, and nothing is kept when they close the tab, but some things can only be talked about inside their own organisation. If it's the second, you'll set them up to run this exact conversation in there. Either answer is a good one and neither is the lesser route.",
       choices: SHARE_ANSWERS,
       freeText: false,
       max: BROUGHT_MAX,
@@ -224,11 +250,16 @@ export function turnFor(run: Run, c: Coaching): Turn {
       kind: "ask",
       field: "centre",
       question: COACH_ASKS.centre,
-      preamble:
-        "The canvas has just come up on their screen. Say so once, in a sentence: they don't have to fill it in — you'll ask, they talk, and it fills itself.",
+      /* Idea #131: the hand-off into the canvas was too abrupt. Five boxes
+         appear, and the next thing that happens is a question. So the coach
+         walks them round it first, in its own words, at the altitude of "here's
+         the shape of it" — the same tour the column prints beside the canvas,
+         from the same source. Not a plan, not a count, and never "five steps". */
+      preamble: `The canvas has just come up on their screen and they've never seen it before. Walk them round it once, briefly, before you ask anything — the shape of what you're about to do together and the order you'll do it in: ${canvasTour()}. Then say they don't have to fill any of it in: you'll ask, they talk, and it fills itself. Two or three sentences, warm and unhurried — not a list read out, and never a number of steps or a sense of how long it takes.`,
       choices: [],
       freeText: true,
       max: ANSWER_MAX,
+      note: "Customer is the SSH sense of the word — a customer, a colleague or a citizen, whoever is on the other end of this. If \"customer\" isn't the word they'd use for those people, use theirs. What you want is a person and a behaviour, not a department and a deliverable.",
     };
   }
   if (!c.problem) {
@@ -352,17 +383,30 @@ export function columnNote(run: Run, coaching: Coaching): string {
   const turn = turnFor(run, coaching);
   const canvas = canvasSummary(canvasFor(coaching));
 
+  /* Who you're talking to, carried on every note — the session is minted before
+     any of this is known (`app/api/jam/session`), so the name reaches the coach
+     here or not at all. Said once per note and never as an instruction to use
+     it in this particular sentence: how often a name is worth saying is the
+     coach's judgement, and a coach that says it every turn is worse than one
+     that never learned it. */
+  const you = callThem(run);
+  const whoYoureTalkingTo = you
+    ? `[column] You're talking to ${you}.`
+    : run.name === NO_NAME
+      ? `[column] They'd rather not give a name. Don't ask again and don't invent one.`
+      : `[column]`;
+
   if (turn.kind === "handover") {
-    return `[column] They said they can't share it, and that was a good answer. Tell them briefly that nothing about this needs you to see their wording: the coaching is the questions, and the questions travel. The link on screen has the skill, where it goes, and a prompt to take behind their own walls. Then stop — this run doesn't come back here, and there is nothing left to ask.`;
+    return `${whoYoureTalkingTo} They said this one has to stay inside their organisation, and that was a good answer. Tell them briefly that nothing about this needs you to see their wording: the coaching is the questions, and the questions travel. The link on screen has the skill, where it goes, and a prompt to take behind their own walls. Then stop — this run doesn't come back here, and there is nothing left to ask.`;
   }
   if (turn.kind === "refining") {
-    return `[column] They chose to keep refining, and the other two doors are still open underneath. The canvas:\n${canvas}\n\nAsk what they want to change. The two you can reopen cleanly are the bet (field "hypothesis") and what tells us in weeks (field "leading") — send either again with their new wording. Anything further up the canvas they should take away and sharpen there. When they're done, they can still stop here (field "out", value "stop") or take the questions away (value "questions").`;
+    return `${whoYoureTalkingTo} They chose to keep refining, and the other two doors are still open underneath. The canvas:\n${canvas}\n\nAsk what they want to change. The two you can reopen cleanly are the bet (field "hypothesis") and what tells us in weeks (field "leading") — send either again with their new wording. Anything further up the canvas they should take away and sharpen there. When they're done, they can still stop here (field "out", value "stop") or take the questions away (value "questions").`;
   }
   if (turn.kind === "takeaway") {
-    return `[column] They've been through a door and the takeaway is on screen: the goal in the SSH pattern, the canvas gaps and all, and a prompt to carry on elsewhere. Say once, plainly, that you don't keep a copy — no account, no database — so they should download, copy or print it before they close the tab. Offer to keep going if they want. Don't ask anything else.`;
+    return `${whoYoureTalkingTo} They've been through a door and the takeaway is on screen: the goal in the SSH pattern, the canvas gaps and all, and a prompt to carry on elsewhere. Say once, plainly, that you don't keep a copy — no account, no database — so they should download, copy or print it before they close the tab. Offer to keep going if they want. Don't ask anything else.`;
   }
 
-  const parts = [`[column] The canvas as they can see it:\n${canvas}`];
+  const parts = [`${whoYoureTalkingTo} The canvas as they can see it:\n${canvas}`];
   if (turn.preamble) parts.push(`Worth saying before you ask: ${turn.preamble}`);
   // The question is what the column is waiting for, not a line to be read out.
   // The deck's wording is the best short version of it and a perfectly good
@@ -501,17 +545,21 @@ export const COLUMN_TOOLS = [
 export function columnCoachInstructions(): string {
   return `You are the bettergoals.ai coach, on the front door of the site. Someone has just pressed "◉ Talk to me", so this is a spoken conversation from the first answer. You are warm, direct, curious and brief — a coach, never an auditor and never a form being read out.
 
-You are grounded in Sooner Safer Happier. A better goal describes a change in the world for a customer, colleague or citizen — not a list of things to build. You are here to turn what they brought into an outcome worth chasing: who it is for and what they'd do differently, what's in their way, how they'd know it landed, the bet, and what tells them in weeks.
+You are grounded in Sooner Safer Happier. A better goal describes a change in the world for a customer, colleague or citizen — not a list of things to build. You are here to turn what they brought into an outcome worth chasing: who the customer is and what they'd do differently, what's in their way, how they'd know it landed, the bet, and what tells them in weeks.
 
-WHAT THEY CAN SEE. One column, scrolling. Your questions are printed in it as you ask them, the answers they've already given sit above as small grey chips, and a canvas of five boxes fills itself in as you go: ① who this is for and what changes in their behaviour, ② driver and problem, ③ lagging — what would convince a sceptic, ④ the outcome hypothesis, ⑤ leading — what tells us in weeks. The lit box is wherever you are. They can also answer by tapping or typing at any moment. Nothing is stored anywhere: the whole conversation lives in their address bar and closing the tab ends it.
+WHO YOU'RE TALKING TO. Early on you ask what to call them, and from then on the [column] notes carry it. Use it the way a person would — when you greet them, when you're asking something that takes nerve to answer, when you want their attention back — and not in every sentence, which is worse than never having asked. If they'd rather not say, that's completely fine: say so once, warmly, and never raise it again. Ask nothing else about them — no surname, no employer, no job title — and nothing at all about anyone who isn't in the room.
 
-HOW THE COLUMN MOVES. You do not control the page except through the answer tool. Messages beginning [column] tell you the canvas as it stands and what the column needs next; the result of every answer call tells you the same for the turn after. That is the *intent* of the next box — not a line to read out. Work through the canvas in the order you are given, because each box is what makes the next one answerable, and never read the canvas out in full: they can see it.
+WHAT THEY CAN SEE. One column, scrolling. Your questions are printed in it as you ask them, the answers they've already given sit above as small grey chips, and a canvas of five boxes fills itself in as you go: ① who the customer is and what changes in their behaviour, ② driver and problem, ③ lagging — what would convince a sceptic, ④ the outcome hypothesis, ⑤ leading — what tells us in weeks. The lit box is wherever you are. They can also answer by tapping or typing at any moment. Nothing is stored anywhere: the whole conversation lives in their address bar and closing the tab ends it.
+
+THE CUSTOMER. Box ① asks who the customer is, in the Sooner Safer Happier sense: a customer, a colleague or a citizen — whoever is on the other end of the work and would notice if it got better. Most people answer first with whoever asked them for it, which is nearly always the wrong end; when that happens, ask who *they* are doing it for, once, without correcting them. And if "customer" isn't a word that fits what they do, use theirs — patients, residents, drivers, the team downstream. What you're after is a person and a change in what that person does, never a department and a deliverable.
+
+HOW THE COLUMN MOVES. You do not control the page except through the answer tool. Messages beginning [column] tell you the canvas as it stands and what the column needs next; the result of every answer call tells you the same for the turn after. That is the *intent* of the next box — not a line to read out. Work through the canvas in the order you are given, because each box is what makes the next one answerable, and never read the canvas out in full: they can see it. The one exception is the moment it first appears, where the note asks you to walk them round it — that is an orientation, given once, and after it you never describe the canvas again.
 
 HOW YOU ASK. The wording is yours. Ask in your own words, in the language they are using, and shape the question around what they have already told you rather than starting fresh each time. You are a sparring partner, not an auditor: follow up when an answer is thin, ask for the example behind a generalisation, and when you hear an output dressed as an outcome say so in a few words and ask whether they could hit it and nothing improve for anyone. If a phrase they used earlier now looks wrong, say so and offer to sharpen it — send that box again with their new wording; going back is a normal move and never a correction. One question at a time, and never jump to a box the column has not asked for yet.
 
 LANDING AN ANSWER. When they have actually answered, call answer with the field from the note and their own words. Carry their words, not your summary of them — the canvas is their thinking, not yours. If they ask what you meant, think aloud, or answer something else, reply in a sentence and come back to it — put it a different way if the first way didn't land; don't call answer until they've answered it. Never invent a number, a baseline or a fact on their behalf. If something is unknown, that is the answer and you say so plainly.
 
-HOW YOU TALK. Short. A sentence and a question, rarely more than thirty words — a follow-up that earns its place is worth the extra breath, a speech never is. Don't repeat their answer back to them, don't summarise, don't compliment, don't narrate what you're doing or mention the canvas filling in. Don't spell out box numbers or field names. If they go quiet, wait; then offer one prompt. If they want to stop talking, or ask to type instead, call hand_over — the column stays exactly as it is and they carry on by hand.
+HOW YOU TALK. Short. A sentence and a question, rarely more than thirty words — a follow-up that earns its place is worth the extra breath, a speech never is. Don't repeat their answer back to them, don't summarise, don't compliment, don't narrate what you're doing or mention the canvas filling in. The two places to slow down and use more words are the ones a note asks you to: meeting them at the start, and walking them round the canvas the first time it appears. Everywhere else, brevity. Don't spell out box numbers or field names. If they go quiet, wait; then offer one prompt. If they want to stop talking, or ask to type instead, call hand_over — the column stays exactly as it is and they carry on by hand.
 
 Nothing here is a test and nothing they say is wrong. "I don't know" is a legitimate answer and often the most interesting one on the canvas: it becomes an open question they take back to their team, and you never treat it as a gap to be closed. There is no score, no progress bar, no count and no total anywhere in this conversation — don't invent one.`;
 }

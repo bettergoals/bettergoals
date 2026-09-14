@@ -22,11 +22,16 @@ import {
   BROUGHT_ANSWERS,
   BROUGHT_MAX,
   MODE_ANSWERS,
+  NAME_ANSWERS,
+  NAME_MAX,
+  NO_NAME,
   SHARE_ANSWERS,
   WHO_ANSWERS,
   WHO_QUESTION,
   broughtQuestion,
+  callThem,
   chipsFor,
+  nameQuestion,
   readRun,
   readsAloud,
   runHref,
@@ -200,6 +205,40 @@ function Seam({ state, started }: { state: CanvasState; started: boolean }) {
         <Canvas state={state} />
       </details>
     </section>
+  );
+}
+
+/**
+ * The canvas, walked round once before anything is asked — idea #131.
+ *
+ * "The transition to the Canvas is too harsh": five boxes arrived with no
+ * account of what they were or which order they'd be worked, and the very next
+ * thing that happened was a question. This is the account, said in the coach's
+ * voice, in the shared order (CARD A, contract 2), in the boxes' own words.
+ *
+ * What it is careful not to be: a plan, a count, an agenda or an estimate.
+ * There is no total, no "five", no time, nothing numbered as a step and nothing
+ * that can later be ticked. The numerals are the boxes' names — the same ones
+ * on the canvas below it — which is how you can read this and then recognise
+ * what you are looking at. Rule 5 holds: the canvas filling in is still the
+ * only orientation there is.
+ */
+function Tour() {
+  return (
+    <div className="text-base text-ink-soft sm:text-lg">
+      <p>Here&rsquo;s the shape of it, so you know where we&rsquo;re going:</p>
+      <ul className="mt-2 space-y-1">
+        {CANVAS_ORDER.map((box) => (
+          <li key={box.id} className="flex gap-2">
+            <span aria-hidden className="text-ink-soft/70">
+              {box.numeral}
+            </span>
+            <span>{box.tour}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2">We start in the middle and work outwards. You can stop me anywhere.</p>
+    </div>
   );
 }
 
@@ -439,7 +478,10 @@ export default function Column({
   voiceConfigured?: boolean;
 }) {
   const run = readRun(params);
-  const { mode, who, brought, share } = run;
+  const { mode, who, name, brought, share } = run;
+  /* What to call them, or null — including when they said they'd rather not,
+     which is an answer the column has to be able to tell from silence. */
+  const you = callThem(run);
 
   const chips = chipsFor(run);
   const speaking = mode === "speak";
@@ -539,11 +581,26 @@ export default function Column({
           </Turn>
         ) : null}
 
-        {/* 03 What you brought. Slide 5 — the coach says the last answer back
-            before asking the next thing. */}
+        {/* 02a What to call you — idea #131. Not a slide: the deck goes from
+            who's here straight to what you brought, and taking two facts in a
+            row without ever asking who you are is what made this read as a
+            form. The coach says the last answer back here, as slide 5 has it,
+            and then asks the one thing that makes the rest a conversation.
+
+            It is a courtesy, not a field. "I'd rather not say" is beside it,
+            weighted the same, and nothing downstream needs an answer either
+            way — PRINCIPLES.md, "Accessible to everyone". */}
         {who ? (
+          <Turn spent={Boolean(name)}>
+            <p>{nameQuestion(who)}</p>
+          </Turn>
+        ) : null}
+
+        {/* 03 What you brought. Slide 5 — the coach greets you by name the
+            first turn it has one. */}
+        {name ? (
           <Turn spent={Boolean(brought)}>
-            <p>{broughtQuestion(who)}</p>
+            <p>{broughtQuestion(run)}</p>
           </Turn>
         ) : null}
 
@@ -572,11 +629,12 @@ export default function Column({
             line is said. It is not repeated anywhere else in the column. */}
         {brought ? (
           <Turn spent={Boolean(share)}>
-            <p>{shareQuestion(brought)}</p>
+            <p>{shareQuestion(run)}</p>
             <p className="text-base text-ink-soft sm:text-lg">
               Before you answer — there&rsquo;s no account here, no database, and I keep nothing when
-              you close the tab. Even so, some wording isn&rsquo;t yours to paste anywhere. Your call,
-              and either answer is a good one.
+              you close the tab. Even so, some things can only be talked about inside your own
+              organisation, and if that&rsquo;s this, I&rsquo;ll set you up to run this same
+              conversation in there. Your call, and either answer is a good one.
             </p>
           </Turn>
         ) : null}
@@ -612,11 +670,25 @@ export default function Column({
         {share === "yes" ? (
           <>
             <Turn spent={Boolean(coaching.centre)}>
-              <p>Good — then I&rsquo;ve got everything I need to be useful.</p>
+              <p>
+                {you ? `Good, ${you} — ` : "Good — "}then I&rsquo;ve got everything I need to be
+                useful.
+              </p>
               <p>
                 I&rsquo;m going to put your canvas up as we go. You don&rsquo;t have to fill it in —
                 I&rsquo;ll ask, you talk, and it fills itself.
               </p>
+              {/* Idea #131. The canvas used to simply appear, and the next thing
+                  that happened was a question — which is the hand-off reading as
+                  harsh. So here is the shape of it first, in the order we
+                  actually work, said once before anything is asked of anyone.
+
+                  It is the boxes' own names and their own clauses, from
+                  `CANVAS_ORDER`, so this can never describe a canvas the coach
+                  isn't running. It is not a plan and not a count: no total, no
+                  "five steps", no how-long-this-takes, nothing here reports
+                  progress and nothing ticks. */}
+              {!coaching.centre ? <Tour /> : null}
             </Turn>
             <Seam state={canvas} started={Boolean(coaching.centre)} />
             {/* Slide 9's footnote, said once, at the one moment it is exactly
@@ -645,9 +717,22 @@ export default function Column({
             an error, a validation failure or a skip. */}
         {share === "yes" ? (
           <>
-            {/* 06 · centre ①. Slide 9. */}
+            {/* 06 · centre ①. Slide 9, whose own title for this box is
+                "customer and behaviour change" — so idea #131 asking for the
+                word "customer" here is the deck's intent, not a departure from
+                it. "Who is this for" was being answered with whoever asked for
+                the work, which is the wrong end of it every time.
+
+                The second line is the one that makes "customer" safe to say:
+                PRINCIPLES.md means it in the widest sense, and plenty of people
+                on this site have patients, residents or colleagues rather than
+                customers. Their word wins. */}
             <Turn spent={Boolean(coaching.centre)}>
-              <p>Who is this actually for, and what would they be doing differently?</p>
+              <p>{COACH_ASKS.centre}</p>
+              <p className="text-base text-ink-soft sm:text-lg">
+                Customer, colleague or citizen — whoever&rsquo;s on the other end of this and would
+                notice it got better. Use your word for them, not mine.
+              </p>
             </Turn>
 
             {/* 07 · problem ②. Slide 10. The deck gives box ② its label and its
@@ -1038,8 +1123,8 @@ export default function Column({
             <>
               <Answers answers={MODE_ANSWERS} hrefs={hrefsFor(run, "mode", MODE_ANSWERS)} />
               <p className="text-sm text-ink-soft">
-                I&rsquo;ll ask three short questions first, so I know who I&rsquo;m coaching. Works for
-                one person or a whole room.
+                I&rsquo;ll ask a few short questions first, so I know who I&rsquo;m talking to and
+                what you&rsquo;ve brought. Works for one person or a whole room.
               </p>
               {/* Said before the press, not after it. Talking means the coach
                   talks back and the microphone opens on its own, and both are
@@ -1091,7 +1176,55 @@ export default function Column({
                 </>
               ) : null}
 
-              {who && !brought ? (
+              {/* 02a · what to call you. A plain GET form like every other
+                  answer here, so it works with JavaScript off, and "I'd rather
+                  not say" beside it as a real answer rather than a skip —
+                  it moves the conversation on exactly as far. */}
+              {who && !name ? (
+                <>
+                  {localVoice ? (
+                    <SayIt
+                      answers={NAME_ANSWERS}
+                      hrefs={hrefsFor(run, "name", NAME_ANSWERS)}
+                      freeTextHref={runHref(run, { name: "__SAID__" })}
+                      invitation="…or just say it"
+                      max={NAME_MAX}
+                      say={aloud ? nameQuestion(who) : undefined}
+                      auto
+                    />
+                  ) : null}
+                  <form method="get" action={COLUMN_PATH} className="flex flex-col gap-2 sm:flex-row">
+                    {carried(run, coaching).map((field) => (
+                      <input key={field.name} type="hidden" name={field.name} value={field.value} />
+                    ))}
+                    <label htmlFor="your-name" className="sr-only">
+                      What should I call you?
+                    </label>
+                    <input
+                      id="your-name"
+                      name="name"
+                      type="text"
+                      maxLength={NAME_MAX}
+                      autoComplete="given-name"
+                      placeholder="…first name is plenty"
+                      className="flex-1 rounded-2xl border border-ink/15 bg-white px-5 py-4 placeholder:text-ink-soft/75"
+                    />
+                    <button
+                      type="submit"
+                      className="rounded-2xl bg-ink px-5 py-4 font-semibold text-chalk hover:bg-ink-soft sm:px-6"
+                    >
+                      ↵ send
+                    </button>
+                  </form>
+                  <Choice href={runHref(run, { name: NO_NAME })}>I&rsquo;d rather not say</Choice>
+                  <p className="text-sm text-ink-soft/75">
+                    It only travels in this tab&rsquo;s address bar, like everything else here, and
+                    nothing below needs it.
+                  </p>
+                </>
+              ) : null}
+
+              {who && name && !brought ? (
                 <>
                   <Answers answers={BROUGHT_ANSWERS} hrefs={hrefsFor(run, "brought", BROUGHT_ANSWERS)} />
                   {localVoice ? (
@@ -1100,7 +1233,7 @@ export default function Column({
                       hrefs={hrefsFor(run, "brought", BROUGHT_ANSWERS)}
                       freeTextHref={runHref(run, { brought: "__SAID__" })}
                       invitation="…or say it however you like"
-                      say={aloud ? broughtQuestion(who) : undefined}
+                      say={aloud ? broughtQuestion(run) : undefined}
                       auto
                     />
                   ) : null}
@@ -1108,8 +1241,12 @@ export default function Column({
                       works with JavaScript off like everything else here, and
                       it stays available whichever way you're answering. */}
                   <form method="get" action={COLUMN_PATH} className="flex flex-col gap-2 sm:flex-row">
-                    <input type="hidden" name="mode" value={mode} />
-                    <input type="hidden" name="who" value={who} />
+                    {/* The whole run so far, including what to call you — the
+                        same hidden fields every other form in this column
+                        carries. */}
+                    {carried(run, coaching).map((field) => (
+                      <input key={field.name} type="hidden" name={field.name} value={field.value} />
+                    ))}
                     <label htmlFor="brought-own" className="sr-only">
                       Tell me in your own words what you have brought
                     </label>
@@ -1140,7 +1277,7 @@ export default function Column({
                       answers={SHARE_ANSWERS}
                       hrefs={hrefsFor(run, "share", SHARE_ANSWERS)}
                       invitation="…or just say it"
-                      say={aloud ? shareQuestion(brought) : undefined}
+                      say={aloud ? shareQuestion(run) : undefined}
                       auto
                     />
                   ) : null}
