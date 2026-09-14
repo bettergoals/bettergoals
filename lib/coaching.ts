@@ -39,7 +39,7 @@
 
 import { COLUMN_PATH } from "./config";
 import { CANVAS_ORDER, type CanvasBoxId } from "./canvas";
-import { BROUGHT_MAX, type Run, type TriageAnswer } from "./triage";
+import { BROUGHT_MAX, NAME_MAX, type Run, type TriageAnswer } from "./triage";
 
 /** The longest answer we'll carry on the canvas. A UX bound, not a safety one. */
 export const ANSWER_MAX = 180;
@@ -208,6 +208,7 @@ export function columnHref(
   };
   put("mode", merged.mode);
   put("who", merged.who);
+  if (merged.name) q.set("name", merged.name.slice(0, NAME_MAX));
   if (merged.brought) q.set("brought", merged.brought.slice(0, BROUGHT_MAX));
   put("share", merged.share);
   put("voice", merged.voice);

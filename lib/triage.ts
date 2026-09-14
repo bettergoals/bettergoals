@@ -1,15 +1,26 @@
 /**
  * Triage — steps 01–04 of the entry column. CARD 2.
  *
- * Four things the coach establishes before any coaching starts: how you want
- * to talk, who is in the room, what you brought, and whether you can share it.
- * Every answer leaves an outline chip behind — a fact about you, not your
- * thinking — and those chips stay above the canvas for the rest of the run.
+ * The things the coach establishes before any coaching starts: how you want to
+ * talk, who is in the room, what to call you, what you brought, and whether the
+ * two of you can work on it out here. Every answer leaves an outline chip
+ * behind — a fact about you, not your thinking — and those chips stay above the
+ * canvas for the rest of the run.
  *
  * Source: slides 3, 4, 5 and 6 of `docs/reference/voice-coach-deck.md`, under
  * `docs/reference/card-a.md`. The deck is binding on what is asked, in what
  * order, and what each answer produces. It is not binding on how any of it
  * looks.
+ *
+ * Idea #131 adds one turn the deck does not have, and rewords a second.
+ * "It doesn't ask for our name or start to build rapport, it just moved to the
+ * next step" — so between who's here and what you brought, the coach asks what
+ * to call you, and uses it. The deck is binding on order, and this is an
+ * insertion rather than a rearrangement: nothing the deck asks for has moved.
+ * And the share question now asks the thing it was always for — whether the two
+ * of you can work on this out here, or whether it can only happen inside their
+ * organisation — because "can you share it with me?" read as a request for the
+ * document rather than a fork in where the work happens.
  *
  * Two things this file deliberately does not do:
  *  - it does not count. There is no total, no "of three", no step number. Two
@@ -37,6 +48,11 @@ export type Run = {
   /** Unset until the landing screen is answered — that answer is what starts it. */
   mode: Mode | null;
   who: Who | null;
+  /**
+   * What to call them. Their own words, or `NO_NAME` when they'd rather not
+   * say — which is an answer and moves the conversation on exactly as far.
+   */
+  name: string | null;
   /** One of the three offered answers, or the leader's own words. */
   brought: string | null;
   share: Share | null;
@@ -95,6 +111,72 @@ export const WHO_ANSWERS: readonly TriageAnswer[] = [
   },
 ];
 
+/**
+ * What to call them — idea #131. Not on a slide: the deck goes straight from
+ * who's here to what you brought, and that jump is exactly what read as
+ * robotic.
+ *
+ * The only fixed answer is the one that declines, and it is weighted like every
+ * other answer in this column rather than offered as a skip. A name is a
+ * courtesy the coach asks for, never a field it requires — PRINCIPLES.md,
+ * "Accessible to everyone", and there is nothing downstream that needs it.
+ */
+export const NO_NAME = "anon";
+
+export const NAME_ANSWERS: readonly TriageAnswer[] = [
+  {
+    value: NO_NAME,
+    label: "I’d rather not say",
+    aside: "that’s fine — nothing here needs it",
+    // No chip. The turn greying is the acknowledgement; a chip saying what you
+    // declined to tell me would be a record of the wrong thing.
+    chip: "",
+    phrases: [
+      "rather not",
+      "rather not say",
+      "prefer not",
+      "prefer not to",
+      "no name",
+      "not saying",
+      "keep it to myself",
+      "anonymous",
+      "skip",
+      "skip it",
+      "next",
+    ],
+  },
+];
+
+/** The longest name we'll carry. A courtesy bound, not a safety one. */
+export const NAME_MAX = 40;
+
+/**
+ * What people actually say when asked their name — "I'm Sam", "call me Sam",
+ * "my name's Sam". Only the lead-in is trimmed; the name itself is theirs and
+ * is never corrected, capitalised or otherwise tidied up.
+ */
+const NAME_LEAD_IN = /^(?:hi|hey|hello)?[\s,!.]*(?:i'?m|it'?s|this is|my name'?s|my name is|the name'?s|they call me|you can call me|call me|name'?s)\s+/i;
+
+export function cleanName(said: string): string {
+  return said
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(NAME_LEAD_IN, "")
+    .replace(/^["'“”‘’\s,.!-]+/, "")
+    .replace(/["'“”‘’\s,.!]+$/, "")
+    .slice(0, NAME_MAX)
+    .trim();
+}
+
+/**
+ * What the coach should call them, or null when there is nothing to call them.
+ * Every use of the name goes through here, so "I'd rather not say" can never
+ * leak into a sentence as the word "anon".
+ */
+export function callThem(run: Run): string | null {
+  return run.name && run.name !== NO_NAME ? run.name : null;
+}
+
 /** Slide 5. What you brought — the second chip. Free text is offered alongside. */
 export const BROUGHT_ANSWERS: readonly TriageAnswer[] = [
   {
@@ -124,21 +206,57 @@ export const BROUGHT_ANSWERS: readonly TriageAnswer[] = [
  * Slide 6. The fork. Both answers leave this screen forward, and the wording,
  * the weight and the shape of the two are deliberately identical — neither one
  * is the recommended answer.
+ *
+ * Idea #131 rewrote what the two answers say. The deck asks "can you share it
+ * with me?", which reads as a request to hand something over — so people
+ * answered it as if the coach wanted their document, and the follow-up made no
+ * sense. The fork was never about the document. It is about where the work
+ * happens: out here with the coach, or inside their own organisation with the
+ * skill and the prompt. That is what both answers now say, and it is the same
+ * fork the handover has always described (`lib/handover.ts`).
  */
 export const SHARE_ANSWERS: readonly TriageAnswer[] = [
   {
     value: "yes",
-    label: "Yes — let's look at it together",
-    aside: "we start coaching now",
-    chip: "happy to share it",
-    phrases: ["yes", "yeah", "yep", "sure", "of course", "go ahead", "happy to", "lets look"],
+    label: "Yes — we can work through it here",
+    aside: "we start now, together",
+    chip: "we can work on it out here",
+    phrases: [
+      "yes",
+      "yeah",
+      "yep",
+      "sure",
+      "of course",
+      "go ahead",
+      "happy to",
+      "lets look",
+      "work through it here",
+      "work on it here",
+      "out here",
+      "in the open",
+      "fine to",
+    ],
   },
   {
     value: "no",
-    label: "No — it stays inside our walls",
+    label: "No — it stays inside our organisation",
     aside: "I'll set you up to coach it in there",
-    chip: "it stays inside our walls",
-    phrases: ["no", "nope", "cant", "cannot", "it stays", "stays inside", "rather not", "better not"],
+    chip: "it stays inside our organisation",
+    phrases: [
+      "no",
+      "nope",
+      "cant",
+      "cannot",
+      "it stays",
+      "stays inside",
+      "inside our",
+      "in house",
+      "internal",
+      "internally",
+      "confidential",
+      "rather not",
+      "better not",
+    ],
   },
 ];
 
@@ -158,13 +276,17 @@ function oneOf<T extends string>(value: string | null, allowed: readonly T[]): T
 export function readRun(params: Record<string, string | string[] | undefined>): Run {
   const mode = oneOf(first(params.mode), ["speak", "type"] as const);
   const who = mode ? oneOf(first(params.who), ["me", "room"] as const) : null;
-  const broughtRaw = who ? first(params.brought) : null;
+  const nameRaw = who ? first(params.name) : null;
+  // "I'd rather not say" is an answer and travels as itself. Anything else is
+  // their own words, with only the lead-in trimmed off.
+  const name = nameRaw === NO_NAME ? NO_NAME : nameRaw ? cleanName(nameRaw) || null : null;
+  const broughtRaw = name ? first(params.brought) : null;
   const brought = broughtRaw ? broughtRaw.slice(0, BROUGHT_MAX) : null;
   const share = brought ? oneOf(first(params.share), ["yes", "no"] as const) : null;
   // Not gated by anything above it. Asking the coach to be quiet is not a turn
   // in the conversation, and it has to work at whatever point it is asked.
   const voice = oneOf(first(params.voice), ["off"] as const);
-  return { mode, who, brought, share, voice };
+  return { mode, who, name, brought, share, voice };
 }
 
 /**
@@ -186,6 +308,7 @@ export function runHref(run: Run, next: Partial<Run>, hash = "#live"): string {
   const q = new URLSearchParams();
   if (merged.mode) q.set("mode", merged.mode);
   if (merged.who) q.set("who", merged.who);
+  if (merged.name) q.set("name", merged.name.slice(0, NAME_MAX));
   if (merged.brought) q.set("brought", merged.brought);
   if (merged.share) q.set("share", merged.share);
   if (merged.voice) q.set("voice", merged.voice);
@@ -205,6 +328,10 @@ function chipFor(answers: readonly TriageAnswer[], value: string): string {
 export function chipsFor(run: Run): string[] {
   const chips: string[] = [];
   if (run.who) chips.push(chipFor(WHO_ANSWERS, run.who));
+  // Their name in their own spelling, and nothing at all when they'd rather not
+  // say — declining leaves no trace, which is the point of being able to.
+  const you = callThem(run);
+  if (you) chips.push(you);
   if (run.brought) chips.push(chipFor(BROUGHT_ANSWERS, run.brought));
   if (run.share) chips.push(chipFor(SHARE_ANSWERS, run.share));
   return chips;
@@ -221,24 +348,56 @@ export function chipsFor(run: Run): string[] {
  */
 export const WHO_QUESTION = "First — is it just you, or is there a room of you?";
 
-/** Slide 5. The coach says the last answer back before asking the next thing. */
-export function reflectWho(who: Who): string {
-  return who === "me" ? "You said “just me”. Good." : "You said “there’s a room of us”. Good.";
-}
-
-/** Slide 5, in full: the answer said back, then the next question. */
-export function broughtQuestion(who: Who): string {
-  return `${reflectWho(who)} And what have you brought with you today?`;
+/**
+ * Idea #131's new turn. It is where the coach says the who answer back — the
+ * deck's habit, kept — and then asks the one thing that turns a questionnaire
+ * into a conversation.
+ *
+ * It says why it is asking, in the same breath, because a name asked for
+ * without a reason is a form field.
+ */
+export function nameQuestion(who: Who): string {
+  return who === "me"
+    ? "Just you and me, then. What should I call you?"
+    : "A room of you — even better. What should I call you? You’re the one I’ll be talking to.";
 }
 
 /**
- * Slide 6. The same question either way; it just names what you actually said
- * you had. Reflecting the answer back is the coach's habit, not new behaviour.
+ * Slide 5, with the name in it: the coach greets them by it the first time it
+ * has one, and then asks what they brought. Declining is answered too — being
+ * unnamed should not read as having been ignored.
  */
-export function shareQuestion(brought: string): string {
-  if (brought === "draft") return "Last question. Can you share that draft with me?";
-  if (BROUGHT_ANSWERS.some((a) => a.value === brought)) return "Last question. Can you share it with me?";
-  return "Last question. Can you share that with me?";
+export function broughtQuestion(run: Run): string {
+  const you = callThem(run);
+  const hello = you ? `Good to meet you, ${you}.` : "No name needed — that’s genuinely fine.";
+  return run.who === "room"
+    ? `${hello} So, what have you all brought with you today?`
+    : `${hello} So, what have you brought with you today?`;
+}
+
+/** What they brought, named the way the question needs to name it. */
+function broughtAs(brought: string | null): string {
+  if (brought === "draft") return "that draft";
+  if (brought === "nothing") return "whatever comes up";
+  if (brought === "work") return "it";
+  if (brought && BROUGHT_ANSWERS.some((a) => a.value === brought)) return "it";
+  return "that";
+}
+
+/**
+ * Slide 6, asking the thing the fork was always for — idea #131.
+ *
+ * The deck's "can you share it with me?" is a question about a document, and
+ * people answered it as one. What actually forks here is where the work
+ * happens: out here with this coach, or inside their own organisation with the
+ * skill and a prompt. So that is what it asks, and the answers below say the
+ * same two things in the same words.
+ */
+export function shareQuestion(run: Run): string {
+  const you = callThem(run);
+  return `One more thing before we start${you ? `, ${you}` : ""} — can we work through ${broughtAs(
+    run.brought,
+  )} out here, together? Or does it need to stay inside your organisation?`;
 }
 
 /** Whole-word matching, so "I don't know" is not a "no" and "work" is not "wo". */
