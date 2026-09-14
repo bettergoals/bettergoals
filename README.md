@@ -29,6 +29,10 @@ The board falls back to demo data when GitHub is unreachable, so the site always
 
 See [CLAUDE.md](CLAUDE.md) — it doubles as the guide for the automated Claude Code builds, including guardrails.
 
+## Decisions
+
+Some cards are decisions rather than code. Those live in [`docs/decisions/`](docs/decisions/) — one option, its consequence accepted, and what it binds — so the answer is on the record before the build starts rather than settled halfway through one.
+
 ## Operations
 
 - **Deploy:** Vercel, linked to this repo. `main` → production (bettergoals.ai); PRs → preview URLs.
