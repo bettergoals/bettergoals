@@ -72,6 +72,30 @@ export function readCarryBack(params: Record<string, string | string[] | undefin
 }
 
 /**
+ * How we'd like someone else's assistant to run this conversation.
+ *
+ * These are this product's own rules, restated for somewhere we can't reach:
+ * one question at a time, the gap in words and never scored, "I don't know"
+ * written down as an open question rather than treated as a blank, and nothing
+ * asked about an identifiable person. They are not new behaviour and they are
+ * not this file's opinion — they are PRINCIPLES.md and CARD A's contract 1, in
+ * the second person.
+ *
+ * Shared, because both ways out of this column hand over a prompt: the
+ * can't-share off-ramp below (CARD 3) and the takeaway at step 13
+ * (`lib/takeaway.ts`, CARD 6). The two prompts differ in what they carry — one
+ * has a canvas in it and the other deliberately doesn't — but they must never
+ * differ in how they ask for the coaching to be done.
+ */
+export const COACHING_RULES: readonly string[] = [
+  `- Ask me one question at a time and wait for the answer. Don't fill the boxes in for me.`,
+  `- Where an answer is thin, say what's thin and why, in words. No score, no total, no percentage, no grade.`,
+  `- Where I genuinely don't know, write it down as an open question for me to take back to my team. That's a real answer, not a gap to fill.`,
+  `- Deviate from the order where the conversation calls for it, then come back to it.`,
+  `- Don't ask me for anything about an identifiable person. Work with the role instead.`,
+];
+
+/**
  * The prompt to carry back — the third thing on screen D.
  *
  * It asks the leader's own assistant to run the conversation our coach would
@@ -96,11 +120,7 @@ export function carryBackPrompt({ brought, who }: CarryBack): string {
     boxes,
     ``,
     `How I'd like you to do it:`,
-    `- Ask me one question at a time and wait for the answer. Don't fill the boxes in for me.`,
-    `- Where an answer is thin, say what's thin and why, in words. No score, no total, no percentage, no grade.`,
-    `- Where I genuinely don't know, write it down as an open question for me to take back to my team. That's a real answer, not a gap to fill.`,
-    `- Deviate from the order where the conversation calls for it, then come back to it.`,
-    `- Don't ask me for anything about an identifiable person. Work with the role instead.`,
+    ...COACHING_RULES,
     ``,
     `Finish with the goal in the Sooner Safer Happier pattern: an objective written as an outcome hypothesis, with leading indicators that tell us in weeks and one lagging indicator that would convince a sceptic. Show me the filled-in canvas, open questions and all.`,
   ].join("\n");

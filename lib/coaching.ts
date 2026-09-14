@@ -1,5 +1,6 @@
 /**
- * Coaching — steps 06–11 of the entry column. CARD 5.
+ * Coaching — steps 06–11 of the entry column (CARD 5), and the door the reader
+ * leaves by at step 12 (CARD 6).
  *
  * One coach loop, not six builds. The canvas order is fixed (`lib/canvas.ts`,
  * CARD A contract 2); this module holds the *presentation* state that sits on
@@ -101,7 +102,28 @@ export type Coaching = {
   leading: string | null;
   /** 11 · the nudge. Whether the reader asked to see which ones. */
   nudge: "show" | "later" | null;
+  /**
+   * 12 · which door they went through. CARD 6, slide 15.
+   *
+   * Three ways out, none of them recommended and none of them a finish button:
+   * `refine` keeps the conversation going in the same column, `stop` and
+   * `questions` both open the takeaway — the second with the open questions
+   * pulled to the front, because that is what the reader said they came for.
+   *
+   * `null` is the state the doors are *offered* in, not a missing answer. Going
+   * through a door never closes the other two.
+   */
+  out: Door | null;
 };
+
+/** The three doors on slide 15, in the order the deck draws them. */
+export type Door = "refine" | "stop" | "questions";
+export const DOORS: readonly Door[] = ["refine", "stop", "questions"];
+
+/** The two doors that end the conversation with something in your hands. */
+export function leaving(out: Door | null): boolean {
+  return out === "stop" || out === "questions";
+}
 
 export const NO_COACHING: Coaching = {
   centre: null,
@@ -113,6 +135,7 @@ export const NO_COACHING: Coaching = {
   hypothesis: null,
   leading: null,
   nudge: null,
+  out: null,
 };
 
 /* ------------------------------------------------------------------------ */
@@ -158,8 +181,12 @@ export function readCoaching(
   const hypothesis = moved ? first(params.hypothesis) : null;
   const leading = hypothesis ? first(params.leading) : null;
   const nudge = leading ? oneOf(first(params.nudge), ["show", "later"] as const) : null;
+  // The doors exist once the last answer has landed. Whether they are on screen
+  // is the column's call, because the nudge sits between the two and a room
+  // never gets one — but nothing can be *through* a door before the canvas is.
+  const out = leading ? oneOf(first(params.out), DOORS) : null;
 
-  return { centre, problem, lagging, whoKnows, back, centreAgain, hypothesis, leading, nudge };
+  return { centre, problem, lagging, whoKnows, back, centreAgain, hypothesis, leading, nudge, out };
 }
 
 /**
@@ -191,6 +218,7 @@ export function columnHref(
   put("hypothesis", merged.hypothesis);
   put("leading", merged.leading);
   put("nudge", merged.nudge);
+  put("out", merged.out);
   const s = q.toString();
   return `/coach/entry${s ? `?${s}` : ""}${hash}`;
 }
