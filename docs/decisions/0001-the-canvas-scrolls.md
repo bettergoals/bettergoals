@@ -3,7 +3,9 @@
 **Status:** decided, 14 September 2026
 **Decides:** [CARD 0 — Decide: does the canvas pin, or scroll?](https://github.com/bettergoals/bettergoals/issues/95)
 **Binding on:** Card 1, and therefore everything after it.
-**Deck:** slide 18 (call 1), slide 7 (the cost), slide 17 (strain 1).
+**Deck:** slide 18 (call 1), slide 7 (the cost), slide 17 (strain 1) —
+[`docs/reference/voice-coach-deck.md`](../reference/voice-coach-deck.md).
+**Also binding:** [CARD A](../reference/card-a.md).
 
 ## The decision
 
@@ -150,11 +152,24 @@ The card is ambiguous in two places. These are the readings Card 1 is built on.
 If either is wrong, correct it here and Card 1 changes with it — don't work it
 out during build.
 
-- **"On mobile the canvas is permanently collapsed to a thumbnail map"** is
-  listed among the costs of scrolling. We read it as the cost of trying to have
-  it both ways: scrolling the column *while still keeping the canvas in sight*.
-  We're not doing that. Scrolling means the canvas is full size at both widths
-  and simply off screen when you aren't looking at it.
+- **"On mobile the canvas is permanently collapsed to a thumbnail map."**
+  Settled against the deck itself. Slide 17's first strain is titled *"The seam
+  works, the scroll doesn't"*:
+
+  > Keeping one column means the canvas inherits the column's width and the
+  > transcript scrolls away above it. Nothing breaks, but by step 10 the coach's
+  > earlier turns are a long way up — and on mobile the canvas is permanently
+  > collapsed to a thumbnail map.
+
+  So the thumbnail is a cost the deck puts on **scrolling** — the option we
+  chose — and not, as this decision first recorded, a cost of trying to keep the
+  canvas in sight while scrolling. The decision does not change, but the honest
+  framing does: we take the first half of that strain as the consequence already
+  accepted above, and we refuse the second half. The canvas is **not** collapsed
+  to a thumbnail on mobile. Rule 5 forbids it — a thumbnail of five boxes with
+  *n* shaded is a progress bar — and Card 1's rule 4 makes the opposite binding.
+  Mobile gets a longer column, not a smaller canvas. Where the deck assumes the
+  thumbnail, the deck is wrong in CARD A's sense, and this is the raise.
 - **"The coach's earlier turns are a long way up"** is true of any transcript
   that grows downward, so it doesn't tell us where the canvas sits. We've put
   the canvas above the conversation, because rule 4 says the triage chips stay
@@ -171,3 +186,14 @@ One thing, and it isn't "people had to scroll":
 If that happens, the answer is a shorter conversation or a tighter canvas — not
 a pinned panel. This decision comes back to CARD A before any card proposes
 pinning again.
+
+## Provenance
+
+This decision was first written without CARD A or the deck: both were attached
+to issue #95, and attachments live on `github.com/user-attachments`, which the
+build Action cannot fetch. The first reading under *Two readings we had to
+settle* was wrong as a result, and has been corrected against slide 17.
+
+Both documents are now committed at
+[`docs/reference/`](../reference/README.md), so the next card in this series is
+decided with them open rather than inferred from a summary.
