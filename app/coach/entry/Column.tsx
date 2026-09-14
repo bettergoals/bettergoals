@@ -543,11 +543,18 @@ export default function Column({
 
   return (
     <div className="mx-auto max-w-3xl px-4 pt-8 pb-20">
+      {/* Idea #135. The first thing anyone reads, so it says what this is and
+          what happens to what they type — and nothing else. The old wording
+          described the column to someone who had not seen it yet ("the chips
+          they leave behind", "the canvas"), which only makes sense once you
+          are further down the page than this box. */}
       <p className="no-print mb-10 rounded-2xl border border-safer/40 bg-safer/10 px-4 py-3 text-sm text-ink-soft">
-        <strong className="text-ink">This is the column, being built in the open.</strong> The
-        questions below are real, so are the chips they leave behind, so is the canvas, so is the
-        coaching that fills it in, and so is what you leave with. Nothing you say here is stored
-        anywhere — the whole conversation lives in the address bar, and closing the tab ends it.
+        <strong className="text-ink">
+          This is the AI Outcome Coach, being built in the open by the Sooner Safer Happier
+          community.
+        </strong>{" "}
+        Nothing you say here is stored anywhere — the whole conversation lives in the address bar,
+        and closing the tab ends it.
       </p>
 
       {/* One column. One scroller. Everything below is appended in order and
