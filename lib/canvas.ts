@@ -84,8 +84,15 @@ export const CANVAS_ORDER: readonly CanvasBox[] = [
     id: "leading",
     numeral: "⑤",
     label: "Leading",
-    waiting: "what tells us in weeks?",
-    tour: "what tells us in weeks",
+    // Idea #140. "What tells us in weeks?" only reads right for a quarterly
+    // outcome. The golden thread on /okrs — precedence 2, per CARD A — hangs
+    // quarterly outcomes off annual ones and annual off multi-year, so the
+    // early signal is whatever arrives long before *this* outcome is due:
+    // weeks for a quarter, months for a year. The box asks for the early
+    // signal without fixing the horizon; the coach settles which horizon it is
+    // while it is on the measure (see `turnFor`, the lagging turn).
+    waiting: "what tells us we’re on track early?",
+    tour: "what tells us we’re on track, long before the outcome is due",
     short: "leading",
   },
 ];

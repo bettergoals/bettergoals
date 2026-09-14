@@ -8,13 +8,13 @@ const PILLARS = [
     word: "Sooner",
     color: "text-sooner",
     border: "border-sooner/40",
-    text: "Goals that create value in weeks, not vague ambitions parked until year-end. Small, outcome-shaped, and testable early.",
+    text: "Goals that create value within a quarter, not vague ambitions nobody can judge until year-end. Multi-year outcomes broken into annual, then quarterly — one golden thread, outcome-shaped and testable early.",
   },
   {
     word: "Safer",
     color: "text-safer",
     border: "border-safer/40",
-    text: "Goals with psychological safety and governance built in — safe to challenge, safe to miss, safe to learn from in the open.",
+    text: "Goals with psychological safety and governance built in — safe to challenge, safe to learn from in the open.",
   },
   {
     word: "Happier",

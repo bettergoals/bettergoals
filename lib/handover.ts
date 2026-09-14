@@ -92,6 +92,10 @@ export const COACHING_RULES: readonly string[] = [
   `- Where an answer is thin, say what's thin and why, in words. No score, no total, no percentage, no grade.`,
   `- Where I genuinely don't know, write it down as an open question for me to take back to my team. That's a real answer, not a gap to fill.`,
   `- Deviate from the order where the conversation calls for it, then come back to it.`,
+  /* Idea #140. The golden thread on bettergoals.ai/okrs, carried into the
+     conversation someone has elsewhere: an outcome sits at one of three
+     horizons, and the early signal is relative to whichever one it is. */
+  `- Settle early whether this is a multi-year, an annual or a quarterly outcome, and hold me to it. The golden thread nests quarterly outcomes inside annual ones and annual inside multi-year. Leading indicators are whatever tells us we're on track long before that horizon is up — weeks for a quarter, months for a year.`,
   `- Don't ask me for anything about an identifiable person. Work with the role instead.`,
 ];
 
@@ -122,6 +126,6 @@ export function carryBackPrompt({ brought, who }: CarryBack): string {
     `How I'd like you to do it:`,
     ...COACHING_RULES,
     ``,
-    `Finish with the goal in the Sooner Safer Happier pattern: an objective written as an outcome hypothesis, with leading indicators that tell us in weeks and one lagging indicator that would convince a sceptic. Show me the filled-in canvas, open questions and all.`,
+    `Finish with the goal in the Sooner Safer Happier pattern: an objective written as an outcome hypothesis at its horizon, with leading indicators that tell us we're on track long before that and one lagging indicator that would convince a sceptic. Show me the filled-in canvas, open questions and all.`,
   ].join("\n");
 }

@@ -876,7 +876,7 @@ export default function Column({
                   </p>
                 }
               >
-                <p>Last one. What tells us in weeks?</p>
+                <p>Last one. {COACH_ASKS.leading}</p>
               </Turn>
             ) : null}
 
@@ -1025,7 +1025,7 @@ export default function Column({
               <Turn>
                 <p>{you ? `Then we'll leave it there, ${you}.` : "Then we'll leave it there."}</p>
                 <p>
-                  You&rsquo;ve written the bet down and said what would tell you in weeks.
+                  You&rsquo;ve written the bet down and said what would tell you early.
                   Here&rsquo;s everything to take with you — and if you change your mind, the other
                   two doors are still open underneath.
                 </p>
@@ -1104,7 +1104,7 @@ export default function Column({
                     <p className="text-sm text-ink-soft">Key results</p>
                     <ul className="space-y-2">
                       <li>
-                        <span className="text-sm text-ink-soft">Leading — what tells us in weeks:</span>{" "}
+                        <span className="text-sm text-ink-soft">Leading — what tells us we&rsquo;re on track early:</span>{" "}
                         {takeaway.goal.leading ?? "still open"}
                       </li>
                       <li>
@@ -1535,7 +1535,7 @@ export default function Column({
                   coaching={coaching}
                   name="leading"
                   label={COACH_ASKS.leading}
-                  placeholder="what tells us in weeks…"
+                  placeholder="what tells us we’re on track early…"
                   speaking={localVoice}
                   aloud={aloud}
                 >
@@ -1628,7 +1628,7 @@ export default function Column({
                       href={columnHref(run, coaching, { leading: null })}
                       className="text-ink-soft underline underline-offset-2"
                     >
-                      …let me redo what tells us in weeks
+                      …let me redo the early signal
                     </Link>
                   </p>
                   <p>

@@ -56,7 +56,7 @@ export type Goal = {
   objective: string | null;
   /** Who it's for and what changes in their behaviour — the current wording. */
   forWhom: string | null;
-  /** What tells us in weeks. */
+  /** What tells us we're on track, long before the outcome is due. */
   leading: string | null;
   /** What would convince a sceptic — null when that answer was a question. */
   lagging: string | null;
@@ -190,7 +190,7 @@ function carryOnPrompt(
     ...COACHING_RULES,
     `- Start from what's here. Don't make me say it all again.`,
     ``,
-    `Finish with the goal in the Sooner Safer Happier pattern: an objective written as an outcome hypothesis, leading indicators that tell us in weeks and a lagging indicator that would convince a sceptic. Show me the canvas, open questions and all.`,
+    `Finish with the goal in the Sooner Safer Happier pattern: an objective written as an outcome hypothesis at its horizon, leading indicators that tell us we're on track long before that and a lagging indicator that would convince a sceptic. Show me the canvas, open questions and all.`,
   );
 
   return lines.join("\n");
@@ -242,8 +242,8 @@ export function takeawayText(run: Run, state: CanvasState): string {
   out.push(`**Key results**`, BLANK);
   out.push(
     goal.leading
-      ? `- Leading — what tells us in weeks: ${goal.leading}`
-      : `- Leading — what tells us in weeks: (still open)`,
+      ? `- Leading — what tells us we're on track early: ${goal.leading}`
+      : `- Leading — what tells us we're on track early: (still open)`,
   );
   out.push(
     goal.lagging

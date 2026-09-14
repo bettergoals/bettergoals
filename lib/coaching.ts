@@ -99,7 +99,7 @@ export type Coaching = {
   centreAgain: string | null;
   /** 10 · hypothesis ④. The bet. */
   hypothesis: string | null;
-  /** 10 · leading ⑤. What tells us in weeks. */
+  /** 10 · leading ⑤. What tells us we’re on track, long before the outcome is due. */
   leading: string | null;
   /** 11 · the nudge. Whether the reader asked to see which ones. */
   nudge: "show" | "later" | null;
@@ -343,7 +343,7 @@ export function canvasFor(c: Coaching): CanvasState {
   // already exists — which is why ③ came first.
   lit = "hypothesis";
   boxes.hypothesis.standing = null;
-  boxes.leading.standing = "last — what tells us in weeks?";
+  boxes.leading.standing = "last — what tells us we’re on track early?";
   if (!c.hypothesis) return { lit, boxes };
   boxes.hypothesis.notes.push({ kind: "sticky", text: c.hypothesis });
   lit = "leading";
