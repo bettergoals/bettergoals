@@ -251,7 +251,14 @@ function padded(text: string): string {
  * so "just me" beats "me" and an answer is never picked on a stray word.
  * Returns null when nothing matched — which is not an error, just a miss.
  */
-export function matchSpoken(said: string, answers: readonly TriageAnswer[]): string | null {
+export function matchSpoken(
+  said: string,
+  /* Anything with a value and the phrases it can sound like. The triage answers
+     above are the usual caller; the voice coach's other fixed answers (idea
+     #124) carry no chip and no aside, and don't need to invent one to be
+     matched the same way. */
+  answers: readonly { value: string; phrases: string[] }[],
+): string | null {
   const heard = padded(said);
   let best: { value: string; length: number } | null = null;
   for (const answer of answers) {
