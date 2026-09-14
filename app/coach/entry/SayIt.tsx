@@ -62,6 +62,7 @@ export function SayIt({
   hrefs,
   freeTextHref,
   invitation,
+  max = BROUGHT_MAX,
 }: {
   /** The same answers that are on screen as buttons. */
   answers: readonly TriageAnswer[];
@@ -75,6 +76,12 @@ export function SayIt({
   freeTextHref?: string;
   /** The coach's own invitation to speak, in this step's words. */
   invitation: string;
+  /**
+   * How much of what was said is carried, matching the typed field beside it —
+   * a triage answer is a phrase, a coaching answer is a sentence. Same bound
+   * either way you answer, so speaking is never the lesser route.
+   */
+  max?: number;
 }) {
   const router = useRouter();
   /** Whether this browser can listen at all — only knowable once it's running. */
@@ -105,12 +112,12 @@ export function SayIt({
       }
       if (freeTextHref) {
         setPhase("going");
-        router.push(freeTextHref.replace("__SAID__", encodeURIComponent(trimmed.slice(0, BROUGHT_MAX))));
+        router.push(freeTextHref.replace("__SAID__", encodeURIComponent(trimmed.slice(0, max))));
         return;
       }
       setPhase("missed");
     },
-    [answers, hrefs, freeTextHref, router, setPhase]
+    [answers, hrefs, freeTextHref, max, router, setPhase]
   );
 
   const listen = useCallback(() => {
@@ -156,11 +163,12 @@ export function SayIt({
    * an invitation to talk that nothing is listening to — the tapped answers
    * above are the same conversation, and typing is a link away.
    */
+  const instead = answers.length ? "Tap an answer" : "Type it instead";
+
   if (supported === "no") {
     return (
       <p className="text-sm text-ink-soft">
-        This browser won&rsquo;t let me listen. Tap an answer — it&rsquo;s the same conversation either
-        way.
+        This browser won&rsquo;t let me listen. {instead} — it&rsquo;s the same conversation either way.
       </p>
     );
   }
@@ -179,11 +187,11 @@ export function SayIt({
         {phase === "going" ? "Got it." : null}
         {phase === "missed"
           ? heard
-            ? `I heard “${heard}”, and I'm not sure which one you meant. Tap an answer and we'll carry on.`
-            : "I didn't catch that. Tap an answer and we'll carry on."
+            ? `I heard “${heard}”, and I'm not sure which one you meant. ${instead} and we'll carry on.`
+            : `I didn't catch that. ${instead} and we'll carry on.`
           : null}
         {phase === "blocked"
-          ? "Your browser is keeping the microphone to itself. Tap an answer instead — it's the same conversation either way."
+          ? `Your browser is keeping the microphone to itself. ${instead} — it's the same conversation either way.`
           : null}
       </p>
     </div>
