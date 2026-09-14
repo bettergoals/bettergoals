@@ -49,6 +49,24 @@ body {
 }
 .canvas-arrives > summary::-webkit-details-marker { display: none; }
 
+/* The jump, narrated (CARD 5, slide 10). The coach says why it skipped a box in
+   one sentence, in the flow of talk. On a wide screen that sentence is simply
+   said. On a narrow one the deck puts it behind a "why?" — the coach's turn has
+   to stay short enough to read above your own — so it is the same native
+   disclosure, carrying the same sentence, one tap away.
+
+   Same markup either way, same document order, same plain-text reading; only
+   the CSS differs. The @supports wrapper is doing the same job it does above: a
+   browser that can't be told to force a disclosure open keeps its summary, so
+   the sentence is a tap away rather than unreachable. */
+@media (min-width: 768px) {
+  @supports selector(::details-content) {
+    .why-on-narrow > summary { display: none; }
+    .why-on-narrow::details-content { content-visibility: visible; }
+  }
+}
+.why-on-narrow > summary::-webkit-details-marker { display: none; }
+
 /* Goal jam chalkboard — chalk goes on with a stroke, comes off with a smear. */
 @keyframes chalk-in {
   from { opacity: 0; clip-path: inset(0 100% 0 0); transform: translateY(2px) rotate(-0.4deg); }
