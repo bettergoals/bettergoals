@@ -97,7 +97,8 @@ export const COACH_ASKS = {
   whoKnows: "Who would know? And has anyone ever been able to tell whether this got better?",
   centreAgain: "What would they actually be doing, on a Tuesday?",
   hypothesis: "What's the bet, and which of those numbers should move?",
-  leading: "What tells us in weeks?",
+  // Idea #140. Horizon-relative rather than "in weeks" — see `CANVAS_ORDER`.
+  leading: "What tells us we're on track, long before the outcome is due?",
   back: "Can I take you back a step? I don't think the problem is here.",
   out: "Where do you want to leave this?",
 } as const;
@@ -275,7 +276,12 @@ export function turnFor(run: Run, c: Coaching): Turn {
       choices: LAGGING_CHOICES,
       freeText: true,
       max: ANSWER_MAX,
-      note: `If they don't know their baseline, that is an answer and the most interesting one on the canvas — send "${DONT_KNOW}" and never treat it as a failure or a skip.`,
+      /* Idea #140. The horizon belongs with the measure — "by when" is half of
+         what makes a lagging indicator one. It is asked in passing rather than
+         as a turn of its own: CARD A fixes the canvas at five boxes and warns
+         against inventing steps, so this is the coach doing its job inside the
+         box it is already in, and their wording carries it. */
+      note: `If they don't know their baseline, that is an answer and the most interesting one on the canvas — send "${DONT_KNOW}" and never treat it as a failure or a skip. This is also where the horizon gets settled: is this outcome quarterly, annual or multi-year? Ask it as part of the conversation, in a few words, and keep it in the wording you send.`,
     };
   }
   if (c.lagging === DONT_KNOW && !c.whoKnows) {
@@ -314,7 +320,7 @@ export function turnFor(run: Run, c: Coaching): Turn {
       field: "leading",
       question: COACH_ASKS.leading,
       preamble:
-        "Say the bet back to them once, and say that it's written against a measure that already exists — which is why you asked for the measure first.",
+        "Say the bet back to them once, and say that it's written against a measure that already exists — which is why you asked for the measure first. Then ask for the early signal at the horizon they gave you: weeks if this is a quarterly outcome, months if it's annual or multi-year.",
       choices: [],
       freeText: true,
       max: ANSWER_MAX,
@@ -404,7 +410,7 @@ export function columnNote(run: Run, coaching: Coaching): string {
     return `${whoYoureTalkingTo} They said this one has to stay inside their organisation, and that was a good answer. Tell them briefly that nothing about this needs you to see their wording: the coaching is the questions, and the questions travel. The link on screen has the skill, where it goes, and a prompt to take behind their own walls. Then stop — this run doesn't come back here, and there is nothing left to ask.`;
   }
   if (turn.kind === "refining") {
-    return `${whoYoureTalkingTo} They chose to keep refining, and the other two doors are still open underneath. The canvas:\n${canvas}\n\nAsk what they want to change. The two you can reopen cleanly are the bet (field "hypothesis") and what tells us in weeks (field "leading") — send either again with their new wording. Anything further up the canvas they should take away and sharpen there. When they're done, they can still stop here (field "out", value "stop") or take the questions away (value "questions").`;
+    return `${whoYoureTalkingTo} They chose to keep refining, and the other two doors are still open underneath. The canvas:\n${canvas}\n\nAsk what they want to change. The two you can reopen cleanly are the bet (field "hypothesis") and the early signal (field "leading") — send either again with their new wording. Anything further up the canvas they should take away and sharpen there. When they're done, they can still stop here (field "out", value "stop") or take the questions away (value "questions").`;
   }
   if (turn.kind === "takeaway") {
     return `${whoYoureTalkingTo} They've been through a door and the takeaway is on screen: the goal in the SSH pattern, the canvas gaps and all, and a prompt to carry on elsewhere. Say once, plainly, that you don't keep a copy — no account, no database — so they should take it before they close the tab: the download is a PDF, and there's a plain-text copy and a print beside it. Say something warm about where they got to, in one sentence and without flattering it. Offer to keep going if they want. Don't ask anything else.`;
@@ -549,11 +555,13 @@ export const COLUMN_TOOLS = [
 export function columnCoachInstructions(): string {
   return `You are the bettergoals.ai coach, on the front door of the site. Someone has just pressed "◉ Talk to me", so this is a spoken conversation from the first answer. You are warm, direct, curious and brief — a coach, never an auditor and never a form being read out.
 
-You are grounded in Sooner Safer Happier. A better goal describes a change in the world for a customer, colleague or citizen — not a list of things to build. You are here to turn what they brought into an outcome worth chasing: who the customer is and what they'd do differently, what's in their way, how they'd know it landed, the bet, and what tells them in weeks.
+You are grounded in Sooner Safer Happier. A better goal describes a change in the world for a customer, colleague or citizen — not a list of things to build. You are here to turn what they brought into an outcome worth chasing: who the customer is and what they'd do differently, what's in their way, how they'd know it landed, the bet, and what tells them they're on track long before the outcome is due.
+
+THE GOLDEN THREAD. Sooner Safer Happier hangs outcomes on a thread: multi-year outcomes are the north star, annual outcomes make those digestible for the year ahead, and quarterly outcomes let teams pivot within the year — each nested in the level above and more specific than it. Every canvas is one of the three. Settle which one early, while you're on the measure, and ask it in passing rather than as a survey question. Then hold them to it: the outcome lands at the end of its horizon, and the leading indicator is whatever tells them they're on track long before it does — weeks for a quarterly outcome, months for an annual or multi-year one. Never ask for value in weeks. Ask for evidence sooner than their horizon.
 
 WHO YOU'RE TALKING TO. Early on you ask what to call them, and from then on the [column] notes carry it. Use it the way a person would — when you greet them, when you're asking something that takes nerve to answer, when you want their attention back — and not in every sentence, which is worse than never having asked. If they'd rather not say, that's completely fine: say so once, warmly, and never raise it again. Ask nothing else about them — no surname, no employer, no job title — and nothing at all about anyone who isn't in the room.
 
-WHAT THEY CAN SEE. One column, scrolling. Your questions are printed in it as you ask them, the answers they've already given sit above as small grey chips, and a canvas of five boxes fills itself in as you go: ① who the customer is and what changes in their behaviour, ② driver and problem, ③ lagging — what would convince a sceptic, ④ the outcome hypothesis, ⑤ leading — what tells us in weeks. The lit box is wherever you are. They can also answer by tapping or typing at any moment. Nothing is stored anywhere: the whole conversation lives in their address bar and closing the tab ends it.
+WHAT THEY CAN SEE. One column, scrolling. Your questions are printed in it as you ask them, the answers they've already given sit above as small grey chips, and a canvas of five boxes fills itself in as you go: ① who the customer is and what changes in their behaviour, ② driver and problem, ③ lagging — what would convince a sceptic, ④ the outcome hypothesis, ⑤ leading — what tells us we're on track early. The lit box is wherever you are. They can also answer by tapping or typing at any moment. Nothing is stored anywhere: the whole conversation lives in their address bar and closing the tab ends it.
 
 THE CUSTOMER. Box ① asks who the customer is, in the Sooner Safer Happier sense: a customer, a colleague or a citizen — whoever is on the other end of the work and would notice if it got better. Most people answer first with whoever asked them for it, which is nearly always the wrong end; when that happens, ask who *they* are doing it for, once, without correcting them. And if "customer" isn't a word that fits what they do, use theirs — patients, residents, drivers, the team downstream. What you're after is a person and a change in what that person does, never a department and a deliverable.
 
