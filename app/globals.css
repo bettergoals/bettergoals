@@ -19,6 +19,13 @@ body {
   color: var(--foreground);
 }
 
+/* The column (CARD 1). One scroller: the document. The only thing that moves
+   the page is the reader, or landing on the live turn after answering — smooth
+   where the browser allows it, instant where motion is unwelcome. */
+@media (prefers-reduced-motion: no-preference) {
+  html:has(.the-column) { scroll-behavior: smooth; }
+}
+
 /* Goal jam chalkboard — chalk goes on with a stroke, comes off with a smear. */
 @keyframes chalk-in {
   from { opacity: 0; clip-path: inset(0 100% 0 0); transform: translateY(2px) rotate(-0.4deg); }
