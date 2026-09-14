@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
 import { JAM_TOOLS, coachInstructions } from "@/lib/jamBoard";
+import { COLUMN_TOOLS, columnCoachInstructions } from "@/lib/voiceColumn";
 
 /**
  * Mints a short-lived client secret for the OpenAI Realtime API, so the
  * browser can open a WebRTC session directly with the voice model without the
  * real key ever leaving the server.
+ *
+ * Two flows use it, because every voice session on this site should be rate
+ * limited in one place and against one budget:
+ *   "jam"    — the goal jam, a room around one microphone with a chalkboard.
+ *   "column" — "◉ Talk to me" on the front door, one leader and the canvas
+ *              (idea #124). Same coach, different room and different artefact.
+ * They differ only in who the coach is and what it can do; everything about the
+ * key, the origin check and the limits below is shared.
  *
  * Configuration (server-only environment, never exposed to the browser):
  *   OPENAI_API_KEY             required — unset = the jam page says it isn't switched on.
@@ -102,8 +111,10 @@ export async function POST(req: Request) {
   }
 
   let names: string[] = [];
+  let column = false;
   try {
-    const body = (await req.json()) as { names?: unknown };
+    const body = (await req.json()) as { names?: unknown; flow?: unknown };
+    column = body?.flow === "column";
     if (Array.isArray(body?.names)) {
       names = body.names
         .filter((n): n is string => typeof n === "string")
@@ -112,7 +123,7 @@ export async function POST(req: Request) {
         .slice(0, MAX_NAMES);
     }
   } catch {
-    // No body is fine — the coach will ask for names itself.
+    // No body is fine — it's a jam, and the coach will ask for names itself.
   }
 
   const upstream = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
@@ -123,8 +134,8 @@ export async function POST(req: Request) {
       session: {
         type: "realtime",
         model: MODEL(),
-        instructions: coachInstructions(names),
-        tools: JAM_TOOLS,
+        instructions: column ? columnCoachInstructions() : coachInstructions(names),
+        tools: column ? COLUMN_TOOLS : JAM_TOOLS,
         tool_choice: "auto",
         reasoning: reasoning(MODEL()),
         audio: {
@@ -142,7 +153,7 @@ export async function POST(req: Request) {
 
   if (!upstream.ok) {
     const detail = await upstream.text().catch(() => "");
-    console.error(`[jam] OpenAI refused the session: ${upstream.status} ${detail.slice(0, 400)}`);
+    console.error(`[${column ? "column" : "jam"}] OpenAI refused the session: ${upstream.status} ${detail.slice(0, 400)}`);
     return NextResponse.json(
       {
         error: "upstream",
