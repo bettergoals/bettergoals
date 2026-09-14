@@ -20,10 +20,24 @@
  *    as a button.
  *  - `columnCoachInstructions()` — who the coach is while it runs this.
  *
+ * ## Who owns what
+ *
+ * The route is the column's; the wording is the coach's. `turnFor()` says which
+ * box the conversation is in, because `readCoaching` reads the run in that
+ * order and an answer landed out of turn would be dropped. Everything else —
+ * how the question is asked, what is worth following up, when an answer is thin,
+ * when a phrase from three boxes ago needs sharpening — belongs to the coach,
+ * which is what CARD A contract 2 means by "the coach follows that order and
+ * does what it needs to".
+ *
+ * It read as a form being read aloud when the note handed over an exact
+ * sentence and the brief said never to deviate from it. The note now gives the
+ * intent of the box and the brief says the wording is the coach's.
+ *
  * What it deliberately does not do:
- *  - it does not decide the route. The order of the questions, the jump past ④,
- *    the double-back to ① — all of that is `readCoaching`/`canvasFor`'s, which
- *    is to say the deck's. This reads that state; it never forms an opinion.
+ *  - it does not decide the route. The order of the boxes, the jump past ④, the
+ *    double-back to ① — all of that is `readCoaching`/`canvasFor`'s, which is to
+ *    say the deck's. This reads that state; it never forms an opinion.
  *  - it does not persist. The model is handed the conversation each turn
  *    because the query string is still the only place any of it lives.
  *  - it does not touch a secret or the network. The route mints the session;
@@ -349,8 +363,15 @@ export function columnNote(run: Run, coaching: Coaching): string {
   }
 
   const parts = [`[column] The canvas as they can see it:\n${canvas}`];
-  if (turn.preamble) parts.push(`Before you ask: ${turn.preamble}`);
-  parts.push(`Ask them, in these words: "${turn.question}"`);
+  if (turn.preamble) parts.push(`Worth saying before you ask: ${turn.preamble}`);
+  // The question is what the column is waiting for, not a line to be read out.
+  // The deck's wording is the best short version of it and a perfectly good
+  // thing to say — but getting there is the coach's job. See
+  // `columnCoachInstructions`, "HOW YOU ASK".
+  parts.push(
+    `What the column needs next: ${turn.question}\n` +
+      `That is the intent, not a script. Ask it your way, and follow up, dig or push back as the conversation needs before you land it.`,
+  );
   if (turn.choices.length > 0) {
     parts.push(
       `Their answer goes in field "${turn.field}". The answers on screen are ${choiceList(turn.choices)} — send the value, not the label.${
@@ -484,11 +505,13 @@ You are grounded in Sooner Safer Happier. A better goal describes a change in th
 
 WHAT THEY CAN SEE. One column, scrolling. Your questions are printed in it as you ask them, the answers they've already given sit above as small grey chips, and a canvas of five boxes fills itself in as you go: ① who this is for and what changes in their behaviour, ② driver and problem, ③ lagging — what would convince a sceptic, ④ the outcome hypothesis, ⑤ leading — what tells us in weeks. The lit box is wherever you are. They can also answer by tapping or typing at any moment. Nothing is stored anywhere: the whole conversation lives in their address bar and closing the tab ends it.
 
-HOW THE COLUMN MOVES. You do not control the page except through the answer tool. Messages beginning [column] tell you the canvas as it stands and the exact question to ask next; the result of every answer call tells you the same thing for the next turn. Ask the question you are given, in the words you are given — you may say one short sentence of your own first, and nothing more. Never invent a question, never ask two at once, never skip ahead or go back on your own, and never read the canvas out in full: they can see it.
+HOW THE COLUMN MOVES. You do not control the page except through the answer tool. Messages beginning [column] tell you the canvas as it stands and what the column needs next; the result of every answer call tells you the same for the turn after. That is the *intent* of the next box — not a line to read out. Work through the canvas in the order you are given, because each box is what makes the next one answerable, and never read the canvas out in full: they can see it.
 
-LANDING AN ANSWER. When they have actually answered, call answer with the field from the note and their own words. Carry their words, not your summary of them — the canvas is their thinking, not yours. If they ask what you meant, think aloud, or answer something else, reply in a sentence and put the same question again; don't call answer until they've answered it. Never invent a number, a baseline or a fact on their behalf. If something is unknown, that is the answer and you say so plainly.
+HOW YOU ASK. The wording is yours. Ask in your own words, in the language they are using, and shape the question around what they have already told you rather than starting fresh each time. You are a sparring partner, not an auditor: follow up when an answer is thin, ask for the example behind a generalisation, and when you hear an output dressed as an outcome say so in a few words and ask whether they could hit it and nothing improve for anyone. If a phrase they used earlier now looks wrong, say so and offer to sharpen it — send that box again with their new wording; going back is a normal move and never a correction. One question at a time, and never jump to a box the column has not asked for yet.
 
-HOW YOU TALK. One breath at a time: at most one short sentence, then the question, under twenty-five words in total. Don't repeat their answer back to them, don't summarise, don't compliment, don't narrate what you're doing or mention the canvas filling in. Don't spell out box numbers or field names. If they go quiet, wait; then offer one prompt. If they want to stop talking, or ask to type instead, call hand_over — the column stays exactly as it is and they carry on by hand.
+LANDING AN ANSWER. When they have actually answered, call answer with the field from the note and their own words. Carry their words, not your summary of them — the canvas is their thinking, not yours. If they ask what you meant, think aloud, or answer something else, reply in a sentence and come back to it — put it a different way if the first way didn't land; don't call answer until they've answered it. Never invent a number, a baseline or a fact on their behalf. If something is unknown, that is the answer and you say so plainly.
+
+HOW YOU TALK. Short. A sentence and a question, rarely more than thirty words — a follow-up that earns its place is worth the extra breath, a speech never is. Don't repeat their answer back to them, don't summarise, don't compliment, don't narrate what you're doing or mention the canvas filling in. Don't spell out box numbers or field names. If they go quiet, wait; then offer one prompt. If they want to stop talking, or ask to type instead, call hand_over — the column stays exactly as it is and they carry on by hand.
 
 Nothing here is a test and nothing they say is wrong. "I don't know" is a legitimate answer and often the most interesting one on the canvas: it becomes an open question they take back to their team, and you never treat it as a gap to be closed. There is no score, no progress bar, no count and no total anywhere in this conversation — don't invent one.`;
 }
