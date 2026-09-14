@@ -1,7 +1,15 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import Link from "next/link";
+import { CopyButton } from "@/components/CopyButton";
 import { REPO_URL } from "@/lib/config";
+import {
+  broughtInWords,
+  carryBackPrompt,
+  readCarryBack,
+  skillFor,
+  type CarryBack,
+} from "@/lib/handover";
 
 export const metadata = { title: "Skills" };
 
@@ -20,11 +28,132 @@ async function getSkills(): Promise<SkillMeta[]> {
   return skills.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export default async function SkillsPage() {
+/**
+ * CARD 3 — where the can't-share off-ramp lands.
+ *
+ * Slide 7 of `docs/reference/voice-coach-deck.md` points the "no" answer at
+ * step 04 here and deliberately doesn't redraw the screen: skill download →
+ * where to install it → the prompt to carry back. The first two were already on
+ * this page. This adds the third, and puts the three in the deck's order for
+ * whoever arrives from the column.
+ *
+ * It only appears for an arrival (`?carry=1`). Browsing to /skills is unchanged
+ * — this is a handover, not a new front door.
+ *
+ * Numbered one to three because they're instructions to follow in order, which
+ * is the one thing rule 5 is not about: there is nothing here reporting how far
+ * through a conversation anybody is.
+ */
+function CarryBackPanel({ arrival }: { arrival: CarryBack }) {
+  const skill = skillFor(arrival.who);
+  const prompt = carryBackPrompt(arrival);
+
+  return (
+    <section
+      id="carry-back"
+      aria-labelledby="carry-back-heading"
+      className="mb-12 scroll-mt-24 rounded-3xl border border-ink/10 bg-white p-6 shadow-sm sm:p-8"
+    >
+      <h1 id="carry-back-heading" className="text-2xl font-bold tracking-tight sm:text-3xl">
+        Take it back in with you
+      </h1>
+      <p className="mt-2 max-w-2xl text-ink-soft">
+        {arrival.brought
+          ? `You brought ${broughtInWords(arrival.brought)} and it stays where it is. `
+          : "Whatever you're working on stays where it is. "}
+        Three things and you&rsquo;re running the same conversation inside your own walls — the same
+        five boxes, the same questions, in a place we never see.
+      </p>
+
+      <ol className="mt-6 space-y-6">
+        <li>
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-ink-soft/80">
+            <span aria-hidden>1 · </span>The skill
+          </h2>
+          <p className="mt-2 font-mono text-lg font-bold text-sooner">{skill.name}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <a
+              href={`/skills/${skill.file}`}
+              download
+              className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-chalk hover:bg-ink-soft"
+            >
+              Download .md
+            </a>
+            <a
+              href={`/skills/${skill.file}`}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-ink/15 px-4 py-2 text-sm font-semibold hover:bg-ink/5"
+            >
+              View
+            </a>
+          </div>
+        </li>
+
+        <li>
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-ink-soft/80">
+            <span aria-hidden>2 · </span>Where it goes
+          </h2>
+          <p className="mt-2 text-ink-soft">
+            In Claude Code, save it as{" "}
+            <code className="break-all font-mono text-sm">
+              ~/.claude/skills/{skill.name}/SKILL.md
+            </code>
+            . In the
+            Claude app, paste it into a project&rsquo;s instructions or attach it to a chat. Same for
+            any assistant your organisation has already approved — it&rsquo;s a markdown file, not an
+            integration.
+          </p>
+        </li>
+
+        <li>
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-ink-soft/80">
+            <span aria-hidden>3 · </span>The prompt to carry back
+          </h2>
+          <p className="mt-2 text-ink-soft">
+            Paste this after the skill. It already knows what you told me out here, which is all it
+            ever needed to know.
+          </p>
+          <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-2xl bg-ink/[0.04] p-4 font-mono text-xs leading-relaxed text-ink">
+            {prompt}
+          </pre>
+          <div className="mt-3">
+            <CopyButton text={prompt} label="Copy the prompt" />
+          </div>
+        </li>
+      </ol>
+
+      <p className="mt-6 border-t border-ink/10 pt-4 text-sm text-ink-soft">
+        Take it now — there&rsquo;s no account here and no database, so closing the tab ends it. The
+        rest of the shelf is below, and{" "}
+        <Link href="/coach/entry" className="underline underline-offset-2">
+          the conversation out here
+        </Link>{" "}
+        is still open if you ever want to run one on something you can share.
+      </p>
+    </section>
+  );
+}
+
+export default async function SkillsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const skills = await getSkills();
+  const arrival = readCarryBack(await searchParams);
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
-      <h1 className="text-3xl font-bold tracking-tight">Skills</h1>
+      {arrival ? <CarryBackPanel arrival={arrival} /> : null}
+      {/* Arriving from the off-ramp, the handover is what the page is and the
+          shelf is what's underneath it — so the two headings swap rank rather
+          than the page carrying two h1s. */}
+      {arrival ? (
+        <h2 className="text-3xl font-bold tracking-tight">Skills</h2>
+      ) : (
+        <h1 className="text-3xl font-bold tracking-tight">Skills</h1>
+      )}
       <p className="mt-2 max-w-2xl text-ink-soft">
         Downloadable skills for Claude (and other AI assistants) created by this
         community. Drop one into your assistant and it becomes a better-goals

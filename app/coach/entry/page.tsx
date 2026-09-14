@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CANVAS_OPENS_ON, CANVAS_ORDER, type CanvasBoxId } from "@/lib/canvas";
 import { REPO_URL } from "@/lib/config";
+import { broughtInWords, handoverHref, skillFor } from "@/lib/handover";
 import {
   BROUGHT_ANSWERS,
   BROUGHT_MAX,
@@ -26,6 +27,7 @@ export const metadata = {
 /*
  * CARD 1 — The column. The shell everything else lives inside.
  * CARD 2 — Triage, steps 01–04. The four questions that fill it in.
+ * CARD 3 — The can't-share off-ramp. Where "no" at step 04 goes.
  * CARD 4 — The seam, step 05. The canvas rises into the column.
  *
  * Binding: `docs/decisions/0001-the-canvas-scrolls.md` (the canvas is a block
@@ -352,21 +354,47 @@ export default async function ColumnPage({
           </>
         ) : null}
 
-        {/* The off-ramp. It leaves the spine and never reaches the canvas, but
-            the column it leaves from does not close. */}
+        {/* CARD 3 — the off-ramp. Slide 7: it leaves the spine for the handover
+            that already exists, and it doesn't come back. Two things it has to
+            get right.
+
+            It must not read as a downgrade. Step 04 weighted both answers the
+            same and this is where that promise is kept or broken, so the exit
+            is a full-weight panel — the same size and the same voice as the
+            seam the other answer gets — and it says what you're being given
+            rather than what you're not. PRINCIPLES.md, "Safe to share": never
+            require confidential material to give a good answer.
+
+            And the column must not close. Nothing above is cleared, the chips
+            stay, and the live turn below still says which way things went. */}
         {share === "no" ? (
-          <Turn>
-            <p>Understood — and thank you for saying so.</p>
-            <p>
-              Then let&rsquo;s set you up to coach it where it already lives. Take the skill and the
-              prompt with you, and run the same conversation inside your own walls.
-            </p>
-            <p className="text-base sm:text-lg">
-              <Link href="/skills" className="font-semibold underline underline-offset-2">
-                The skill, where to install it, and the prompt to carry back →
-              </Link>
-            </p>
-          </Turn>
+          <>
+            <Turn>
+              <p>Right — then we do it in there, not out here.</p>
+              <p>
+                Nothing about this needs me to see your wording. The coaching is the questions, and
+                the questions travel: take the skill, put it in front of your own assistant, and run
+                this same conversation behind your own walls with the material in the room.
+              </p>
+            </Turn>
+            <Link
+              href={handoverHref(run)}
+              className="block rounded-2xl border border-ink/15 bg-white p-5 transition-colors hover:border-ink/40 hover:bg-ink/[0.03] sm:p-6"
+            >
+              <span className="text-lg font-semibold sm:text-xl">
+                The skill, where to install it, and the prompt to carry back{" "}
+                <span aria-hidden>→</span>
+              </span>
+              {/* The three things screen D holds, in the deck's order, named so
+                  the link is a description of what's on the other side rather
+                  than a leap of faith. */}
+              <span className="mt-2 block text-ink-soft">
+                <code className="font-mono text-sm">{skillFor(who).name}</code> · where it goes in
+                Claude · a prompt that already knows you brought{" "}
+                {brought ? broughtInWords(brought) : "nothing down yet"}
+              </span>
+            </Link>
+          </>
         ) : null}
 
         {/* The live turn — where you speak or type. Always the last thing in
