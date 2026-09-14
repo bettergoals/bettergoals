@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CopyButton } from "@/components/CopyButton";
 import { CANVAS_OPENS_ON, CANVAS_ORDER } from "@/lib/canvas";
 import {
   ANSWER_MAX,
@@ -8,13 +9,15 @@ import {
   canvasText,
   carried,
   columnHref,
+  leaving,
   readCoaching,
   type Coaching,
   type CanvasState,
 } from "@/lib/coaching";
 import { REPO_URL } from "@/lib/config";
 import { broughtInWords, handoverHref, skillFor } from "@/lib/handover";
-import { nudgeFor } from "@/lib/nudge";
+import { nudgeFor, standingFor } from "@/lib/nudge";
+import { stillOpenInWords, takeawayFor, takeawayHref, takeawayText } from "@/lib/takeaway";
 import {
   BROUGHT_ANSWERS,
   BROUGHT_MAX,
@@ -31,11 +34,12 @@ import {
 } from "@/lib/triage";
 import { Canvas } from "./Canvas";
 import { SayIt } from "./SayIt";
+import { PrintCanvas, TakeIt } from "./Takeaway";
 
 export const metadata = {
   title: "The column",
   description:
-    "One continuous column, from the landing screen to the canvas. Nothing is replaced, nothing is cleared away, and nothing reports how far through you are.",
+    "One continuous column, from the landing screen to the canvas to what you leave with. Nothing is replaced, nothing is cleared away, nothing reports how far through you are, and nothing is stored.",
 };
 
 /*
@@ -44,12 +48,13 @@ export const metadata = {
  * CARD 3 — The can't-share off-ramp. Where "no" at step 04 goes.
  * CARD 4 — The seam, step 05. The canvas rises into the column.
  * CARD 5 — Coaching, steps 06–11. The lit box moves; the canvas fills itself.
+ * CARD 6 — Leaving, steps 12–13. Three doors, and something to take with you.
  *
  * Binding: `docs/decisions/0001-the-canvas-scrolls.md` (the canvas is a block
  * in ordinary document flow at every width),
  * `docs/decisions/0002-the-canvas-arrives-collapsed-on-mobile.md`,
  * `docs/decisions/0003-the-canvas-arrives-open-once-coaching-starts.md`,
- * `docs/reference/card-a.md`, and slides 1–14 of
+ * `docs/reference/card-a.md`, and slides 1–16 of
  * `docs/reference/voice-coach-deck.md`. The wording of the questions and the
  * answers is the deck's; the layout is not.
  *
@@ -65,7 +70,8 @@ export const metadata = {
  *  - no progress bar, no step numbers, no count, no score. The canvas filling
  *    in is the only orientation there is.
  *  - no persistence. The whole run is in the query string; close the tab and
- *    it is gone.
+ *    it is gone — and at step 13 that is said on screen, in words, because by
+ *    then it is the reader's problem and not just ours.
  *  - it works as a plain document. Every answer is a real link or a real GET
  *    form, so the run works with JavaScript off. Speaking an answer is an
  *    enhancement on top of that and never the only way through.
@@ -154,7 +160,10 @@ function hrefsFor(run: Run, key: keyof Run, answers: readonly TriageAnswer[]): R
 function Seam({ state, started }: { state: CanvasState; started: boolean }) {
   const where = CANVAS_ORDER.find((box) => box.id === state.lit) ?? CANVAS_OPENS_ON;
   return (
-    <section aria-labelledby="canvas-heading">
+    /* `printable` is what "print the canvas" means: on paper this section and
+       the takeaway are the whole page, and the conversation around them is not.
+       See the print rules in `globals.css`. */
+    <section aria-labelledby="canvas-heading" className="printable">
       <h2 id="canvas-heading" className="sr-only">
         Your canvas
       </h2>
@@ -309,6 +318,55 @@ function Choice({ href: to, children }: { href: string; children: React.ReactNod
   );
 }
 
+/**
+ * One of the three ways out (slide 15). Three identically weighted cards, in
+ * the deck's order, and nothing anywhere marks one of them as the one to take:
+ * no primary styling, no "recommended", no default focus, and no fourth control
+ * that finishes anything. Going through one never closes the other two — the
+ * one already taken says so, quietly, and stays exactly where it was.
+ */
+function Door({
+  href: to,
+  label,
+  aside,
+  go,
+  taken = false,
+}: {
+  href: string;
+  label: string;
+  aside: string;
+  go: string;
+  taken?: boolean;
+}) {
+  return (
+    <Link
+      href={to}
+      aria-current={taken ? "true" : undefined}
+      className={`flex flex-col rounded-2xl bg-white px-5 py-4 text-left transition-colors hover:border-ink/40 hover:bg-ink/[0.03] ${
+        taken ? "border-2 border-ink/45" : "border border-ink/15"
+      }`}
+    >
+      <span className="font-semibold">{label}</span>
+      <span className="mt-0.5 text-sm text-ink-soft">{aside}</span>
+      <span className="mt-3 text-sm font-semibold text-ink-soft">
+        {go} <span aria-hidden>→</span>
+      </span>
+      {taken ? (
+        <span className="mt-1 text-xs uppercase tracking-widest text-ink-soft/70">
+          the one you took
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
+/** A heading inside the leaving screens. Never a step, never a count. */
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="text-sm font-semibold uppercase tracking-widest text-ink-soft">{children}</h3>
+  );
+}
+
 export default async function ColumnPage({
   searchParams,
 }: {
@@ -341,13 +399,34 @@ export default async function ColumnPage({
     ? nudgeFor(canvasText(canvas), { room: who === "room" })
     : null;
 
+  /* CARD 6. The doors are on screen once the coach has run out of questions —
+     the last answer has landed, and the nudge has been either answered or never
+     offered (a room never gets one). This is the only place in the column that
+     decides when step 12 exists, and it decides it from the conversation rather
+     than from a count of how many steps have gone by. */
+  const atTheDoors = Boolean(coaching.leading) && (!nudge || Boolean(coaching.nudge));
+  const out = atTheDoors ? coaching.out : null;
+
+  /* Step 12, said honestly. Two readings, kept apart on purpose: the signal's,
+     translated into words by the same table the nudge uses (`standing`), and
+     the canvas's own — an open question, a box nobody wrote in — which needs no
+     signal to be true. Neither is ever a number. */
+  const takeaway = atTheDoors ? takeawayFor(run, canvas) : null;
+  const standing = atTheDoors ? standingFor(canvasText(canvas)) : null;
+  const sharp = standing?.sharp ?? [];
+  const stillOpen = [...(standing?.open ?? []), ...(takeaway ? stillOpenInWords(takeaway) : [])];
+
+  /* Step 13. Built here, once, so the file you download, the text you copy and
+     the words on the screen are the same words. Nothing is written anywhere. */
+  const file = leaving(out) ? takeawayText(run, canvas) : null;
+
   return (
     <div className="mx-auto max-w-3xl px-4 pt-8 pb-20">
-      <p className="mb-10 rounded-2xl border border-safer/40 bg-safer/10 px-4 py-3 text-sm text-ink-soft">
+      <p className="no-print mb-10 rounded-2xl border border-safer/40 bg-safer/10 px-4 py-3 text-sm text-ink-soft">
         <strong className="text-ink">This is the column, being built in the open.</strong> The
-        questions below are real, so are the chips they leave behind, so is the canvas, and so is the
-        coaching that fills it in. What is not here yet is what happens at the end — the ways out, and
-        what you take away with you, arrive in later cards.
+        questions below are real, so are the chips they leave behind, so is the canvas, so is the
+        coaching that fills it in, and so is what you leave with. Nothing you say here is stored
+        anywhere — the whole conversation lives in the address bar, and closing the tab ends it.
       </p>
 
       {/* One column. One scroller. Everything below is appended in order and
@@ -609,6 +688,221 @@ export default async function ColumnPage({
               <Turn>
                 <p>Right. It&rsquo;ll keep.</p>
               </Turn>
+            ) : null}
+
+            {/* CARD 6 · 12 — three ways out. Slide 15.
+
+                Where this stands, said honestly and said in words. Two readings
+                side by side: what the signal makes of it, translated by the
+                same table the nudge uses, and what the canvas says about
+                itself. Neither is a number, neither is added up, and the
+                asymmetry is deliberate — a thin canvas has more in the right
+                column than the left, which is the only defence against wording
+                a goal to look finished.
+
+                The doors themselves are in the live turn below, because they
+                are answers, and answers are always the last thing in the
+                column. The canvas stays on screen behind all of it. */}
+            {atTheDoors ? (
+              <section aria-labelledby="standing-heading" className="space-y-4">
+                <Turn>
+                  <h2 id="standing-heading" className="text-lg leading-relaxed sm:text-xl">
+                    Where this stands, honestly.
+                  </h2>
+                </Turn>
+                {sharp.length === 0 && stillOpen.length === 0 ? (
+                  <Turn>
+                    <p>
+                      You&rsquo;ve written the whole thing down. What&rsquo;s sharp and what
+                      isn&rsquo;t is yours to judge from here — I&rsquo;d rather say nothing than
+                      make something up about it.
+                    </p>
+                  </Turn>
+                ) : (
+                  <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
+                    {sharp.length > 0 ? (
+                      <div className="space-y-2 rounded-2xl border border-ink/15 bg-white px-5 py-4">
+                        <Label>Sharp</Label>
+                        <ul className="space-y-2 text-ink-soft">
+                          {sharp.map((line) => (
+                            <li key={line}>{line}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {stillOpen.length > 0 ? (
+                      <div className="space-y-2 rounded-2xl border border-ink/15 bg-white px-5 py-4">
+                        <Label>Still open</Label>
+                        <ul className="space-y-2 text-ink-soft">
+                          {stillOpen.map((line) => (
+                            <li key={line}>{line}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </section>
+            ) : null}
+
+            {/* The first door, answered. The conversation carries on in the
+                same column — no new page, nothing cleared away, and the other
+                two doors still open below. */}
+            {out === "refine" ? (
+              <Turn>
+                <p>{standing?.start ? `Right — ${standing.start}, then.` : "Right. Let's keep going."}</p>
+                <p>
+                  Nothing&rsquo;s going anywhere. Change what you want to change and we&rsquo;ll pick
+                  it up from there; the other two doors are still open underneath.
+                </p>
+              </Turn>
+            ) : null}
+
+            {/* CARD 6 · 13 — the takeaway. Slide 16.
+
+                Three artefacts and three ways to take them, and the sentence
+                that makes all of it necessary said first and said plainly. The
+                canvas above is untouched: this is appended under it, like
+                everything else in this column. */}
+            {leaving(out) && file && takeaway ? (
+              <section
+                id="takeaway"
+                aria-labelledby="takeaway-heading"
+                className="printable scroll-mt-24 space-y-6"
+              >
+                <Turn>
+                  <h2 id="takeaway-heading" className="text-lg leading-relaxed sm:text-xl">
+                    Take this now — I don&rsquo;t keep a copy.
+                  </h2>
+                  <p className="text-base text-ink-soft sm:text-lg">
+                    No account, no database, nothing saved anywhere. Close this tab and the
+                    conversation, the canvas and this are all gone — there is no coming back later,
+                    and I can&rsquo;t send it on to you.
+                  </p>
+                </Turn>
+
+                {/* "Take the questions away" doesn't get a different takeaway —
+                    it gets the same one with what they came for at the front.
+                    The questions are marked as questions everywhere they
+                    appear, here and in the file (rule 9). */}
+                {out === "questions" ? (
+                  <div className="space-y-2 rounded-2xl border border-safer/50 bg-safer/10 px-5 py-4">
+                    <Label>The questions you&rsquo;re taking</Label>
+                    {takeaway.open.length > 0 ? (
+                      <ul className="space-y-2">
+                        {takeaway.open.map((q) => (
+                          <li key={`${q.box.id}-${q.text}`}>
+                            {q.text}{" "}
+                            <span className="text-ink-soft">— {q.box.short}, and it&rsquo;s a question, not a blank.</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-ink-soft">
+                        You answered everything I asked. Nothing is waiting on your team — the canvas
+                        travels with you anyway.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
+
+                <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
+                  <div className="space-y-3 rounded-2xl border border-ink/15 bg-white px-5 py-4">
+                    <Label>1 · The goal, SSH pattern</Label>
+                    <p className="text-sm text-ink-soft">Objective — an outcome hypothesis</p>
+                    <p className="border-l-2 border-ink/15 pl-4">
+                      {takeaway.goal.objective ?? "We didn’t get to the bet."}
+                    </p>
+                    {takeaway.goal.forWhom ? (
+                      <p className="text-ink-soft">
+                        <span className="text-sm">For:</span> {takeaway.goal.forWhom}
+                      </p>
+                    ) : null}
+                    <p className="text-sm text-ink-soft">Key results</p>
+                    <ul className="space-y-2">
+                      <li>
+                        <span className="text-sm text-ink-soft">Leading — what tells us in weeks:</span>{" "}
+                        {takeaway.goal.leading ?? "still open"}
+                      </li>
+                      <li>
+                        <span className="text-sm text-ink-soft">
+                          Lagging — what would convince a sceptic:
+                        </span>{" "}
+                        {takeaway.goal.lagging ?? "still an open question — it travels as one"}
+                      </li>
+                    </ul>
+                    {/* The OKRs page, not this column, is what says how many key
+                        results an OKR carries. Saying where the conversation got
+                        to is not the same as saying it fell short. */}
+                    <p className="text-sm text-ink-soft/75">
+                      Sooner Safer Happier asks for three to five key results, leading and lagging.
+                      This is where we got to, not the finished set.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3 rounded-2xl border border-ink/15 bg-white px-5 py-4">
+                    <Label>2 · The canvas, gaps and all</Label>
+                    <ul className="space-y-2">
+                      {takeaway.boxes.map(({ box, notes }) => (
+                        <li key={box.id}>
+                          <span className="text-sm text-ink-soft">
+                            <span aria-hidden>{box.numeral} </span>
+                            {box.short}:
+                          </span>{" "}
+                          {notes.length === 0 ? (
+                            <span className="text-ink-soft">
+                              left alone, on purpose
+                            </span>
+                          ) : (
+                            notes.map((note, i) => (
+                              <span key={i}>
+                                {i > 0 ? " · " : null}
+                                {note.kind === "open" ? (
+                                  <>
+                                    <span className="text-ink-soft">open question — </span>
+                                    {note.text}
+                                  </>
+                                ) : (
+                                  note.text
+                                )}
+                              </span>
+                            ))
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-sm text-ink-soft/75">
+                      It goes as it is. Nothing is tidied up on the way out, and nothing you left
+                      open is written as a blank.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="no-print space-y-3 rounded-2xl border border-ink/15 bg-white px-5 py-4">
+                  <Label>3 · Carry on elsewhere</Label>
+                  <p className="text-ink-soft">
+                    A prompt with your canvas already in it, for your own assistant — the same
+                    questions, asked the same way, wherever you go next.
+                  </p>
+                  <details>
+                    <summary className="cursor-pointer text-sm text-ink-soft underline underline-offset-4">
+                      read the prompt
+                    </summary>
+                    <pre className="mt-3 whitespace-pre-wrap border-l-2 border-ink/15 pl-4 font-sans text-sm text-ink-soft">
+                      {takeaway.prompt}
+                    </pre>
+                  </details>
+                  <CopyButton text={takeaway.prompt} label="⧉ Copy the prompt" />
+                </div>
+
+                {/* Download first, and the only thing here that is pushed. The
+                    other two are the same three artefacts by another route. */}
+                <div className="no-print flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                  <TakeIt href={takeawayHref(carried(run, coaching))} />
+                  <CopyButton text={file} label="⧉ Copy as text" />
+                  <PrintCanvas />
+                </div>
+              </section>
             ) : null}
           </>
         ) : null}
@@ -874,17 +1168,88 @@ export default async function ColumnPage({
                 </div>
               ) : null}
 
-              {/* Where the column runs out for now. The canvas above stays
-                  exactly as you left it — nothing is cleared away here either. */}
-              {share === "yes" && coaching.leading && (!nudge || coaching.nudge) ? (
-                <div className="rounded-2xl border border-dashed border-ink/25 bg-white/60 px-5 py-4">
+              {/* CARD 6 · 12 — the three doors themselves, in the deck's order.
+                  They are answers, so they live here with every other answer,
+                  and they stay here after one is taken: going through a door
+                  never closes the other two. There is no finish button beside
+                  them and no fourth control that ends the run. */}
+              {atTheDoors ? (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Door
+                    href={columnHref(run, coaching, { out: "refine" })}
+                    label="Keep refining"
+                    aside={
+                      standing?.start
+                        ? `I'd start with ${standing.start}`
+                        : "there's more in this if you want it"
+                    }
+                    go="Carry on"
+                    taken={out === "refine"}
+                  />
+                  <Door
+                    href={columnHref(run, coaching, { out: "stop" }, "#takeaway")}
+                    label="Stop here"
+                    aside="this is already sharper than most"
+                    go="Take it and go"
+                    taken={out === "stop"}
+                  />
+                  <Door
+                    href={columnHref(run, coaching, { out: "questions" }, "#takeaway")}
+                    label="Take the questions away"
+                    aside={
+                      takeaway && takeaway.open.length > 0
+                        ? `${takeaway.open.length === 1 ? "one answer lives" : `${takeaway.open.length} answers live`} with your team, not with me`
+                        : "nothing's open right now — this still packs the canvas up"
+                    }
+                    go="Pack them up"
+                    taken={out === "questions"}
+                  />
+                </div>
+              ) : null}
+
+              {/* Carrying on. The two answers that can be reopened without
+                  unpicking what sits under them — the same "let me redo it"
+                  the bet already had at step 10, not a new kind of move. Taking
+                  one back never deletes anything else you said. */}
+              {out === "refine" ? (
+                <div className="space-y-2 text-sm">
+                  <p>
+                    <Link
+                      href={columnHref(run, coaching, { leading: null })}
+                      className="text-ink-soft underline underline-offset-2"
+                    >
+                      …let me redo what tells us in weeks
+                    </Link>
+                  </p>
+                  <p>
+                    <Link
+                      href={columnHref(run, coaching, { hypothesis: null })}
+                      className="text-ink-soft underline underline-offset-2"
+                    >
+                      …or let me redo the bet
+                    </Link>
+                  </p>
+                  <p className="text-ink-soft/75">
+                    Those are the two I can reopen without pulling apart everything underneath them.
+                    Anything further up the canvas, take away and sharpen it there — the prompt goes
+                    with you.
+                  </p>
+                </div>
+              ) : null}
+
+              {/* The end of the column. It says which way you're talking, as it
+                  has at every step, and it says the one thing that is still
+                  true whichever door you took. */}
+              {atTheDoors ? (
+                <div className="no-print rounded-2xl border border-dashed border-ink/25 bg-white/60 px-5 py-4">
                   <p className="text-sm text-ink-soft">
-                    {speaking ? "◉ Speaking." : "⌨ Typing."} That&rsquo;s the canvas.{" "}
+                    {speaking ? "◉ Speaking." : "⌨ Typing."}{" "}
                     {who === "room"
-                      ? "In a room I keep the nudge to myself — nobody needs one person told what's thin in front of everyone."
-                      : null}{" "}
-                    What happens next — the three ways out, and what you take away with you — is a
-                    later card.
+                      ? "In a room I keep the nudge to myself — nobody needs one person told what's thin in front of everyone. "
+                      : null}
+                    {leaving(out)
+                      ? "The canvas is still up there, exactly as you left it. Nothing is saved here, so take what you want before you close the tab."
+                      : "No rush, and no wrong door. Nothing is saved here either way."}
                   </p>
                 </div>
               ) : null}

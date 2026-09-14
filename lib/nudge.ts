@@ -1,5 +1,6 @@
 /**
- * The nudge — step 11 of the entry column. CARD 5, slide 14.
+ * The nudge — step 11 of the entry column. CARD 5, slide 14 — and the honest
+ * standing at step 12. CARD 6, slide 15.
  *
  * This is a translation layer over the quality signal that already exists. It
  * is not a new score and it does not compute one.
@@ -19,6 +20,19 @@
  *  - in room mode it is suppressed entirely. The signal keeps running
  *    underneath regardless, which is what `nudgeFor()` returning `null` means:
  *    nothing to show, not nothing happening.
+ *
+ * CARD 6 adds `standingFor()` — what's sharp and what's still open at step 12,
+ * read off the same signal and said in the same words. It is the same
+ * translation table, split by status rather than sorted to one sentence, and it
+ * is subject to every line of contract 1 above: no total, no percentage, no
+ * headline number, and nothing recomputed here.
+ *
+ * One difference, deliberately. `standingFor()` takes no room option, because
+ * the suppression in contract 1 is the nudge's: slide 14 is annotated "solo
+ * mode · in a room this is off" and slide 15 carries no such annotation. Step 11
+ * is one person being told what's thin; step 12 is the honest state of the thing
+ * everyone in the room has been looking at. Suppressing it would leave a room
+ * with three doors and no reason to pick one.
  */
 
 import { type Check, evaluateOutcome } from "./outcomeCoach";
@@ -51,46 +65,61 @@ export type Nudge = {
  * dimension named as the deck names it on slide 14 — "behaviour change",
  * "measurable outcome", "not a deliverable" — and the sentences are what the
  * coach would actually say out loud about it.
+ *
+ * `start` is the same dimension said as the thing you'd pick up next, for the
+ * quiet line under the first door on slide 15 — "I'd start with the leading
+ * indicators". It is wording for an element the deck already draws, not a new
+ * opinion about what happens next: the door is the reader's to open or ignore.
  */
-const TRANSLATION: Record<string, { label: string; strong: string; partial: string; missing: string }> = {
+const TRANSLATION: Record<
+  string,
+  { label: string; start: string; strong: string; partial: string; missing: string }
+> = {
   customer: {
     label: "behaviour change",
+    start: "who this is for, and what they'd be doing differently",
     strong: "You've named who this is for and what they'd be doing differently.",
     partial: "There's a who, but not much about what they'd be doing differently.",
     missing: "Nothing on the canvas yet says whose behaviour changes.",
   },
   outcome: {
     label: "not a deliverable",
+    start: "the difference this makes, rather than the thing you'd ship",
     strong: "This describes something getting better, not something being delivered.",
     partial: "Some of this is a change in the world; some of it is still a thing you'd ship.",
     missing: "This reads as work you'd complete rather than a change you'd cause.",
   },
   measures: {
     label: "measurable outcome",
+    start: "the leading indicators — what tells you in weeks",
     strong: "You've said how you'd see movement and how you'd see impact.",
     partial: "There's one kind of measure here — the early signal and the impact aren't both covered.",
     missing: "Nothing here would tell you whether it moved.",
   },
   baseline: {
     label: "a number that already exists",
+    start: "the baseline — where you're starting from, and by when",
     strong: "Where you're starting from, where you're heading and by when are all here.",
     partial: "Part of the baseline, target and timeframe is here; the rest isn't.",
     missing: "There's no baseline, target or timeframe to hang the bet on.",
   },
   hypothesis: {
     label: "a bet, not a certainty",
+    start: "the bet underneath, written so you could be wrong about it",
     strong: "The belief underneath is explicit and testable.",
     partial: "There's a belief in here, but it isn't stated as something you could be wrong about.",
     missing: "Nothing here is written as a bet you could test in weeks.",
   },
   sowhat: {
     label: "the so what",
+    start: "the so what — what's better for the organisation if this lands",
     strong: "It's clear what value this creates and why it matters now.",
     partial: "The value is implied rather than said.",
     missing: "The canvas doesn't say what's better for the organisation if this lands.",
   },
   plain: {
     label: "anyone can read it",
+    start: "the wording, so someone who joined last week could read it",
     strong: "Someone who joined last week could tell what would be different.",
     partial: "A couple of phrases here would need explaining to someone new.",
     missing: "This is written for people already in the room.",
@@ -141,5 +170,48 @@ export function nudgeFor(text: string, opts: { room: boolean }): Nudge | null {
       glyph: GLYPH[c.status],
       words: TRANSLATION[c.id][c.status],
     })),
+  };
+}
+
+/**
+ * Where this stands, honestly — step 12, slide 15. CARD 6.
+ *
+ * Two lists of sentences and one more sentence, all of them the same words the
+ * nudge uses. Nothing here is added up, ranked against a threshold or turned
+ * into a headline: `sharp` is the dimensions the signal reads as strong, `open`
+ * is everything else, thinnest first, and `start` is the thinnest one said as
+ * the thing you'd pick up next.
+ *
+ * `null` when the engine declined to read so little text — its existing
+ * judgement, not a threshold applied here. The doors still open; the column just
+ * doesn't put words in the coach's mouth about a canvas the engine wouldn't
+ * read. What the *canvas* says about itself — an open question, a box nobody
+ * wrote in — is read separately in `lib/takeaway.ts`, because that is the
+ * reader's own material and needs no signal to be true.
+ */
+export type Standing = {
+  /** What's sharp, in words. Empty is a legitimate answer, not a failure. */
+  sharp: string[];
+  /** What's still open, thinnest first. */
+  open: string[];
+  /** The one thing the coach would pick up first, for the door's quiet line. */
+  start: string | null;
+};
+
+export function standingFor(text: string): Standing | null {
+  const signal = evaluateOutcome(text);
+  if (!signal) return null;
+
+  const known = signal.checks.filter((c) => TRANSLATION[c.id]);
+  if (known.length === 0) return null;
+
+  const thin = known
+    .filter((c) => c.status !== "strong")
+    .sort((a, b) => THINNEST[a.status] - THINNEST[b.status]);
+
+  return {
+    sharp: known.filter((c) => c.status === "strong").map((c) => TRANSLATION[c.id].strong),
+    open: thin.map((c) => TRANSLATION[c.id][c.status]),
+    start: thin[0] ? TRANSLATION[thin[0].id].start : null,
   };
 }

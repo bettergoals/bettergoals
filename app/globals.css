@@ -67,6 +67,42 @@ body {
 }
 .why-on-narrow > summary::-webkit-details-marker { display: none; }
 
+/* Print the canvas (CARD 6, slide 16). The third way of taking the takeaway,
+   and the only one that produces something you can put on a wall.
+
+   "Print the canvas" is meant literally: on paper the page is the canvas and
+   what the reader is leaving with, not the conversation that produced it. So
+   the column prints only the blocks marked `printable` — the canvas and the
+   takeaway — and everything marked `no-print` inside them (the buttons, the
+   prompt to paste somewhere else) drops out too.
+
+   Scoped with :has() so it only ever applies to the column. The rest of the
+   site keeps its own print behaviour, whatever the browser makes of it.
+
+   It works without JavaScript: the button in Takeaway.tsx is a shortcut to the
+   browser's own print, and these rules are what either of them gets. */
+@media print {
+  body:has(.the-column) header,
+  body:has(.the-column) footer {
+    display: none;
+  }
+  .the-column > *:not(.printable),
+  .the-column .no-print {
+    display: none;
+  }
+  .the-column,
+  .the-column * {
+    box-shadow: none !important;
+  }
+  /* A collapsed disclosure would print as a heading with nothing under it. */
+  .canvas-arrives > summary {
+    display: none;
+  }
+  .canvas-arrives::details-content {
+    content-visibility: visible;
+  }
+}
+
 /* Goal jam chalkboard — chalk goes on with a stroke, comes off with a smear. */
 @keyframes chalk-in {
   from { opacity: 0; clip-path: inset(0 100% 0 0); transform: translateY(2px) rotate(-0.4deg); }
