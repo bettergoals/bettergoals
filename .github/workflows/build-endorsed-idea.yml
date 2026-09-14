@@ -118,6 +118,12 @@ jobs:
             your pull request and in your progress comment rather than quietly
             deciding without it.
 
+            One exception, and it matters: an attachment is a snapshot taken when
+            that card was written. If the same document also lives in
+            `docs/reference/`, the repo copy is the current one and wins — read
+            that instead, and note in the PR if the two differ. CLAUDE.md says
+            which documents those are.
+
             Do not commit anything from `.idea-attachments/`. It belongs to
             whoever attached it. If material there binds more than one idea, say
             in the PR that it is worth committing to `docs/reference/` — don't
