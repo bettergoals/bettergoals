@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { columnHref, type Coaching } from "@/lib/coaching";
 import type { Run } from "@/lib/triage";
 import { columnNote, landAnswer, turnFor } from "@/lib/voiceColumn";
-import { useCoachSaysSetters } from "./CoachSays";
 
 /**
  * "◉ Talk to me" — the coach itself, on the phone. Idea #124.
@@ -72,12 +71,6 @@ export function TalkToMe({ run, coaching }: { run: Run; coaching: Coaching }) {
   const [blocked, setBlocked] = useState(false);
   /** The coach's last line, in print. What it says is always also readable. */
   const [caption, setCaption] = useState("");
-  /**
-   * The same line, handed up to the live turn at the top of the column. The
-   * wording is the coach's now, so the printed question has to be the coach's
-   * too — otherwise you hear one question and read another. See `CoachSays`.
-   */
-  const coachSays = useCoachSaysSetters();
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
@@ -424,17 +417,6 @@ export function TalkToMe({ run, coaching }: { run: Run; coaching: Coaching }) {
   const turn = turnFor(run, coaching);
   const live = status === "live";
 
-  /* Hand the coach's words up to the live turn, so what you read is what you
-     just heard. `coachSays` is the stable setter context, so writing here never
-     re-renders this component. On the way out the live turn goes back to the
-     column's own wording — the conversation is over, the record stands. */
-  useEffect(() => {
-    coachSays?.setCaption(caption);
-  }, [caption, coachSays]);
-  useEffect(() => {
-    coachSays?.setLive(live);
-    return () => coachSays?.setLive(false);
-  }, [live, coachSays]);
 
   return (
     <div className="rounded-2xl border border-dashed border-ink/25 bg-white/60 px-5 py-4">
@@ -470,12 +452,13 @@ export function TalkToMe({ run, coaching }: { run: Run; coaching: Coaching }) {
         )}
       </div>
 
-      {/* Whatever the coach says is in print, in the live turn above — it is
-          the coach's own wording now, so that is where it belongs rather than
-          repeated down here as a caption. What is left for this line is the
-          thing the live turn cannot say: that the voice itself went wrong. */}
+      {/* Whatever the coach says is also in print, quietly, here by the
+          controls — one line, small, out of the way of the question above it.
+          It is the only readable record of a spoken turn, so it matters to
+          anyone who cannot hear it or is sitting somewhere they can't listen;
+          it is deliberately not the question, and never the size of one. */}
       <p aria-live="polite" className="mt-2 min-h-6 text-sm text-ink-soft">
-        {error}
+        {error ?? (live && caption ? `“${caption}”` : null)}
       </p>
 
       {blocked ? (
