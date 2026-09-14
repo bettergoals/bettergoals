@@ -1,0 +1,1264 @@
+import Link from "next/link";
+import { CopyButton } from "@/components/CopyButton";
+import { CANVAS_OPENS_ON, CANVAS_ORDER } from "@/lib/canvas";
+import {
+  ANSWER_MAX,
+  DONT_KNOW,
+  DONT_KNOW_ANSWER,
+  canvasFor,
+  canvasText,
+  carried,
+  columnHref,
+  leaving,
+  readCoaching,
+  type Coaching,
+  type CanvasState,
+} from "@/lib/coaching";
+import { COLUMN_PATH, REPO_URL } from "@/lib/config";
+import { broughtInWords, handoverHref, skillFor } from "@/lib/handover";
+import { nudgeFor, standingFor } from "@/lib/nudge";
+import { stillOpenInWords, takeawayFor, takeawayHref, takeawayText } from "@/lib/takeaway";
+import {
+  BROUGHT_ANSWERS,
+  BROUGHT_MAX,
+  MODE_ANSWERS,
+  SHARE_ANSWERS,
+  WHO_ANSWERS,
+  chipsFor,
+  readRun,
+  reflectWho,
+  runHref,
+  shareQuestion,
+  type Run,
+  type TriageAnswer,
+} from "@/lib/triage";
+import { Canvas } from "./Canvas";
+import { SayIt } from "./SayIt";
+import { PrintCanvas, TakeIt } from "./Takeaway";
+
+/**
+ * The column itself, as a component rather than a page.
+ *
+ * It renders wherever the conversation lives — today that is the site's front
+ * door, `/`. Keeping it in one file means there is exactly one column rather
+ * than a copy per route, and `columnHref()` in `lib/coaching.ts` stays the
+ * single place that knows which path it is served from.
+ */
+
+/*
+ * CARD 1 — The column. The shell everything else lives inside.
+ * CARD 2 — Triage, steps 01–04. The four questions that fill it in.
+ * CARD 3 — The can't-share off-ramp. Where "no" at step 04 goes.
+ * CARD 4 — The seam, step 05. The canvas rises into the column.
+ * CARD 5 — Coaching, steps 06–11. The lit box moves; the canvas fills itself.
+ * CARD 6 — Leaving, steps 12–13. Three doors, and something to take with you.
+ *
+ * Binding: `docs/decisions/0001-the-canvas-scrolls.md` (the canvas is a block
+ * in ordinary document flow at every width),
+ * `docs/decisions/0002-the-canvas-arrives-collapsed-on-mobile.md`,
+ * `docs/decisions/0003-the-canvas-arrives-open-once-coaching-starts.md`,
+ * `docs/reference/card-a.md`, and slides 1–16 of
+ * `docs/reference/voice-coach-deck.md`. The wording of the questions and the
+ * answers is the deck's; the layout is not.
+ *
+ * The rules this file exists to keep:
+ *  - one scroller. Nothing here is sticky, fixed, or given a height, an
+ *    overflow or a max-height. The nav in SiteChrome is the page's only sticky
+ *    element and it is site chrome, not part of the column.
+ *  - one order, both breakpoints, appended to and never rearranged:
+ *    the opening · the triage turns · the chips · the canvas · the
+ *    conversation · the live turn.
+ *  - nothing is replaced. Answered triage turns grey; their chips stay above
+ *    the canvas for good.
+ *  - no progress bar, no step numbers, no count, no score. The canvas filling
+ *    in is the only orientation there is.
+ *  - no persistence. The whole run is in the query string; close the tab and
+ *    it is gone — and at step 13 that is said on screen, in words, because by
+ *    then it is the reader's problem and not just ours.
+ *  - it works as a plain document. Every answer is a real link or a real GET
+ *    form, so the run works with JavaScript off. Speaking an answer is an
+ *    enhancement on top of that and never the only way through.
+ */
+
+/**
+ * A turn the coach has taken. Greys once it has been answered; never removed.
+ *
+ * Greyed, not faded out: a spent turn is still the record of what was said, and
+ * at step 04 it is the data line itself. It stays above 4.5:1 on chalk.
+ */
+function Turn({ spent = false, children }: { spent?: boolean; children: React.ReactNode }) {
+  return (
+    <div className={spent ? "text-ink-soft/70" : "text-ink"}>
+      <div className="space-y-2 text-lg leading-relaxed sm:text-xl">{children}</div>
+    </div>
+  );
+}
+
+/** Triage answers are outline chips — facts about you, not your thinking. */
+function Chip({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="rounded-full border border-ink/25 px-3 py-1 text-sm text-ink-soft/75">{children}</li>
+  );
+}
+
+function Answer({ href: to, label, aside }: { href: string; label: string; aside?: string }) {
+  return (
+    <Link
+      href={to}
+      className="flex flex-col rounded-2xl border border-ink/15 bg-white px-5 py-4 text-left transition-colors hover:border-ink/40 hover:bg-ink/[0.03] sm:min-w-56 sm:flex-1"
+    >
+      <span className="font-semibold">{label}</span>
+      {aside ? <span className="mt-0.5 text-sm text-ink-soft">{aside}</span> : null}
+    </Link>
+  );
+}
+
+/**
+ * Every answer to one question, side by side and identically weighted. Nothing
+ * here marks one of them as the expected one — at step 04 in particular, both
+ * answers are good answers and have to look like it.
+ */
+function Answers({
+  answers,
+  hrefs,
+}: {
+  answers: readonly TriageAnswer[];
+  hrefs: Record<string, string>;
+}) {
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+      {answers.map((answer) => (
+        <Answer key={answer.value} href={hrefs[answer.value]} label={answer.label} aside={answer.aside} />
+      ))}
+    </div>
+  );
+}
+
+/** The same links the buttons use, keyed by answer, so a spoken answer lands identically. */
+function hrefsFor(run: Run, key: keyof Run, answers: readonly TriageAnswer[]): Record<string, string> {
+  return Object.fromEntries(answers.map((a) => [a.value, runHref(run, { [key]: a.value } as Partial<Run>)]));
+}
+
+/**
+ * CARD 4 — the seam. The canvas rises into the column the conversation was
+ * already in: no transition, no "start" button, no new page, and nothing above
+ * it cleared away.
+ *
+ * Slide 8 gives it two arrivals. On a wide screen it is simply there, under the
+ * coach's line, both halves in view at once. On a narrow one it arrives
+ * collapsed to a single line you tap to open — which is a native disclosure,
+ * not a thumbnail of itself, and never a report of how much of it is done.
+ * Which of the two you get is decided in CSS by the width of the screen, so the
+ * markup, the DOM order and the plain-document reading are the same either way.
+ *
+ * CARD 5 answers the question decision 0002 left it: once a word of coaching
+ * has landed the canvas arrives open, and the summary line says which box the
+ * coach is in rather than which one it is about to start in. It never
+ * re-collapses on its own — `open` only ever goes from false to true. See
+ * `docs/decisions/0003-the-canvas-arrives-open-once-coaching-starts.md`.
+ *
+ * There is one canvas in the column and it stays where it landed. Everything
+ * the coaching does to it happens here, in place.
+ */
+function Seam({ state, started }: { state: CanvasState; started: boolean }) {
+  const where = CANVAS_ORDER.find((box) => box.id === state.lit) ?? CANVAS_OPENS_ON;
+  return (
+    /* `printable` is what "print the canvas" means: on paper this section and
+       the takeaway are the whole page, and the conversation around them is not.
+       See the print rules in `globals.css`. */
+    <section aria-labelledby="canvas-heading" className="printable">
+      <h2 id="canvas-heading" className="sr-only">
+        Your canvas
+      </h2>
+      <details className="canvas-arrives" open={started}>
+        <summary className="mb-3 flex cursor-pointer list-none items-baseline gap-2 rounded-2xl border border-dashed border-ink/25 bg-white/60 px-5 py-4 text-ink-soft hover:bg-white">
+          <span aria-hidden>▾</span>
+          <span>
+            <span className="font-semibold text-ink">canvas</span> —{" "}
+            {started ? <>we&rsquo;re in {where.short}</> : <>we&rsquo;ll start in {where.short}</>}
+            {started ? null : (
+              <span className="mt-0.5 block text-sm text-ink-soft/75">tap to open</span>
+            )}
+          </span>
+        </summary>
+        <Canvas state={state} />
+      </details>
+    </section>
+  );
+}
+
+/**
+ * Why the coach went where it did (slide 10). One sentence, in the flow of
+ * talk — never a diagram and never "step 3 of 5".
+ *
+ * On a wide screen it is simply said. On a narrow one, where the coach's turn
+ * has to stay short enough to read above your own, it is the deck's "why?"
+ * affordance: a native disclosure carrying the same sentence, one tap away. The
+ * markup is identical either way; CSS decides which you get.
+ */
+function Why({ children }: { children: React.ReactNode }) {
+  return (
+    <details className="why-on-narrow">
+      <summary className="cursor-pointer list-none text-base text-ink-soft underline underline-offset-4 sm:text-lg">
+        why? <span aria-hidden>▸</span>
+      </summary>
+      <p className="mt-2 text-base text-ink-soft sm:text-lg">{children}</p>
+    </details>
+  );
+}
+
+/** Available at any point, in both directions, at every step of the run. */
+function ModeSwitch({ run, coaching }: { run: Run; coaching: Coaching }) {
+  const to = run.mode === "speak" ? "type" : "speak";
+  return (
+    <Link
+      href={columnHref(run, coaching, { mode: to })}
+      className="self-start rounded-full border border-ink/15 px-3 py-1.5 text-sm text-ink-soft hover:bg-ink/5"
+    >
+      {to === "type" ? "⌨ switch to typing" : "◉ switch to speaking"}
+    </Link>
+  );
+}
+
+/**
+ * Your turn, in your own words — the shape every coaching answer takes.
+ *
+ * A plain GET form carrying the whole run in hidden fields, so it works with
+ * JavaScript off like everything else in this column, and speaking is an
+ * enhancement laid on top of it rather than a second way in. There is no
+ * "required", no validation, no minimum: an answer is whatever you say, and
+ * nothing you could type here renders as a fault.
+ */
+function Ask({
+  run,
+  coaching,
+  name,
+  label,
+  placeholder,
+  speaking,
+  showLabel = false,
+  spoken = [],
+  spokenHrefs = {},
+  children,
+}: {
+  run: Run;
+  coaching: Coaching;
+  name: keyof Coaching;
+  label: string;
+  placeholder: string;
+  speaking: boolean;
+  /** When the coach's question was said inside the canvas rather than here. */
+  showLabel?: boolean;
+  /**
+   * Answers that are on screen as buttons beside this field, so saying one of
+   * them out loud lands exactly where tapping it would have. Anything else you
+   * say stays in your own words.
+   */
+  spoken?: readonly TriageAnswer[];
+  spokenHrefs?: Record<string, string>;
+  /** Any other answer to this question that isn't the reader's own words. */
+  children?: React.ReactNode;
+}) {
+  const id = `say-${name}`;
+  return (
+    <>
+      {speaking ? (
+        <SayIt
+          answers={spoken}
+          hrefs={spokenHrefs}
+          freeTextHref={columnHref(run, coaching, { [name]: "__SAID__" } as Partial<Coaching>)}
+          invitation="…just say it"
+          max={ANSWER_MAX}
+        />
+      ) : null}
+      <form method="get" action={COLUMN_PATH} className="space-y-2">
+        {carried(run, coaching).map((field) => (
+          <input key={field.name} type="hidden" name={field.name} value={field.value} />
+        ))}
+        <label
+          htmlFor={id}
+          className={showLabel ? "block text-lg leading-relaxed sm:text-xl" : "sr-only"}
+        >
+          {label}
+        </label>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            id={id}
+            name={name}
+            type="text"
+            maxLength={ANSWER_MAX}
+            autoComplete="off"
+            placeholder={placeholder}
+            className="flex-1 rounded-2xl border border-ink/15 bg-white px-5 py-4 placeholder:text-ink-soft/75"
+          />
+          <button
+            type="submit"
+            className="rounded-2xl bg-ink px-5 py-4 font-semibold text-chalk hover:bg-ink-soft sm:px-6"
+          >
+            ↵ send
+          </button>
+        </div>
+      </form>
+      {children}
+    </>
+  );
+}
+
+/**
+ * An answer that isn't the reader's own words — "I don't know", "go on then",
+ * "not now". The deck's buttons. Identically weighted with everything beside
+ * them: none of these is the expected answer, and at step 08 in particular the
+ * one that looks like a shrug is the most interesting thing on the canvas.
+ */
+function Choice({ href: to, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={to}
+      className="rounded-2xl border border-ink/15 bg-white px-5 py-4 text-left font-semibold transition-colors hover:border-ink/40 hover:bg-ink/[0.03]"
+    >
+      {children}
+    </Link>
+  );
+}
+
+/**
+ * One of the three ways out (slide 15). Three identically weighted cards, in
+ * the deck's order, and nothing anywhere marks one of them as the one to take:
+ * no primary styling, no "recommended", no default focus, and no fourth control
+ * that finishes anything. Going through one never closes the other two — the
+ * one already taken says so, quietly, and stays exactly where it was.
+ */
+function Door({
+  href: to,
+  label,
+  aside,
+  go,
+  taken = false,
+}: {
+  href: string;
+  label: string;
+  aside: string;
+  go: string;
+  taken?: boolean;
+}) {
+  return (
+    <Link
+      href={to}
+      aria-current={taken ? "true" : undefined}
+      className={`flex flex-col rounded-2xl bg-white px-5 py-4 text-left transition-colors hover:border-ink/40 hover:bg-ink/[0.03] ${
+        taken ? "border-2 border-ink/45" : "border border-ink/15"
+      }`}
+    >
+      <span className="font-semibold">{label}</span>
+      <span className="mt-0.5 text-sm text-ink-soft">{aside}</span>
+      <span className="mt-3 text-sm font-semibold text-ink-soft">
+        {go} <span aria-hidden>→</span>
+      </span>
+      {taken ? (
+        <span className="mt-1 text-xs uppercase tracking-widest text-ink-soft/70">
+          the one you took
+        </span>
+      ) : null}
+    </Link>
+  );
+}
+
+/** A heading inside the leaving screens. Never a step, never a count. */
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="text-sm font-semibold uppercase tracking-widest text-ink-soft">{children}</h3>
+  );
+}
+
+export default function Column({
+  params,
+}: {
+  params: Record<string, string | string[] | undefined>;
+}) {
+  const run = readRun(params);
+  const { mode, who, brought, share } = run;
+
+  const chips = chipsFor(run);
+  const speaking = mode === "speak";
+
+  /* CARD 5. Where the coach is, and everything that has landed on the canvas so
+     far. `canvasFor` is the only thing that decides either, and it decides them
+     from the coach's route — nothing below reads an answer and forms an opinion
+     about where the conversation should go next. */
+  const coaching = readCoaching(params, run);
+  const canvas = canvasFor(coaching);
+  const digging = coaching.lagging === DONT_KNOW;
+  /* Step 08 is finished when a measure has landed, or — after "I don't know" —
+     when the open question has. Neither is the lesser answer. */
+  const settled = Boolean(coaching.lagging) && (!digging || Boolean(coaching.whoKnows));
+  const moved = coaching.back === "no" || Boolean(coaching.centreAgain);
+
+  /* Step 11. The signal has been running underneath this whole conversation,
+     exactly as it does today; this is the first and only moment anything is
+     said about it, and what is said is words. `null` means there is nothing to
+     say — in a room, always. See `lib/nudge.ts` and CARD A, contract 1. */
+  const nudge = coaching.leading
+    ? nudgeFor(canvasText(canvas), { room: who === "room" })
+    : null;
+
+  /* CARD 6. The doors are on screen once the coach has run out of questions —
+     the last answer has landed, and the nudge has been either answered or never
+     offered (a room never gets one). This is the only place in the column that
+     decides when step 12 exists, and it decides it from the conversation rather
+     than from a count of how many steps have gone by. */
+  const atTheDoors = Boolean(coaching.leading) && (!nudge || Boolean(coaching.nudge));
+  const out = atTheDoors ? coaching.out : null;
+
+  /* Step 12, said honestly. Two readings, kept apart on purpose: the signal's,
+     translated into words by the same table the nudge uses (`standing`), and
+     the canvas's own — an open question, a box nobody wrote in — which needs no
+     signal to be true. Neither is ever a number. */
+  const takeaway = atTheDoors ? takeawayFor(run, canvas) : null;
+  const standing = atTheDoors ? standingFor(canvasText(canvas)) : null;
+  const sharp = standing?.sharp ?? [];
+  const stillOpen = [...(standing?.open ?? []), ...(takeaway ? stillOpenInWords(takeaway) : [])];
+
+  /* Step 13. Built here, once, so the file you download, the text you copy and
+     the words on the screen are the same words. Nothing is written anywhere. */
+  const file = leaving(out) ? takeawayText(run, canvas) : null;
+
+  return (
+    <div className="mx-auto max-w-3xl px-4 pt-8 pb-20">
+      <p className="no-print mb-10 rounded-2xl border border-safer/40 bg-safer/10 px-4 py-3 text-sm text-ink-soft">
+        <strong className="text-ink">This is the column, being built in the open.</strong> The
+        questions below are real, so are the chips they leave behind, so is the canvas, so is the
+        coaching that fills it in, and so is what you leave with. Nothing you say here is stored
+        anywhere — the whole conversation lives in the address bar, and closing the tab ends it.
+      </p>
+
+      {/* One column. One scroller. Everything below is appended in order and
+          nothing in it ever moves. */}
+      <article className="the-column space-y-8">
+        {/* 01 Landing. Slide 3 — unchanged by anything that happens later. The
+            open-source line is part of the opening and stays with it, greying
+            along with it rather than being cleared away. */}
+        <div className="space-y-3">
+          <Turn spent={Boolean(mode)}>
+            <h1 className="text-2xl font-bold leading-snug tracking-tight sm:text-3xl">
+              Hello. I help you turn a goal into an outcome worth chasing.
+            </h1>
+            <p>Shall we talk it through? Speaking is quicker. Typing works just as well.</p>
+          </Turn>
+          <p className="text-sm text-ink-soft/75">
+            <a href={REPO_URL} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+              Open source
+            </a>{" "}
+            ·{" "}
+            <Link href="/contribute" className="underline underline-offset-2">
+              built by the community
+            </Link>
+          </p>
+        </div>
+
+        {/* 02 Who's here. Slide 4. */}
+        {mode ? (
+          <Turn spent={Boolean(who)}>
+            <p>First — is it just you, or is there a room of you?</p>
+          </Turn>
+        ) : null}
+
+        {/* 03 What you brought. Slide 5 — the coach says the last answer back
+            before asking the next thing. */}
+        {who ? (
+          <Turn spent={Boolean(brought)}>
+            <p>
+              {reflectWho(who)} And what have you brought with you today?
+            </p>
+          </Turn>
+        ) : null}
+
+        {/* The room fork, flagged and not built. The deck runs the same thirteen
+            steps on a big screen with the nudge suppressed; that spine is a
+            later card, and pretending otherwise would be worse than saying so. */}
+        {who === "room" ? (
+          <aside className="border-l-2 border-ink/15 pl-4 text-sm text-ink-soft">
+            <p>
+              <strong className="text-ink">The big-screen run isn&rsquo;t in this column yet.</strong> A
+              room of you forks the whole thing onto its own spine — the same questions and the same
+              canvas, up where everyone can see them, and no nudge, because a room doesn&rsquo;t need
+              one person told what&rsquo;s thin. It&rsquo;s deferred, not dropped.
+            </p>
+            <p className="mt-2">
+              What already does a room today is{" "}
+              <Link href="/coach/jam" className="underline underline-offset-2">
+                the goal jam
+              </Link>
+              . Carry on here and the questions are the same ones.
+            </p>
+          </aside>
+        ) : null}
+
+        {/* 04 Can you share it. Slide 6 — the fork, and the one place the data
+            line is said. It is not repeated anywhere else in the column. */}
+        {brought ? (
+          <Turn spent={Boolean(share)}>
+            <p>{shareQuestion(brought)}</p>
+            <p className="text-base text-ink-soft sm:text-lg">
+              Before you answer — there&rsquo;s no account here, no database, and I keep nothing when
+              you close the tab. Even so, some wording isn&rsquo;t yours to paste anywhere. Your call,
+              and either answer is a good one.
+            </p>
+          </Turn>
+        ) : null}
+
+        {/* The chips. They accumulate here, they grey, and they are never
+            cleared — so the canvas below reads as something the conversation
+            produced rather than a new tool you have been handed. Two chips read
+            as two chips: there is nothing here that counts them. */}
+        {chips.length > 0 ? (
+          <section aria-labelledby="chips-heading">
+            <h2 id="chips-heading" className="sr-only">
+              What you have told the coach
+            </h2>
+            <ul className="flex flex-wrap gap-2">
+              {chips.map((chip, i) => (
+                <Chip key={`${i}-${chip}`}>{chip}</Chip>
+              ))}
+            </ul>
+            {/* Slide 8's footnote, said once, at the moment the canvas arrives
+                and the worry it answers actually exists. It points up at the
+                chips because that is what it is about. */}
+            {share === "yes" ? (
+              <p className="mt-3 text-sm text-ink-soft/75">
+                <span aria-hidden>↑ </span>
+                What you told me stays up there, greyed. Nothing has been cleared away.
+              </p>
+            ) : null}
+          </section>
+        ) : null}
+
+        {/* The seam. No transition, no "start" button, no new page — the canvas
+            simply rises into the column the conversation was already in. */}
+        {share === "yes" ? (
+          <>
+            <Turn spent={Boolean(coaching.centre)}>
+              <p>Good — then I&rsquo;ve got everything I need to be useful.</p>
+              <p>
+                I&rsquo;m going to put your canvas up as we go. You don&rsquo;t have to fill it in —
+                I&rsquo;ll ask, you talk, and it fills itself.
+              </p>
+            </Turn>
+            <Seam state={canvas} started={Boolean(coaching.centre)} />
+            {/* Slide 9's footnote, said once, at the one moment it is exactly
+                true: the canvas is up, the first question is about to be asked,
+                and nothing has landed in any box yet. It is about the lighting,
+                not about how much is done. */}
+            {!coaching.centre ? (
+              <p className="-mt-4 text-sm text-ink-soft/75">
+                The lit box is where we&rsquo;re talking. The others are questions I haven&rsquo;t
+                asked yet.
+              </p>
+            ) : null}
+          </>
+        ) : null}
+
+        {/* CARD 5 — the coaching. One loop, six steps of it, and the canvas
+            above reacting to every one.
+
+            Every line here is the coach's, in the coach's voice, and every move
+            between boxes is the coach's call (CARD A, contracts 2 and 3). The
+            column renders them; it never decides them. Two moves in particular
+            have to land without drama: the jump past ④ at step 07, narrated in
+            one sentence in the flow of talk, and the double-back to ① at step
+            09, where nothing — not the struck-through wording, not the parked
+            box, not the answer that was "I don't know" — is allowed to read as
+            an error, a validation failure or a skip. */}
+        {share === "yes" ? (
+          <>
+            {/* 06 · centre ①. Slide 9. */}
+            <Turn spent={Boolean(coaching.centre)}>
+              <p>Who is this actually for, and what would they be doing differently?</p>
+            </Turn>
+
+            {/* 07 · problem ②. Slide 10. The deck gives box ② its label and its
+                answer but not the coach's question for it; this is that label
+                said out loud, in the voice the rest of the column uses. */}
+            {coaching.centre ? (
+              <Turn spent={Boolean(coaching.problem)}>
+                <p>Good. Now the driver — due to what? What&rsquo;s in their way today?</p>
+              </Turn>
+            ) : null}
+
+            {/* 07 · the jump to ③. The coach skips ④ and says why, in one
+                sentence, in the flow of talk. The canvas moves the lit box to
+                follow and box ④ says "not yet — see below" in its own words, so
+                nothing up there reads as skipped. */}
+            {coaching.problem ? (
+              <Turn spent={Boolean(coaching.lagging)}>
+                <p>Now — before we write the bet, tell me how you&rsquo;d know it landed.</p>
+                <Why>
+                  I do it this way round on purpose: write the clever sentence first and we&rsquo;ll
+                  pick measures that flatter it.
+                </Why>
+              </Turn>
+            ) : null}
+
+            {/* 08 · "I don't know" ③. The digging happens inside the box — that
+                is the whole point of slide 11, and it is why there is no turn
+                for it here. The box grows to hold it. */}
+
+            {/* 09 · going backwards to ①. The coach's call and the coach's
+                wording. It asks, because it is written as a question, and both
+                answers are real ones. */}
+            {settled ? (
+              <Turn spent={Boolean(coaching.back)}>
+                <p>Can I take you back a step? I don&rsquo;t think the problem is here.</p>
+                <p>
+                  Your lagging measure can only be as sharp as the behaviour underneath it — so
+                  let&rsquo;s sharpen that, and this box will write itself. Nothing you&rsquo;ve said
+                  is wrong. We&rsquo;re fixing it upstream.
+                </p>
+              </Turn>
+            ) : null}
+
+            {/* 09 · the rewrite. Your old words stay on the canvas, struck
+                through, and box ③ says your words are safe while we're away. */}
+            {coaching.back === "yes" ? (
+              <Turn spent={Boolean(coaching.centreAgain)}>
+                <p>So — what would they actually be doing, on a Tuesday?</p>
+              </Turn>
+            ) : null}
+
+            {/* 10 · hypothesis ④. Slide 13. */}
+            {moved ? (
+              <Turn spent={Boolean(coaching.hypothesis)}>
+                <p>So: what&rsquo;s the bet, and which of those numbers should move?</p>
+              </Turn>
+            ) : null}
+
+            {/* 10 · leading ⑤. The bet said back, and the reason it came second
+                — that is the deck's "that's it", and "let me redo it" is beside
+                the field below. */}
+            {coaching.hypothesis ? (
+              <Turn spent={Boolean(coaching.leading)}>
+                <p>
+                  That&rsquo;s the bet, and it&rsquo;s written against a measure that already exists
+                  — which is why I asked you for the measure first.
+                </p>
+                <p>Last one. What tells us in weeks?</p>
+              </Turn>
+            ) : null}
+
+            {/* 11 · the nudge. The gap in words, never a number, and never at
+                all in a room. */}
+            {nudge ? (
+              <Turn spent={Boolean(coaching.nudge)}>
+                <p>{nudge.opening}</p>
+                <p>{nudge.gap}</p>
+              </Turn>
+            ) : null}
+
+            {/* "Show me which ones" — the same gap, drawn. The glyphs are how
+                the gap is expressed, not a value: three fixed segments per
+                dimension, nothing added up, and every one of them bound to the
+                sentence beside it, so the picture is never carrying anything on
+                its own. */}
+            {nudge && coaching.nudge === "show" ? (
+              <section aria-labelledby="nudge-heading" className="space-y-3">
+                <h2 id="nudge-heading" className="text-sm font-semibold uppercase tracking-widest text-ink-soft">
+                  How it&rsquo;s shown
+                </h2>
+                <ul className="space-y-2">
+                  {nudge.bars.map((bar) => (
+                    <li
+                      key={bar.label}
+                      className="flex flex-col gap-1 rounded-2xl border border-ink/15 bg-white px-5 py-4 sm:flex-row sm:items-baseline sm:gap-4"
+                    >
+                      <span aria-hidden className="font-mono tracking-widest text-ink-soft/70">
+                        {bar.glyph}
+                      </span>
+                      <span className="sm:flex-1">
+                        <span className="font-semibold">{bar.label}</span>
+                        <span className="mt-0.5 block text-ink-soft">{bar.words}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-sm text-ink-soft/75">
+                  No total, no percentage, no headline number — not here and not anywhere. This is
+                  the same thing I just said, drawn.
+                </p>
+              </section>
+            ) : null}
+
+            {nudge && coaching.nudge === "later" ? (
+              <Turn>
+                <p>Right. It&rsquo;ll keep.</p>
+              </Turn>
+            ) : null}
+
+            {/* CARD 6 · 12 — three ways out. Slide 15.
+
+                Where this stands, said honestly and said in words. Two readings
+                side by side: what the signal makes of it, translated by the
+                same table the nudge uses, and what the canvas says about
+                itself. Neither is a number, neither is added up, and the
+                asymmetry is deliberate — a thin canvas has more in the right
+                column than the left, which is the only defence against wording
+                a goal to look finished.
+
+                The doors themselves are in the live turn below, because they
+                are answers, and answers are always the last thing in the
+                column. The canvas stays on screen behind all of it. */}
+            {atTheDoors ? (
+              <section aria-labelledby="standing-heading" className="space-y-4">
+                <Turn>
+                  <h2 id="standing-heading" className="text-lg leading-relaxed sm:text-xl">
+                    Where this stands, honestly.
+                  </h2>
+                </Turn>
+                {sharp.length === 0 && stillOpen.length === 0 ? (
+                  <Turn>
+                    <p>
+                      You&rsquo;ve written the whole thing down. What&rsquo;s sharp and what
+                      isn&rsquo;t is yours to judge from here — I&rsquo;d rather say nothing than
+                      make something up about it.
+                    </p>
+                  </Turn>
+                ) : (
+                  <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
+                    {sharp.length > 0 ? (
+                      <div className="space-y-2 rounded-2xl border border-ink/15 bg-white px-5 py-4">
+                        <Label>Sharp</Label>
+                        <ul className="space-y-2 text-ink-soft">
+                          {sharp.map((line) => (
+                            <li key={line}>{line}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {stillOpen.length > 0 ? (
+                      <div className="space-y-2 rounded-2xl border border-ink/15 bg-white px-5 py-4">
+                        <Label>Still open</Label>
+                        <ul className="space-y-2 text-ink-soft">
+                          {stillOpen.map((line) => (
+                            <li key={line}>{line}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </section>
+            ) : null}
+
+            {/* The first door, answered. The conversation carries on in the
+                same column — no new page, nothing cleared away, and the other
+                two doors still open below. */}
+            {out === "refine" ? (
+              <Turn>
+                <p>{standing?.start ? `Right — ${standing.start}, then.` : "Right. Let's keep going."}</p>
+                <p>
+                  Nothing&rsquo;s going anywhere. Change what you want to change and we&rsquo;ll pick
+                  it up from there; the other two doors are still open underneath.
+                </p>
+              </Turn>
+            ) : null}
+
+            {/* CARD 6 · 13 — the takeaway. Slide 16.
+
+                Three artefacts and three ways to take them, and the sentence
+                that makes all of it necessary said first and said plainly. The
+                canvas above is untouched: this is appended under it, like
+                everything else in this column. */}
+            {leaving(out) && file && takeaway ? (
+              <section
+                id="takeaway"
+                aria-labelledby="takeaway-heading"
+                className="printable scroll-mt-24 space-y-6"
+              >
+                <Turn>
+                  <h2 id="takeaway-heading" className="text-lg leading-relaxed sm:text-xl">
+                    Take this now — I don&rsquo;t keep a copy.
+                  </h2>
+                  <p className="text-base text-ink-soft sm:text-lg">
+                    No account, no database, nothing saved anywhere. Close this tab and the
+                    conversation, the canvas and this are all gone — there is no coming back later,
+                    and I can&rsquo;t send it on to you.
+                  </p>
+                </Turn>
+
+                {/* "Take the questions away" doesn't get a different takeaway —
+                    it gets the same one with what they came for at the front.
+                    The questions are marked as questions everywhere they
+                    appear, here and in the file (rule 9). */}
+                {out === "questions" ? (
+                  <div className="space-y-2 rounded-2xl border border-safer/50 bg-safer/10 px-5 py-4">
+                    <Label>The questions you&rsquo;re taking</Label>
+                    {takeaway.open.length > 0 ? (
+                      <ul className="space-y-2">
+                        {takeaway.open.map((q) => (
+                          <li key={`${q.box.id}-${q.text}`}>
+                            {q.text}{" "}
+                            <span className="text-ink-soft">— {q.box.short}, and it&rsquo;s a question, not a blank.</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-ink-soft">
+                        You answered everything I asked. Nothing is waiting on your team — the canvas
+                        travels with you anyway.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
+
+                <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
+                  <div className="space-y-3 rounded-2xl border border-ink/15 bg-white px-5 py-4">
+                    <Label>1 · The goal, SSH pattern</Label>
+                    <p className="text-sm text-ink-soft">Objective — an outcome hypothesis</p>
+                    <p className="border-l-2 border-ink/15 pl-4">
+                      {takeaway.goal.objective ?? "We didn’t get to the bet."}
+                    </p>
+                    {takeaway.goal.forWhom ? (
+                      <p className="text-ink-soft">
+                        <span className="text-sm">For:</span> {takeaway.goal.forWhom}
+                      </p>
+                    ) : null}
+                    <p className="text-sm text-ink-soft">Key results</p>
+                    <ul className="space-y-2">
+                      <li>
+                        <span className="text-sm text-ink-soft">Leading — what tells us in weeks:</span>{" "}
+                        {takeaway.goal.leading ?? "still open"}
+                      </li>
+                      <li>
+                        <span className="text-sm text-ink-soft">
+                          Lagging — what would convince a sceptic:
+                        </span>{" "}
+                        {takeaway.goal.lagging ?? "still an open question — it travels as one"}
+                      </li>
+                    </ul>
+                    {/* The OKRs page, not this column, is what says how many key
+                        results an OKR carries. Saying where the conversation got
+                        to is not the same as saying it fell short. */}
+                    <p className="text-sm text-ink-soft/75">
+                      Sooner Safer Happier asks for three to five key results, leading and lagging.
+                      This is where we got to, not the finished set.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3 rounded-2xl border border-ink/15 bg-white px-5 py-4">
+                    <Label>2 · The canvas, gaps and all</Label>
+                    <ul className="space-y-2">
+                      {takeaway.boxes.map(({ box, notes }) => (
+                        <li key={box.id}>
+                          <span className="text-sm text-ink-soft">
+                            <span aria-hidden>{box.numeral} </span>
+                            {box.short}:
+                          </span>{" "}
+                          {notes.length === 0 ? (
+                            <span className="text-ink-soft">
+                              left alone, on purpose
+                            </span>
+                          ) : (
+                            notes.map((note, i) => (
+                              <span key={i}>
+                                {i > 0 ? " · " : null}
+                                {note.kind === "open" ? (
+                                  <>
+                                    <span className="text-ink-soft">open question — </span>
+                                    {note.text}
+                                  </>
+                                ) : (
+                                  note.text
+                                )}
+                              </span>
+                            ))
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-sm text-ink-soft/75">
+                      It goes as it is. Nothing is tidied up on the way out, and nothing you left
+                      open is written as a blank.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="no-print space-y-3 rounded-2xl border border-ink/15 bg-white px-5 py-4">
+                  <Label>3 · Carry on elsewhere</Label>
+                  <p className="text-ink-soft">
+                    A prompt with your canvas already in it, for your own assistant — the same
+                    questions, asked the same way, wherever you go next.
+                  </p>
+                  <details>
+                    <summary className="cursor-pointer text-sm text-ink-soft underline underline-offset-4">
+                      read the prompt
+                    </summary>
+                    <pre className="mt-3 whitespace-pre-wrap border-l-2 border-ink/15 pl-4 font-sans text-sm text-ink-soft">
+                      {takeaway.prompt}
+                    </pre>
+                  </details>
+                  <CopyButton text={takeaway.prompt} label="⧉ Copy the prompt" />
+                </div>
+
+                {/* Download first, and the only thing here that is pushed. The
+                    other two are the same three artefacts by another route. */}
+                <div className="no-print flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                  <TakeIt href={takeawayHref(carried(run, coaching))} />
+                  <CopyButton text={file} label="⧉ Copy as text" />
+                  <PrintCanvas />
+                </div>
+              </section>
+            ) : null}
+          </>
+        ) : null}
+
+        {/* CARD 3 — the off-ramp. Slide 7: it leaves the spine for the handover
+            that already exists, and it doesn't come back. Two things it has to
+            get right.
+
+            It must not read as a downgrade. Step 04 weighted both answers the
+            same and this is where that promise is kept or broken, so the exit
+            is a full-weight panel — the same size and the same voice as the
+            seam the other answer gets — and it says what you're being given
+            rather than what you're not. PRINCIPLES.md, "Safe to share": never
+            require confidential material to give a good answer.
+
+            And the column must not close. Nothing above is cleared, the chips
+            stay, and the live turn below still says which way things went. */}
+        {share === "no" ? (
+          <>
+            <Turn>
+              <p>Right — then we do it in there, not out here.</p>
+              <p>
+                Nothing about this needs me to see your wording. The coaching is the questions, and
+                the questions travel: take the skill, put it in front of your own assistant, and run
+                this same conversation behind your own walls with the material in the room.
+              </p>
+            </Turn>
+            <Link
+              href={handoverHref(run)}
+              className="block rounded-2xl border border-ink/15 bg-white p-5 transition-colors hover:border-ink/40 hover:bg-ink/[0.03] sm:p-6"
+            >
+              <span className="text-lg font-semibold sm:text-xl">
+                The skill, where to install it, and the prompt to carry back{" "}
+                <span aria-hidden>→</span>
+              </span>
+              {/* The three things screen D holds, in the deck's order, named so
+                  the link is a description of what's on the other side rather
+                  than a leap of faith. */}
+              <span className="mt-2 block text-ink-soft">
+                <code className="font-mono text-sm">{skillFor(who).name}</code> · where it goes in
+                Claude · a prompt that already knows you brought{" "}
+                {brought ? broughtInWords(brought) : "nothing down yet"}
+              </span>
+            </Link>
+          </>
+        ) : null}
+
+        {/* The live turn — where you speak or type. Always the last thing in
+            the column, at every width, at every step. */}
+        <section id="live" aria-labelledby="live-heading" className="scroll-mt-24 space-y-4">
+          <h2 id="live-heading" className="sr-only">
+            Your turn
+          </h2>
+
+          {!mode ? (
+            <>
+              <Answers answers={MODE_ANSWERS} hrefs={hrefsFor(run, "mode", MODE_ANSWERS)} />
+              <p className="text-sm text-ink-soft">
+                I&rsquo;ll ask three short questions first, so I know who I&rsquo;m coaching. Works for
+                one person or a whole room.
+              </p>
+            </>
+          ) : (
+            <>
+              <ModeSwitch run={run} coaching={coaching} />
+
+              {!who ? (
+                <>
+                  <Answers answers={WHO_ANSWERS} hrefs={hrefsFor(run, "who", WHO_ANSWERS)} />
+                  {speaking ? (
+                    <SayIt
+                      answers={WHO_ANSWERS}
+                      hrefs={hrefsFor(run, "who", WHO_ANSWERS)}
+                      invitation="…or just say it"
+                    />
+                  ) : null}
+                </>
+              ) : null}
+
+              {who && !brought ? (
+                <>
+                  <Answers answers={BROUGHT_ANSWERS} hrefs={hrefsFor(run, "brought", BROUGHT_ANSWERS)} />
+                  {speaking ? (
+                    <SayIt
+                      answers={BROUGHT_ANSWERS}
+                      hrefs={hrefsFor(run, "brought", BROUGHT_ANSWERS)}
+                      freeTextHref={runHref(run, { brought: "__SAID__" })}
+                      invitation="…or say it however you like"
+                    />
+                  ) : null}
+                  {/* …or tell me in your own words. A plain GET form, so it
+                      works with JavaScript off like everything else here, and
+                      it stays available whichever way you're answering. */}
+                  <form method="get" action={COLUMN_PATH} className="flex flex-col gap-2 sm:flex-row">
+                    <input type="hidden" name="mode" value={mode} />
+                    <input type="hidden" name="who" value={who} />
+                    <label htmlFor="brought-own" className="sr-only">
+                      Tell me in your own words what you have brought
+                    </label>
+                    <input
+                      id="brought-own"
+                      name="brought"
+                      type="text"
+                      maxLength={BROUGHT_MAX}
+                      autoComplete="off"
+                      placeholder="…or tell me in your own words"
+                      className="flex-1 rounded-2xl border border-ink/15 bg-white px-5 py-4 placeholder:text-ink-soft/75"
+                    />
+                    <button
+                      type="submit"
+                      className="rounded-2xl bg-ink px-5 py-4 font-semibold text-chalk hover:bg-ink-soft sm:px-6"
+                    >
+                      ↵ send
+                    </button>
+                  </form>
+                </>
+              ) : null}
+
+              {brought && !share ? (
+                <>
+                  <Answers answers={SHARE_ANSWERS} hrefs={hrefsFor(run, "share", SHARE_ANSWERS)} />
+                  {speaking ? (
+                    <SayIt
+                      answers={SHARE_ANSWERS}
+                      hrefs={hrefsFor(run, "share", SHARE_ANSWERS)}
+                      invitation="…or just say it"
+                    />
+                  ) : null}
+                </>
+              ) : null}
+
+              {share === "no" ? (
+                <div className="rounded-2xl border border-dashed border-ink/25 bg-white/60 px-5 py-4">
+                  <p className="text-sm text-ink-soft">
+                    {speaking ? "◉ Speaking." : "⌨ Typing."} The handover above is where this run
+                    goes next. The column stays open behind it.
+                  </p>
+                </div>
+              ) : null}
+
+              {/* CARD 5 — answering the coach. Always the last thing in the
+                  column, at every width, at every step, and always in the same
+                  place: you never have to go and find where to speak. */}
+              {share === "yes" && !coaching.centre ? (
+                <Ask
+                  run={run}
+                  coaching={coaching}
+                  name="centre"
+                  label="Who is this for, and what would they be doing differently?"
+                  placeholder="district managers, counting in daylight…"
+                  speaking={speaking}
+                />
+              ) : null}
+
+              {share === "yes" && coaching.centre && !coaching.problem ? (
+                <Ask
+                  run={run}
+                  coaching={coaching}
+                  name="problem"
+                  label="Due to what? What's in their way today?"
+                  placeholder="counts take three hours and happen at night…"
+                  speaking={speaking}
+                />
+              ) : null}
+
+              {/* 08. "I don't know" sits beside your own words, weighted the
+                  same, because it is not a lesser answer — it is the one that
+                  makes the box grow. There is no skip here to offer instead. */}
+              {share === "yes" && coaching.problem && !coaching.lagging ? (
+                <Ask
+                  run={run}
+                  coaching={coaching}
+                  name="lagging"
+                  label="How would you know it landed? What would convince a sceptic?"
+                  placeholder="what would convince a sceptic…"
+                  speaking={speaking}
+                  spoken={[DONT_KNOW_ANSWER]}
+                  spokenHrefs={{ [DONT_KNOW]: columnHref(run, coaching, { lagging: DONT_KNOW }) }}
+                >
+                  <Choice href={columnHref(run, coaching, { lagging: DONT_KNOW })}>
+                    I don&rsquo;t know what our baseline is
+                  </Choice>
+                </Ask>
+              ) : null}
+
+              {/* The digging. The coach's question for this one was asked
+                  inside the box, so it is said again here as the field's own
+                  label rather than left implied. */}
+              {share === "yes" && digging && !coaching.whoKnows ? (
+                <Ask
+                  run={run}
+                  coaching={coaching}
+                  name="whoKnows"
+                  label="Who would know? And has anyone ever been able to tell whether this got better?"
+                  placeholder="ask Priya's team…"
+                  speaking={speaking}
+                  showLabel
+                />
+              ) : null}
+
+              {/* 09. Both answers are real answers. Going backwards is a normal
+                  move, so neither of these is the recommended one. */}
+              {share === "yes" && settled && !coaching.back ? (
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <Choice href={columnHref(run, coaching, { back: "yes" })}>Go on then</Choice>
+                  <Choice href={columnHref(run, coaching, { back: "no" })}>
+                    I&rsquo;d rather push on
+                  </Choice>
+                </div>
+              ) : null}
+
+              {share === "yes" && coaching.back === "yes" && !coaching.centreAgain ? (
+                <Ask
+                  run={run}
+                  coaching={coaching}
+                  name="centreAgain"
+                  label="What would they actually be doing, on a Tuesday?"
+                  placeholder="counting a shelf in minutes, before lunch…"
+                  speaking={speaking}
+                />
+              ) : null}
+
+              {share === "yes" && moved && !coaching.hypothesis ? (
+                <Ask
+                  run={run}
+                  coaching={coaching}
+                  name="hypothesis"
+                  label="What's the bet, and which of those numbers should move?"
+                  placeholder="we believe that…"
+                  speaking={speaking}
+                />
+              ) : null}
+
+              {/* Slide 13's two answers. Carrying on is "that's it"; "let me
+                  redo it" puts the bet back in your hands, and takes nothing
+                  off the canvas that you didn't take off yourself. */}
+              {share === "yes" && coaching.hypothesis && !coaching.leading ? (
+                <Ask
+                  run={run}
+                  coaching={coaching}
+                  name="leading"
+                  label="What tells us in weeks?"
+                  placeholder="what tells us in weeks…"
+                  speaking={speaking}
+                >
+                  <p className="text-sm">
+                    <Link
+                      href={columnHref(run, coaching, { hypothesis: null })}
+                      className="text-ink-soft underline underline-offset-2"
+                    >
+                      …or let me redo the bet
+                    </Link>
+                  </p>
+                </Ask>
+              ) : null}
+
+              {share === "yes" && nudge && !coaching.nudge ? (
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <Choice href={columnHref(run, coaching, { nudge: "show" })}>
+                    Show me which ones
+                  </Choice>
+                  <Choice href={columnHref(run, coaching, { nudge: "later" })}>Not now</Choice>
+                </div>
+              ) : null}
+
+              {/* CARD 6 · 12 — the three doors themselves, in the deck's order.
+                  They are answers, so they live here with every other answer,
+                  and they stay here after one is taken: going through a door
+                  never closes the other two. There is no finish button beside
+                  them and no fourth control that ends the run. */}
+              {atTheDoors ? (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Door
+                    href={columnHref(run, coaching, { out: "refine" })}
+                    label="Keep refining"
+                    aside={
+                      standing?.start
+                        ? `I'd start with ${standing.start}`
+                        : "there's more in this if you want it"
+                    }
+                    go="Carry on"
+                    taken={out === "refine"}
+                  />
+                  <Door
+                    href={columnHref(run, coaching, { out: "stop" }, "#takeaway")}
+                    label="Stop here"
+                    aside="this is already sharper than most"
+                    go="Take it and go"
+                    taken={out === "stop"}
+                  />
+                  <Door
+                    href={columnHref(run, coaching, { out: "questions" }, "#takeaway")}
+                    label="Take the questions away"
+                    aside={
+                      takeaway && takeaway.open.length > 0
+                        ? `${takeaway.open.length === 1 ? "one answer lives" : `${takeaway.open.length} answers live`} with your team, not with me`
+                        : "nothing's open right now — this still packs the canvas up"
+                    }
+                    go="Pack them up"
+                    taken={out === "questions"}
+                  />
+                </div>
+              ) : null}
+
+              {/* Carrying on. The two answers that can be reopened without
+                  unpicking what sits under them — the same "let me redo it"
+                  the bet already had at step 10, not a new kind of move. Taking
+                  one back never deletes anything else you said. */}
+              {out === "refine" ? (
+                <div className="space-y-2 text-sm">
+                  <p>
+                    <Link
+                      href={columnHref(run, coaching, { leading: null })}
+                      className="text-ink-soft underline underline-offset-2"
+                    >
+                      …let me redo what tells us in weeks
+                    </Link>
+                  </p>
+                  <p>
+                    <Link
+                      href={columnHref(run, coaching, { hypothesis: null })}
+                      className="text-ink-soft underline underline-offset-2"
+                    >
+                      …or let me redo the bet
+                    </Link>
+                  </p>
+                  <p className="text-ink-soft/75">
+                    Those are the two I can reopen without pulling apart everything underneath them.
+                    Anything further up the canvas, take away and sharpen it there — the prompt goes
+                    with you.
+                  </p>
+                </div>
+              ) : null}
+
+              {/* The end of the column. It says which way you're talking, as it
+                  has at every step, and it says the one thing that is still
+                  true whichever door you took. */}
+              {atTheDoors ? (
+                <div className="no-print rounded-2xl border border-dashed border-ink/25 bg-white/60 px-5 py-4">
+                  <p className="text-sm text-ink-soft">
+                    {speaking ? "◉ Speaking." : "⌨ Typing."}{" "}
+                    {who === "room"
+                      ? "In a room I keep the nudge to myself — nobody needs one person told what's thin in front of everyone. "
+                      : null}
+                    {leaving(out)
+                      ? "The canvas is still up there, exactly as you left it. Nothing is saved here, so take what you want before you close the tab."
+                      : "No rush, and no wrong door. Nothing is saved here either way."}
+                  </p>
+                </div>
+              ) : null}
+            </>
+          )}
+        </section>
+      </article>
+    </div>
+  );
+}
