@@ -1,5 +1,21 @@
 import Link from "next/link";
 import { CANVAS_ORDER, type CanvasBoxId } from "@/lib/canvas";
+import { REPO_URL } from "@/lib/config";
+import {
+  BROUGHT_ANSWERS,
+  BROUGHT_MAX,
+  MODE_ANSWERS,
+  SHARE_ANSWERS,
+  WHO_ANSWERS,
+  chipsFor,
+  readRun,
+  reflectWho,
+  runHref,
+  shareQuestion,
+  type Run,
+  type TriageAnswer,
+} from "@/lib/triage";
+import { SayIt } from "./SayIt";
 
 export const metadata = {
   title: "The column",
@@ -9,10 +25,12 @@ export const metadata = {
 
 /*
  * CARD 1 — The column. The shell everything else lives inside.
+ * CARD 2 — Triage, steps 01–04. The four questions that fill it in.
  *
  * Binding: `docs/decisions/0001-the-canvas-scrolls.md` (the canvas is a block
  * in ordinary document flow at every width), `docs/reference/card-a.md`, and
- * slides 1, 2, 7 and 8 of `docs/reference/voice-coach-deck.md`.
+ * slides 1–8 of `docs/reference/voice-coach-deck.md`. The wording of the four
+ * triage questions and their answers is the deck's; the layout is not.
  *
  * The rules this file exists to keep:
  *  - one scroller. Nothing here is sticky, fixed, or given a height, an
@@ -28,67 +46,19 @@ export const metadata = {
  *  - no persistence. The whole run is in the query string; close the tab and
  *    it is gone.
  *  - it works as a plain document. Every answer is a real link or a real GET
- *    form, so the run works with JavaScript off.
+ *    form, so the run works with JavaScript off. Speaking an answer is an
+ *    enhancement on top of that and never the only way through.
  */
-
-type Mode = "speak" | "type";
-type Who = "me" | "room";
-type Share = "yes" | "no";
-
-type Run = {
-  /** Unset until the landing screen is answered — that answer is what starts it. */
-  mode: Mode | null;
-  who: Who | null;
-  /** One of the three offered answers, or the leader's own words. */
-  brought: string | null;
-  share: Share | null;
-};
-
-const BROUGHT_OFFERED: Record<string, { label: string; aside: string; chip: string }> = {
-  nothing: { label: "Nothing yet", aside: "a hunch, an itch, a problem", chip: "nothing yet" },
-  work: { label: "Something from work", aside: "an OKR, a target, a mandate", chip: "something from work" },
-  draft: { label: "A draft I wrote", aside: "I've had a go myself", chip: "a draft I wrote" },
-};
-
-function first(value: string | string[] | undefined): string | null {
-  const v = Array.isArray(value) ? value[0] : value;
-  return typeof v === "string" && v.trim() ? v.trim() : null;
-}
-
-function oneOf<T extends string>(value: string | null, allowed: readonly T[]): T | null {
-  return allowed.includes(value as T) ? (value as T) : null;
-}
-
-/** The run so far, in the order it has to be answered — a gap ends it. */
-function readRun(params: Record<string, string | string[] | undefined>): Run {
-  const mode = oneOf(first(params.mode), ["speak", "type"] as const);
-  const who = mode ? oneOf(first(params.who), ["me", "room"] as const) : null;
-  const broughtRaw = who ? first(params.brought) : null;
-  const brought = broughtRaw ? broughtRaw.slice(0, 120) : null;
-  const share = brought ? oneOf(first(params.share), ["yes", "no"] as const) : null;
-  return { mode, who, brought, share };
-}
 
 /**
- * Every answer is a link back to this same page with one more thing known, so
- * there is never a route change and never a page to start. `#live` lands the
- * reader on the live turn, which is where they already were when they answered.
+ * A turn the coach has taken. Greys once it has been answered; never removed.
+ *
+ * Greyed, not faded out: a spent turn is still the record of what was said, and
+ * at step 04 it is the data line itself. It stays above 4.5:1 on chalk.
  */
-function href(run: Run, next: Partial<Run>, hash = "#live"): string {
-  const merged = { ...run, ...next };
-  const q = new URLSearchParams();
-  if (merged.mode) q.set("mode", merged.mode);
-  if (merged.who) q.set("who", merged.who);
-  if (merged.brought) q.set("brought", merged.brought);
-  if (merged.share) q.set("share", merged.share);
-  const s = q.toString();
-  return `/coach/entry${s ? `?${s}` : ""}${hash}`;
-}
-
-/** A turn the coach has taken. Greys once it has been answered; never removed. */
 function Turn({ spent = false, children }: { spent?: boolean; children: React.ReactNode }) {
   return (
-    <div className={spent ? "text-ink-soft/55" : "text-ink"}>
+    <div className={spent ? "text-ink-soft/70" : "text-ink"}>
       <div className="space-y-2 text-lg leading-relaxed sm:text-xl">{children}</div>
     </div>
   );
@@ -105,12 +75,38 @@ function Answer({ href: to, label, aside }: { href: string; label: string; aside
   return (
     <Link
       href={to}
-      className="flex flex-col rounded-2xl border border-ink/15 bg-white px-5 py-4 text-left transition-colors hover:border-ink/40 hover:bg-ink/[0.03] sm:min-w-64 sm:flex-1"
+      className="flex flex-col rounded-2xl border border-ink/15 bg-white px-5 py-4 text-left transition-colors hover:border-ink/40 hover:bg-ink/[0.03] sm:min-w-56 sm:flex-1"
     >
       <span className="font-semibold">{label}</span>
       {aside ? <span className="mt-0.5 text-sm text-ink-soft">{aside}</span> : null}
     </Link>
   );
+}
+
+/**
+ * Every answer to one question, side by side and identically weighted. Nothing
+ * here marks one of them as the expected one — at step 04 in particular, both
+ * answers are good answers and have to look like it.
+ */
+function Answers({
+  answers,
+  hrefs,
+}: {
+  answers: readonly TriageAnswer[];
+  hrefs: Record<string, string>;
+}) {
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+      {answers.map((answer) => (
+        <Answer key={answer.value} href={hrefs[answer.value]} label={answer.label} aside={answer.aside} />
+      ))}
+    </div>
+  );
+}
+
+/** The same links the buttons use, keyed by answer, so a spoken answer lands identically. */
+function hrefsFor(run: Run, key: keyof Run, answers: readonly TriageAnswer[]): Record<string, string> {
+  return Object.fromEntries(answers.map((a) => [a.value, runHref(run, { [key]: a.value } as Partial<Run>)]));
 }
 
 /**
@@ -162,10 +158,10 @@ function Canvas() {
 
 /** Available at any point, in both directions, at every step of the run. */
 function ModeSwitch({ run }: { run: Run }) {
-  const to: Mode = run.mode === "speak" ? "type" : "speak";
+  const to = run.mode === "speak" ? "type" : "speak";
   return (
     <Link
-      href={href(run, { mode: to })}
+      href={runHref(run, { mode: to })}
       className="self-start rounded-full border border-ink/15 px-3 py-1.5 text-sm text-ink-soft hover:bg-ink/5"
     >
       {to === "type" ? "⌨ switch to typing" : "◉ switch to speaking"}
@@ -181,52 +177,84 @@ export default async function ColumnPage({
   const run = readRun(await searchParams);
   const { mode, who, brought, share } = run;
 
-  const chips: string[] = [];
-  if (who) chips.push(who === "me" ? "one person, not a room" : "a room of us");
-  if (brought) chips.push(BROUGHT_OFFERED[brought]?.chip ?? brought);
-  if (share) chips.push(share === "yes" ? "happy to share it" : "it stays inside our walls");
-
-  const typing = mode === "type";
+  const chips = chipsFor(run);
+  const speaking = mode === "speak";
 
   return (
     <div className="mx-auto max-w-3xl px-4 pt-8 pb-20">
       <p className="mb-10 rounded-2xl border border-safer/40 bg-safer/10 px-4 py-3 text-sm text-ink-soft">
-        <strong className="text-ink">This is the column, being built in the open.</strong> The shell
-        the coaching lives inside — one page from the landing screen to the canvas, with nothing
-        replaced along the way. The coach&rsquo;s real questions and voice capture arrive in later
-        cards; the answers below are a stub run through the shape.
+        <strong className="text-ink">This is the column, being built in the open.</strong> The four
+        questions below are real and so are the chips they leave behind. What comes after them — the
+        coaching itself, and the canvas filling in as you talk — arrives in later cards.
       </p>
 
       {/* One column. One scroller. Everything below is appended in order and
           nothing in it ever moves. */}
       <article className="the-column space-y-8">
-        {/* The opening. Slide 3 — unchanged by anything that happens later. */}
-        <Turn spent={Boolean(mode)}>
-          <h1 className="text-2xl font-bold leading-snug tracking-tight sm:text-3xl">
-            Hello. I help you turn a goal into an outcome worth chasing.
-          </h1>
-          <p>Shall we talk it through? Speaking is quicker. Typing works just as well.</p>
-        </Turn>
+        {/* 01 Landing. Slide 3 — unchanged by anything that happens later. The
+            open-source line is part of the opening and stays with it, greying
+            along with it rather than being cleared away. */}
+        <div className="space-y-3">
+          <Turn spent={Boolean(mode)}>
+            <h1 className="text-2xl font-bold leading-snug tracking-tight sm:text-3xl">
+              Hello. I help you turn a goal into an outcome worth chasing.
+            </h1>
+            <p>Shall we talk it through? Speaking is quicker. Typing works just as well.</p>
+          </Turn>
+          <p className="text-sm text-ink-soft/75">
+            <a href={REPO_URL} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+              Open source
+            </a>{" "}
+            ·{" "}
+            <Link href="/contribute" className="underline underline-offset-2">
+              built by the community
+            </Link>
+          </p>
+        </div>
 
-        {/* The triage turns. Each one lands here and stays here. */}
+        {/* 02 Who's here. Slide 4. */}
         {mode ? (
           <Turn spent={Boolean(who)}>
             <p>First — is it just you, or is there a room of you?</p>
           </Turn>
         ) : null}
 
+        {/* 03 What you brought. Slide 5 — the coach says the last answer back
+            before asking the next thing. */}
         {who ? (
           <Turn spent={Boolean(brought)}>
             <p>
-              {who === "me" ? "Just you today — noted." : "A room of you — noted."} And what have you
-              brought with you?
+              {reflectWho(who)} And what have you brought with you today?
             </p>
           </Turn>
         ) : null}
 
+        {/* The room fork, flagged and not built. The deck runs the same thirteen
+            steps on a big screen with the nudge suppressed; that spine is a
+            later card, and pretending otherwise would be worse than saying so. */}
+        {who === "room" ? (
+          <aside className="border-l-2 border-ink/15 pl-4 text-sm text-ink-soft">
+            <p>
+              <strong className="text-ink">The big-screen run isn&rsquo;t in this column yet.</strong> A
+              room of you forks the whole thing onto its own spine — the same questions and the same
+              canvas, up where everyone can see them, and no nudge, because a room doesn&rsquo;t need
+              one person told what&rsquo;s thin. It&rsquo;s deferred, not dropped.
+            </p>
+            <p className="mt-2">
+              What already does a room today is{" "}
+              <Link href="/coach/jam" className="underline underline-offset-2">
+                the goal jam
+              </Link>
+              . Carry on here and the questions are the same ones.
+            </p>
+          </aside>
+        ) : null}
+
+        {/* 04 Can you share it. Slide 6 — the fork, and the one place the data
+            line is said. It is not repeated anywhere else in the column. */}
         {brought ? (
           <Turn spent={Boolean(share)}>
-            <p>Last question. Can you share it with me?</p>
+            <p>{shareQuestion(brought)}</p>
             <p className="text-base text-ink-soft sm:text-lg">
               Before you answer — there&rsquo;s no account here, no database, and I keep nothing when
               you close the tab. Even so, some wording isn&rsquo;t yours to paste anywhere. Your call,
@@ -237,7 +265,8 @@ export default async function ColumnPage({
 
         {/* The chips. They accumulate here, they grey, and they are never
             cleared — so the canvas below reads as something the conversation
-            produced rather than a new tool you have been handed. */}
+            produced rather than a new tool you have been handed. Two chips read
+            as two chips: there is nothing here that counts them. */}
         {chips.length > 0 ? (
           <section aria-labelledby="chips-heading">
             <h2 id="chips-heading" className="sr-only">
@@ -292,20 +321,9 @@ export default async function ColumnPage({
 
           {!mode ? (
             <>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Answer
-                  href={href(run, { mode: "speak" })}
-                  label="◉ Talk to me"
-                  aside="about four minutes, out loud"
-                />
-                <Answer
-                  href={href(run, { mode: "type" })}
-                  label="⌨ Type to me instead"
-                  aside="same conversation, typed"
-                />
-              </div>
+              <Answers answers={MODE_ANSWERS} hrefs={hrefsFor(run, "mode", MODE_ANSWERS)} />
               <p className="text-sm text-ink-soft">
-                I&rsquo;ll ask a few short questions first, so I know who I&rsquo;m coaching. Works for
+                I&rsquo;ll ask three short questions first, so I know who I&rsquo;m coaching. Works for
                 one person or a whole room.
               </p>
             </>
@@ -314,34 +332,32 @@ export default async function ColumnPage({
               <ModeSwitch run={run} />
 
               {!who ? (
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <Answer
-                    href={href(run, { who: "me" })}
-                    label="Just me"
-                    aside="we'll have a conversation"
-                  />
-                  <Answer
-                    href={href(run, { who: "room" })}
-                    label="There's a room of us"
-                    aside="I'll go on the big screen"
-                  />
-                </div>
+                <>
+                  <Answers answers={WHO_ANSWERS} hrefs={hrefsFor(run, "who", WHO_ANSWERS)} />
+                  {speaking ? (
+                    <SayIt
+                      answers={WHO_ANSWERS}
+                      hrefs={hrefsFor(run, "who", WHO_ANSWERS)}
+                      invitation="…or just say it"
+                    />
+                  ) : null}
+                </>
               ) : null}
 
               {who && !brought ? (
                 <>
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    {Object.entries(BROUGHT_OFFERED).map(([value, option]) => (
-                      <Answer
-                        key={value}
-                        href={href(run, { brought: value })}
-                        label={option.label}
-                        aside={option.aside}
-                      />
-                    ))}
-                  </div>
+                  <Answers answers={BROUGHT_ANSWERS} hrefs={hrefsFor(run, "brought", BROUGHT_ANSWERS)} />
+                  {speaking ? (
+                    <SayIt
+                      answers={BROUGHT_ANSWERS}
+                      hrefs={hrefsFor(run, "brought", BROUGHT_ANSWERS)}
+                      freeTextHref={runHref(run, { brought: "__SAID__" })}
+                      invitation="…or say it however you like"
+                    />
+                  ) : null}
                   {/* …or tell me in your own words. A plain GET form, so it
-                      works with JavaScript off like everything else here. */}
+                      works with JavaScript off like everything else here, and
+                      it stays available whichever way you're answering. */}
                   <form method="get" action="/coach/entry" className="flex flex-col gap-2 sm:flex-row">
                     <input type="hidden" name="mode" value={mode} />
                     <input type="hidden" name="who" value={who} />
@@ -352,10 +368,10 @@ export default async function ColumnPage({
                       id="brought-own"
                       name="brought"
                       type="text"
-                      maxLength={120}
+                      maxLength={BROUGHT_MAX}
                       autoComplete="off"
                       placeholder="…or tell me in your own words"
-                      className="flex-1 rounded-2xl border border-ink/15 bg-white px-5 py-4 placeholder:text-ink-soft/60"
+                      className="flex-1 rounded-2xl border border-ink/15 bg-white px-5 py-4 placeholder:text-ink-soft/75"
                     />
                     <button
                       type="submit"
@@ -368,34 +384,28 @@ export default async function ColumnPage({
               ) : null}
 
               {brought && !share ? (
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <Answer
-                    href={href(run, { share: "yes" })}
-                    label="Yes — let's look at it together"
-                    aside="we start coaching now"
-                  />
-                  <Answer
-                    href={href(run, { share: "no" })}
-                    label="No — it stays inside our walls"
-                    aside="I'll set you up to coach it in there"
-                  />
-                </div>
+                <>
+                  <Answers answers={SHARE_ANSWERS} hrefs={hrefsFor(run, "share", SHARE_ANSWERS)} />
+                  {speaking ? (
+                    <SayIt
+                      answers={SHARE_ANSWERS}
+                      hrefs={hrefsFor(run, "share", SHARE_ANSWERS)}
+                      invitation="…or just say it"
+                    />
+                  ) : null}
+                </>
               ) : null}
 
               {share ? (
                 <div className="rounded-2xl border border-dashed border-ink/25 bg-white/60 px-5 py-4">
                   <p className="text-sm text-ink-soft">
-                    {typing ? "⌨ Typing." : "◉ Speaking."}{" "}
+                    {speaking ? "◉ Speaking." : "⌨ Typing."}{" "}
                     {share === "yes"
-                      ? "The coach's first question lands here, and the canvas above fills itself in as you answer. That's a later card — this one is the column it all lands in."
+                      ? "The coach's first question lands here, and the canvas above fills itself in as you answer. That's a later card — this one is the four questions that got you to it."
                       : "The handover above is where this run goes next. The column stays open behind it."}
                   </p>
                 </div>
-              ) : (
-                <p className="text-sm text-ink-soft">
-                  {typing ? "⌨ Type your answer, or tap one." : "◉ …or just say it. Tap one, either way."}
-                </p>
-              )}
+              ) : null}
             </>
           )}
         </section>
