@@ -571,12 +571,22 @@ export default function Column({
 
   return (
     <div className="mx-auto max-w-3xl px-4 pt-8 pb-20">
-      {/* The one thing worth knowing before you say anything, in one line.
-          Idea #134: this was a coloured panel explaining that everything below
-          was real, which is not something anyone needed told — and it sat above
-          the canvas for the whole run, holding the canvas and the question you
-          were answering further apart. */}
+      {/* The first thing anyone reads, so it says what this is and what happens
+          to what they type — and nothing else (idea #135). The wording before
+          that described the column to someone who had not seen it yet ("the
+          chips they leave behind", "the canvas"), which only makes sense once
+          you are further down the page than this box.
+
+          Idea #134 takes the coloured panel it was down to one quiet line. It
+          sits above the canvas for the whole run, and as a panel it held the
+          canvas and the question you were answering further apart — which is
+          the complaint #134 was raised about. The words are #135's; the weight
+          is #134's. */}
       <p className="no-print mb-8 text-sm text-ink-soft/75">
+        <strong className="font-semibold text-ink-soft">
+          This is the AI Outcome Coach, being built in the open by the Sooner Safer Happier
+          community.
+        </strong>{" "}
         Nothing you say here is stored anywhere — the conversation lives in this tab&rsquo;s address
         bar, and closing the tab ends it.
       </p>
