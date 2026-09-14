@@ -24,9 +24,11 @@ import {
   MODE_ANSWERS,
   SHARE_ANSWERS,
   WHO_ANSWERS,
+  WHO_QUESTION,
+  broughtQuestion,
   chipsFor,
   readRun,
-  reflectWho,
+  readsAloud,
   runHref,
   shareQuestion,
   type Run,
@@ -78,6 +80,10 @@ import { PrintCanvas, TakeIt } from "./Takeaway";
  *  - it works as a plain document. Every answer is a real link or a real GET
  *    form, so the run works with JavaScript off. Speaking an answer is an
  *    enhancement on top of that and never the only way through.
+ *  - nothing makes a sound on arrival. Idea #121 gives the coach a voice and
+ *    opens the microphone on its own, but only inside speaking mode, which only
+ *    a press on "◉ Talk to me" can reach. While it is talking there is a
+ *    control that stops it, and `voice=off` stops it for the rest of the run.
  */
 
 /**
@@ -207,15 +213,36 @@ function Why({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** The two switches above the live turn share a shape: quiet, always there. */
+const SWITCH = "rounded-full border border-ink/15 px-3 py-1.5 text-sm text-ink-soft hover:bg-ink/5";
+
 /** Available at any point, in both directions, at every step of the run. */
 function ModeSwitch({ run, coaching }: { run: Run; coaching: Coaching }) {
   const to = run.mode === "speak" ? "type" : "speak";
   return (
-    <Link
-      href={columnHref(run, coaching, { mode: to })}
-      className="self-start rounded-full border border-ink/15 px-3 py-1.5 text-sm text-ink-soft hover:bg-ink/5"
-    >
+    <Link href={columnHref(run, coaching, { mode: to })} className={SWITCH}>
       {to === "type" ? "⌨ switch to typing" : "◉ switch to speaking"}
+    </Link>
+  );
+}
+
+/**
+ * The coach's own voice, off and on — idea #121.
+ *
+ * Speaking mode means the coach reads its questions out loud, and there has to
+ * be a way to say no to that which lasts longer than one question: someone with
+ * a screen reader already has a voice in their ear, and someone in an open-plan
+ * office may want to talk without being talked back to. It is a link like every
+ * other answer here, so it works with JavaScript off, and the decision rides in
+ * the query string with the rest of the run.
+ *
+ * Only offered in speaking mode. Typing was never going to read itself out.
+ */
+function VoiceSwitch({ run, coaching }: { run: Run; coaching: Coaching }) {
+  const quiet = run.voice === "off";
+  return (
+    <Link href={columnHref(run, coaching, { voice: quiet ? null : "off" })} className={SWITCH}>
+      {quiet ? "♪ read the questions out to me" : "◼ stop reading the questions out"}
     </Link>
   );
 }
@@ -236,6 +263,7 @@ function Ask({
   label,
   placeholder,
   speaking,
+  aloud,
   showLabel = false,
   spoken = [],
   spokenHrefs = {},
@@ -247,6 +275,8 @@ function Ask({
   label: string;
   placeholder: string;
   speaking: boolean;
+  /** Whether the coach reads `label` out before the microphone opens. */
+  aloud: boolean;
   /** When the coach's question was said inside the canvas rather than here. */
   showLabel?: boolean;
   /**
@@ -263,12 +293,18 @@ function Ask({
   return (
     <>
       {speaking ? (
+        /* `label` is the coach's question and nothing else — the turn above it
+           may carry a sentence of reasoning too, and a coach that reads its own
+           reasoning aloud is a coach you wait twenty seconds to answer. What is
+           said is what is asked. */
         <SayIt
           answers={spoken}
           hrefs={spokenHrefs}
           freeTextHref={columnHref(run, coaching, { [name]: "__SAID__" } as Partial<Coaching>)}
           invitation="…just say it"
           max={ANSWER_MAX}
+          say={aloud ? label : undefined}
+          auto
         />
       ) : null}
       <form method="get" action={COLUMN_PATH} className="space-y-2">
@@ -380,6 +416,10 @@ export default function Column({
 
   const chips = chipsFor(run);
   const speaking = mode === "speak";
+  /* Idea #121. "Talk to me" means a conversation: the coach reads its question
+     out loud and the microphone opens when it stops, at every turn, until the
+     reader asks it to be quiet. Nothing speaks before that press. */
+  const aloud = readsAloud(run);
 
   /* CARD 5. Where the coach is, and everything that has landed on the canvas so
      far. `canvasFor` is the only thing that decides either, and it decides them
@@ -458,7 +498,7 @@ export default function Column({
         {/* 02 Who's here. Slide 4. */}
         {mode ? (
           <Turn spent={Boolean(who)}>
-            <p>First — is it just you, or is there a room of you?</p>
+            <p>{WHO_QUESTION}</p>
           </Turn>
         ) : null}
 
@@ -466,9 +506,7 @@ export default function Column({
             before asking the next thing. */}
         {who ? (
           <Turn spent={Boolean(brought)}>
-            <p>
-              {reflectWho(who)} And what have you brought with you today?
-            </p>
+            <p>{broughtQuestion(who)}</p>
           </Turn>
         ) : null}
 
@@ -966,10 +1004,22 @@ export default function Column({
                 I&rsquo;ll ask three short questions first, so I know who I&rsquo;m coaching. Works for
                 one person or a whole room.
               </p>
+              {/* Said before the press, not after it. Talking means the coach
+                  talks back and the microphone opens on its own, and both are
+                  worth knowing about a moment before your browser asks you for
+                  the microphone rather than a moment after. */}
+              <p className="text-sm text-ink-soft/75">
+                Talk to me and I&rsquo;ll ask them out loud, then listen for your answer &mdash; your
+                browser will ask you for the microphone. You can tell me to stop reading them out at
+                any point, and typing is always there.
+              </p>
             </>
           ) : (
             <>
-              <ModeSwitch run={run} coaching={coaching} />
+              <div className="flex flex-wrap items-center gap-2">
+                <ModeSwitch run={run} coaching={coaching} />
+                {speaking ? <VoiceSwitch run={run} coaching={coaching} /> : null}
+              </div>
 
               {!who ? (
                 <>
@@ -979,6 +1029,8 @@ export default function Column({
                       answers={WHO_ANSWERS}
                       hrefs={hrefsFor(run, "who", WHO_ANSWERS)}
                       invitation="…or just say it"
+                      say={aloud ? WHO_QUESTION : undefined}
+                      auto
                     />
                   ) : null}
                 </>
@@ -993,6 +1045,8 @@ export default function Column({
                       hrefs={hrefsFor(run, "brought", BROUGHT_ANSWERS)}
                       freeTextHref={runHref(run, { brought: "__SAID__" })}
                       invitation="…or say it however you like"
+                      say={aloud ? broughtQuestion(who) : undefined}
+                      auto
                     />
                   ) : null}
                   {/* …or tell me in your own words. A plain GET form, so it
@@ -1031,6 +1085,8 @@ export default function Column({
                       answers={SHARE_ANSWERS}
                       hrefs={hrefsFor(run, "share", SHARE_ANSWERS)}
                       invitation="…or just say it"
+                      say={aloud ? shareQuestion(brought) : undefined}
+                      auto
                     />
                   ) : null}
                 </>
@@ -1056,6 +1112,7 @@ export default function Column({
                   label="Who is this for, and what would they be doing differently?"
                   placeholder="district managers, counting in daylight…"
                   speaking={speaking}
+                  aloud={aloud}
                 />
               ) : null}
 
@@ -1067,6 +1124,7 @@ export default function Column({
                   label="Due to what? What's in their way today?"
                   placeholder="counts take three hours and happen at night…"
                   speaking={speaking}
+                  aloud={aloud}
                 />
               ) : null}
 
@@ -1081,6 +1139,7 @@ export default function Column({
                   label="How would you know it landed? What would convince a sceptic?"
                   placeholder="what would convince a sceptic…"
                   speaking={speaking}
+                  aloud={aloud}
                   spoken={[DONT_KNOW_ANSWER]}
                   spokenHrefs={{ [DONT_KNOW]: columnHref(run, coaching, { lagging: DONT_KNOW }) }}
                 >
@@ -1101,6 +1160,7 @@ export default function Column({
                   label="Who would know? And has anyone ever been able to tell whether this got better?"
                   placeholder="ask Priya's team…"
                   speaking={speaking}
+                  aloud={aloud}
                   showLabel
                 />
               ) : null}
@@ -1124,6 +1184,7 @@ export default function Column({
                   label="What would they actually be doing, on a Tuesday?"
                   placeholder="counting a shelf in minutes, before lunch…"
                   speaking={speaking}
+                  aloud={aloud}
                 />
               ) : null}
 
@@ -1135,6 +1196,7 @@ export default function Column({
                   label="What's the bet, and which of those numbers should move?"
                   placeholder="we believe that…"
                   speaking={speaking}
+                  aloud={aloud}
                 />
               ) : null}
 
@@ -1149,6 +1211,7 @@ export default function Column({
                   label="What tells us in weeks?"
                   placeholder="what tells us in weeks…"
                   speaking={speaking}
+                  aloud={aloud}
                 >
                   <p className="text-sm">
                     <Link

@@ -24,6 +24,15 @@ export type Mode = "speak" | "type";
 export type Who = "me" | "room";
 export type Share = "yes" | "no";
 
+/**
+ * Whether the coach reads its questions out loud. Only ever `"off"` or unset:
+ * choosing to talk is choosing to be talked to, so there is nothing to switch
+ * on. It is here rather than in a preference because the query string is the
+ * only state this thing has — and because WCAG 2.0 AA, 1.4.2, wants a way to
+ * stop audio that started on its own. See `SayIt`.
+ */
+export type Voice = "off";
+
 export type Run = {
   /** Unset until the landing screen is answered — that answer is what starts it. */
   mode: Mode | null;
@@ -31,6 +40,8 @@ export type Run = {
   /** One of the three offered answers, or the leader's own words. */
   brought: string | null;
   share: Share | null;
+  /** Unset means the coach speaks. Answerable at any point, in both directions. */
+  voice: Voice | null;
 };
 
 export type TriageAnswer = {
@@ -150,7 +161,19 @@ export function readRun(params: Record<string, string | string[] | undefined>): 
   const broughtRaw = who ? first(params.brought) : null;
   const brought = broughtRaw ? broughtRaw.slice(0, BROUGHT_MAX) : null;
   const share = brought ? oneOf(first(params.share), ["yes", "no"] as const) : null;
-  return { mode, who, brought, share };
+  // Not gated by anything above it. Asking the coach to be quiet is not a turn
+  // in the conversation, and it has to work at whatever point it is asked.
+  const voice = oneOf(first(params.voice), ["off"] as const);
+  return { mode, who, brought, share, voice };
+}
+
+/**
+ * Whether the coach reads its questions out loud right now. Speaking mode is
+ * what turns it on — "Talk to me" means a conversation, not a page with a
+ * microphone button on it.
+ */
+export function readsAloud(run: Run): boolean {
+  return run.mode === "speak" && run.voice !== "off";
 }
 
 /**
@@ -165,6 +188,7 @@ export function runHref(run: Run, next: Partial<Run>, hash = "#live"): string {
   if (merged.who) q.set("who", merged.who);
   if (merged.brought) q.set("brought", merged.brought);
   if (merged.share) q.set("share", merged.share);
+  if (merged.voice) q.set("voice", merged.voice);
   const s = q.toString();
   return `${COLUMN_PATH}${s ? `?${s}` : ""}${hash}`;
 }
@@ -186,9 +210,25 @@ export function chipsFor(run: Run): string[] {
   return chips;
 }
 
+/**
+ * Slide 4. The first thing the coach asks once you have said how you want to
+ * talk.
+ *
+ * The triage questions live here as strings rather than as text inside the
+ * column, because in speaking mode the coach now reads them out loud. One
+ * string, said once and printed once, so what you hear and what you can see
+ * can never drift apart.
+ */
+export const WHO_QUESTION = "First — is it just you, or is there a room of you?";
+
 /** Slide 5. The coach says the last answer back before asking the next thing. */
 export function reflectWho(who: Who): string {
   return who === "me" ? "You said “just me”. Good." : "You said “there’s a room of us”. Good.";
+}
+
+/** Slide 5, in full: the answer said back, then the next question. */
+export function broughtQuestion(who: Who): string {
+  return `${reflectWho(who)} And what have you brought with you today?`;
 }
 
 /**
