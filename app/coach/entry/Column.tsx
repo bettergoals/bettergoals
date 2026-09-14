@@ -36,7 +36,6 @@ import {
 } from "@/lib/triage";
 import { COACH_ASKS } from "@/lib/voiceColumn";
 import { Canvas } from "./Canvas";
-import { CoachSaysProvider, Turn } from "./CoachSays";
 import { SayIt } from "./SayIt";
 import { TalkToMe } from "./TalkToMe";
 import { PrintCanvas, TakeIt } from "./Takeaway";
@@ -91,8 +90,25 @@ import { PrintCanvas, TakeIt } from "./Takeaway";
  *    run.
  */
 
-/* `Turn` now lives in `CoachSays.tsx`: the live one prints what the coach
-   actually said while it is talking, which needs client state. */
+/**
+ * A turn the coach has taken. Greys once it has been answered; never removed.
+ *
+ * Greyed, not faded out: a spent turn is still the record of what was said, and
+ * at step 04 it is the data line itself. It stays above 4.5:1 on chalk.
+ *
+ * It prints the column's own wording, including while the coach is talking. The
+ * coach says it its own way now, and for a while this printed what it actually
+ * said — which meant a paragraph rewriting itself, at question size, in the
+ * middle of the column, every time it spoke. The question is the steady thing
+ * on the page; what the coach said belongs in the quiet line by the controls.
+ */
+function Turn({ spent = false, children }: { spent?: boolean; children: React.ReactNode }) {
+  return (
+    <div className={spent ? "text-ink-soft/70" : "text-ink"}>
+      <div className="space-y-2 text-lg leading-relaxed sm:text-xl">{children}</div>
+    </div>
+  );
+}
 
 /** Triage answers are outline chips — facts about you, not your thinking. */
 function Chip({ children }: { children: React.ReactNode }) {
@@ -493,14 +509,7 @@ export default function Column({
       </p>
 
       {/* One column. One scroller. Everything below is appended in order and
-          nothing in it ever moves.
-
-          The provider wraps the whole column because the two halves of "what
-          you hear is what you read" sit at opposite ends of it: the live turn
-          near the top prints the coach's words, and `TalkToMe` at the bottom is
-          what hears them. With no voice session it holds nothing and every turn
-          prints the column's own wording, as it always has. */}
-      <CoachSaysProvider>
+          nothing in it ever moves. */}
       <article className="the-column space-y-8">
         {/* 01 Landing. Slide 3 — unchanged by anything that happens later. The
             open-source line is part of the opening and stays with it, greying
@@ -1368,7 +1377,6 @@ export default function Column({
           )}
         </section>
       </article>
-      </CoachSaysProvider>
     </div>
   );
 }
