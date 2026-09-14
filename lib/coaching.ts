@@ -37,6 +37,7 @@
  *    filling in are the only orientation there is.
  */
 
+import { COLUMN_PATH } from "./config";
 import { CANVAS_ORDER, type CanvasBoxId } from "./canvas";
 import { BROUGHT_MAX, type Run, type TriageAnswer } from "./triage";
 
@@ -220,7 +221,7 @@ export function columnHref(
   put("nudge", merged.nudge);
   put("out", merged.out);
   const s = q.toString();
-  return `/coach/entry${s ? `?${s}` : ""}${hash}`;
+  return `${COLUMN_PATH}${s ? `?${s}` : ""}${hash}`;
 }
 
 /** The hidden fields a GET form needs to carry everything already said. */
