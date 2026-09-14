@@ -91,7 +91,7 @@ const TRANSLATION: Record<
   },
   measures: {
     label: "measurable outcome",
-    start: "the leading indicators — what tells you in weeks",
+    start: "the leading indicators — what tells you you’re on track early",
     strong: "You've said how you'd see movement and how you'd see impact.",
     partial: "There's one kind of measure here — the early signal and the impact aren't both covered.",
     missing: "Nothing here would tell you whether it moved.",
