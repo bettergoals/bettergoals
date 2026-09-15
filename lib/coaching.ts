@@ -32,13 +32,21 @@
  *  - it does not decide the route. The lit box, the jump at step 07 and the
  *    double-back at step 09 are the coach's calls with the coach's wording,
  *    transcribed from the deck. Nothing here reads the reader's answer and
- *    forms an opinion about where the conversation should go next.
+ *    forms an opinion about where the conversation should go next — including
+ *    `backToCentre()`, which asks the existing quality signal whether there is
+ *    anything upstream worth going back for and does no judging of its own.
+ *    Before idea #155 the double-back fired unconditionally, from a fixed
+ *    position in this chain, on every run there has ever been; CARD A contract 1
+ *    always said the flow reads that signal to decide whether to keep going, and
+ *    contract 3 that the signal "may well be what prompts the coach to double
+ *    back". This is that, kept.
  *  - it does not count. No step numbers, no totals, no "n of five". The boxes
  *    filling in are the only orientation there is.
  */
 
 import { COLUMN_PATH } from "./config";
 import { CANVAS_ORDER, type CanvasBoxId } from "./canvas";
+import { centreGapFor, type CentreGap } from "./nudge";
 import { BROUGHT_MAX, NAME_MAX, type Run, type TriageAnswer } from "./triage";
 
 /** The longest answer we'll carry on the canvas. A UX bound, not a safety one. */
@@ -93,7 +101,10 @@ export type Coaching = {
   lagging: string | null;
   /** 08 · the digging, when the answer was "I don't know". Lands blue. */
   whoKnows: string | null;
-  /** 09 · the reader's answer to "can I take you back a step?" */
+  /**
+   * 09 · the reader's answer to "can I take you back a step?" — asked only when
+   * the coach has a reason to ask it. See `backToCentre()`.
+   */
   back: "yes" | "no" | null;
   /** 09 · the sharper wording for ①. The old words are struck through, not lost. */
   centreAgain: string | null;
@@ -153,6 +164,46 @@ function oneOf<T extends string>(value: string | null, allowed: readonly T[]): T
 }
 
 /**
+ * Step 08 is finished when the reader has given a measure, or — having said "I
+ * don't know" — has said who would know. The second is not a lesser answer: it
+ * is the open question they take back to their team.
+ */
+export function laggingSettled(c: Coaching): boolean {
+  return Boolean(c.lagging) && (c.lagging !== DONT_KNOW || Boolean(c.whoKnows));
+}
+
+/**
+ * The words in ①②③ as they were when the measure landed — the canvas the coach
+ * is looking at when it decides whether to go back. Same three notes
+ * `canvasText` would hand over, assembled without going through `canvasFor` so
+ * that the fold can ask this question without asking itself.
+ *
+ * It reads `centre` rather than `centreAgain` on purpose: this is the state the
+ * decision was made in, so once the coach has gone back, the sharper wording
+ * landing in ① cannot retrospectively unmake the trip that produced it.
+ */
+function upstreamText(c: Coaching): string {
+  const measure = c.lagging === DONT_KNOW ? c.whoKnows : c.lagging;
+  return [c.centre, c.problem, measure].filter(Boolean).join(". ").trim();
+}
+
+/**
+ * Whether the coach takes them back to ①, and what it asks when it does — or
+ * `null`, which is the ordinary case: box ① is fine, there is no detour, and the
+ * conversation carries on to ④ and ⑤.
+ *
+ * The call is the signal's, not this file's. `centreGapFor` reads the same
+ * engine the nudge reads, on the same terms (CARD A, contract 1), and looks only
+ * at the dimensions box ① is the place to mend. Nothing here thresholds it,
+ * nothing renders it as a value, and the trip is still a question the reader can
+ * decline.
+ */
+export function backToCentre(c: Coaching): CentreGap | null {
+  if (!laggingSettled(c)) return null;
+  return centreGapFor(upstreamText(c));
+}
+
+/**
  * The coaching so far, gated in the order the coach asked. A gap ends it, so a
  * hand-edited URL can never land the reader in the middle of a conversation
  * that never happened.
@@ -172,13 +223,16 @@ export function readCoaching(
   const lagging = problem ? first(params.lagging) : null;
   const digging = lagging === DONT_KNOW;
   const whoKnows = digging ? first(params.whoKnows) : null;
-  // Step 08 is finished when the reader has given a measure, or — having said
-  // "I don't know" — has said who would know. The second is not a lesser
-  // answer: it is the open question they take back to their team.
-  const settled = Boolean(lagging) && (!digging || Boolean(whoKnows));
-  const back = settled ? oneOf(first(params.back), ["yes", "no"] as const) : null;
+  const settled = laggingSettled({ ...NO_COACHING, lagging, whoKnows });
+  /* 09 · the double-back exists only when the signal says box ① has something
+     in it worth going back for (idea #155). No gap, no question — and so no
+     `back` and no `centreAgain` to read, whatever the address bar says. */
+  const gap = settled ? backToCentre({ ...NO_COACHING, centre, problem, lagging, whoKnows }) : null;
+  const back = gap ? oneOf(first(params.back), ["yes", "no"] as const) : null;
   const centreAgain = back === "yes" ? first(params.centreAgain) : null;
-  const moved = back === "no" || Boolean(centreAgain);
+  // Past ① and on to the bet: either the coach never stopped there, or it did
+  // and the reader has answered — by pushing on, or by sharpening the wording.
+  const moved = settled && (!gap || back === "no" || Boolean(centreAgain));
   const hypothesis = moved ? first(params.hypothesis) : null;
   const leading = hypothesis ? first(params.leading) : null;
   const nudge = leading ? oneOf(first(params.nudge), ["show", "later"] as const) : null;
@@ -323,20 +377,25 @@ export function canvasFor(c: Coaching): CanvasState {
     boxes.lagging.notes.push({ kind: "sticky", text: c.lagging });
   }
 
-  // 09 · going backwards to ①. The coach's call and the coach's wording; the
-  // canvas re-lights box one and parks box three with your words are safe.
-  // Nothing about it reads as an error, a validation failure or a skip.
-  if (!c.back) return { lit, boxes };
-  if (c.back === "yes") {
-    boxes.lagging.parked = true;
-    boxes.lagging.standing = "we’ll come back — your words are safe";
-    if (!c.centreAgain) {
-      lit = "centre";
-      return { lit, boxes };
+  // 09 · going backwards to ①, when there is something up there worth going
+  // back for. The coach's call and the coach's wording; the canvas re-lights box
+  // one and parks box three with your words are safe. Nothing about it reads as
+  // an error, a validation failure or a skip — and when ① is fine it does not
+  // happen at all, which is the whole of idea #155.
+  const gap = backToCentre(c);
+  if (gap) {
+    if (!c.back) return { lit, boxes };
+    if (c.back === "yes") {
+      boxes.lagging.parked = true;
+      boxes.lagging.standing = "we’ll come back — your words are safe";
+      if (!c.centreAgain) {
+        lit = "centre";
+        return { lit, boxes };
+      }
+      boxes.centre.notes = [{ kind: "sticky", text: c.centreAgain, struck: c.centre }];
+      boxes.lagging.parked = false;
+      boxes.lagging.standing = null;
     }
-    boxes.centre.notes = [{ kind: "sticky", text: c.centreAgain, struck: c.centre }];
-    boxes.lagging.parked = false;
-    boxes.lagging.standing = null;
   }
 
   // 10 · hypothesis ④, then leading ⑤. The bet, written against a measure that

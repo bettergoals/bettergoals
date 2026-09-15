@@ -21,6 +21,14 @@
  *    underneath regardless, which is what `nudgeFor()` returning `null` means:
  *    nothing to show, not nothing happening.
  *
+ * Idea #155 adds `centreGapFor()` — whether the coach has a reason to take the
+ * reader back to box ①, and what it asks when it gets there. It is the same
+ * translation, read at step 09 instead of step 11, and it is contract 1 being
+ * kept rather than extended: "the flow reads that signal to decide whether to
+ * keep going", and contract 3's "the quality signal may well be what prompts the
+ * coach to double back". Before it, the double-back fired on every single run
+ * from a fixed position in the chain and asked one hard-coded question.
+ *
  * CARD 6 adds `standingFor()` — what's sharp and what's still open at step 12,
  * read off the same signal and said in the same words. It is the same
  * translation table, split by status rather than sorted to one sentence, and it
@@ -170,6 +178,85 @@ export function nudgeFor(text: string, opts: { room: boolean }): Nudge | null {
       glyph: GLYPH[c.status],
       words: TRANSLATION[c.id][c.status],
     })),
+  };
+}
+
+/* ------------------------------------------------------------------------ */
+/* Going back to ① — step 09, slide 12. Idea #155.                           */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * The dimensions box ① carries, and so the only ones a trip back to ① could
+ * fix. `customer` is the box said in the engine's words — who this is for and
+ * what they'd be doing differently — and `outcome` is the other half of the same
+ * sentence: whether what's written there is a change in what someone does or a
+ * thing you'd ship.
+ *
+ * The other five are deliberately not here. `measures`, `baseline` and
+ * `hypothesis` are fixed in ③ and ④, where they are asked; `sowhat` and `plain`
+ * are read across the whole canvas and going back to ① would not be where you'd
+ * mend either. A back-step that fires on a gap box ① cannot close is the thing
+ * idea #155 is removing, only with a different excuse.
+ *
+ * `because` is slide 12's own reason — "your lagging measure is vague because
+ * 'count faster' is vague" — said for the dimension that is actually thin, and
+ * `question` is what the coach asks once it is back there. The Tuesday line is
+ * still here, because for a thin *behaviour* it is the right question and it is
+ * the deck's; it just isn't asked about anything else any more.
+ */
+const BACK_TO_CENTRE: Record<
+  string,
+  { because: string; question: string; placeholder: string }
+> = {
+  customer: {
+    because: "Your lagging measure can only be as sharp as the behaviour underneath it.",
+    question: "What would they actually be doing, on a Tuesday?",
+    placeholder: "counting a shelf in minutes, before lunch…",
+  },
+  outcome: {
+    because: "A measure written against something you'd ship can only ever tell you that you shipped it.",
+    question: "Say it as the change rather than the thing — what's different for them once it's there?",
+    placeholder: "district managers trusting the count without redoing it…",
+  },
+};
+
+/**
+ * What the coach would go back to ① for, or `null` when it has no reason to.
+ *
+ * `null` is the ordinary case and the point of the whole thing: when ① is fine,
+ * the conversation carries on to ④ and ⑤ and nobody is walked backwards through
+ * a good answer. It is also `null` when the engine declined to read so little
+ * text — its existing judgement, not a threshold applied here.
+ *
+ * Contract 1 holds exactly as it does above: `check.status` and nothing else,
+ * no recompute, no second-guess, and nothing about it rendered as a value.
+ */
+export type CentreGap = {
+  /** The thin dimension, in the reader's terms. The nudge's own label. */
+  label: string;
+  /** Why we're going back, in words — what's thin, and what it costs upstream. */
+  why: string;
+  /** What to ask when we get there. Derived from what's thin, never a stock line. */
+  question: string;
+  /** An example answer for the field, in the shape that question asks for. */
+  placeholder: string;
+};
+
+export function centreGapFor(text: string): CentreGap | null {
+  const signal = evaluateOutcome(text);
+  if (!signal) return null;
+
+  const thin = signal.checks
+    .filter((c) => BACK_TO_CENTRE[c.id] && c.status !== "strong")
+    .sort((a, b) => THINNEST[a.status] - THINNEST[b.status])[0];
+  if (!thin) return null;
+
+  const back = BACK_TO_CENTRE[thin.id];
+  return {
+    label: TRANSLATION[thin.id].label,
+    why: `${TRANSLATION[thin.id][thin.status]} ${back.because}`,
+    question: back.question,
+    placeholder: back.placeholder,
   };
 }
 
