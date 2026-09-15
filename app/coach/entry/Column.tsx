@@ -5,10 +5,12 @@ import {
   ANSWER_MAX,
   DONT_KNOW,
   DONT_KNOW_ANSWER,
+  backToCentre,
   canvasFor,
   canvasText,
   carried,
   columnHref,
+  laggingSettled,
   leaving,
   readCoaching,
   type Coaching,
@@ -629,8 +631,13 @@ export default function Column({
   const digging = coaching.lagging === DONT_KNOW;
   /* Step 08 is finished when a measure has landed, or — after "I don't know" —
      when the open question has. Neither is the lesser answer. */
-  const settled = Boolean(coaching.lagging) && (!digging || Boolean(coaching.whoKnows));
-  const moved = coaching.back === "no" || Boolean(coaching.centreAgain);
+  const settled = laggingSettled(coaching);
+  /* Step 09. Whether the coach goes back to ① at all, and what it asks if it
+     does — the signal's call, read here rather than decided here (idea #155).
+     `null` is the ordinary case: ① is fine, so there is no detour and nothing
+     good gets struck through on the way past. */
+  const backwards = backToCentre(coaching);
+  const moved = settled && (!backwards || coaching.back === "no" || Boolean(coaching.centreAgain));
 
   /* Step 11. The signal has been running underneath this whole conversation,
      exactly as it does today; this is the first and only moment anything is
@@ -737,31 +744,38 @@ export default function Column({
 
     /* 09 · going backwards to ①. The coach's call and the coach's wording. It
        asks, because it is written as a question, and both answers are real
-       ones. */
-    ...(settled
+       ones.
+
+       Idea #155: it only asks when the signal says ① has something in it worth
+       going back for, and the reason it gives is that reading in words — so the
+       trip happens when it is earned, and never to a canvas that was already
+       fine. The reassurance underneath is not derived and never changes: going
+       backwards is a normal move, not a correction (CARD A, contract 3). */
+    ...(backwards
       ? [
           {
             key: "back",
             spent: Boolean(coaching.back),
             aside: (
               <p>
-                Your lagging measure can only be as sharp as the behaviour underneath it — so
-                let&rsquo;s sharpen that, and this box will write itself. Nothing you&rsquo;ve said
-                is wrong. We&rsquo;re fixing it upstream.
+                {backwards.why} So let&rsquo;s sharpen that, and this box will write itself.
+                Nothing you&rsquo;ve said is wrong. We&rsquo;re fixing it upstream.
               </p>
             ),
-            question: <p>Can I take you back a step? I don&rsquo;t think the problem is here.</p>,
+            question: <p>{COACH_ASKS.back}</p>,
           },
         ]
       : []),
     /* 09 · the rewrite. Your old words stay on the canvas, struck through, and
-       box ③ says your words are safe while we're away. */
-    ...(coaching.back === "yes"
+       box ③ says your words are safe while we're away. The question is the one
+       the thin dimension asks for — behaviour when it's the behaviour that's
+       thin, and something else when it isn't. */
+    ...(backwards && coaching.back === "yes"
       ? [
           {
             key: "centreAgain",
             spent: Boolean(coaching.centreAgain),
-            question: <p>So — what would they actually be doing, on a Tuesday?</p>,
+            question: <p>{backwards.question}</p>,
           },
         ]
       : []),
@@ -1655,8 +1669,9 @@ export default function Column({
               ) : null}
 
               {/* 09. Both answers are real answers. Going backwards is a normal
-                  move, so neither of these is the recommended one. */}
-              {share === "yes" && settled && !coaching.back ? (
+                  move, so neither of these is the recommended one — and it is
+                  only offered at all when there is something upstream to mend. */}
+              {share === "yes" && backwards && !coaching.back ? (
                 <div className="flex flex-col gap-3 sm:flex-row">
                   <Choice href={columnHref(run, coaching, { back: "yes" })}>Go on then</Choice>
                   <Choice href={columnHref(run, coaching, { back: "no" })}>
@@ -1665,13 +1680,13 @@ export default function Column({
                 </div>
               ) : null}
 
-              {share === "yes" && coaching.back === "yes" && !coaching.centreAgain ? (
+              {share === "yes" && backwards && coaching.back === "yes" && !coaching.centreAgain ? (
                 <Ask
                   run={run}
                   coaching={coaching}
                   name="centreAgain"
-                  label={COACH_ASKS.centreAgain}
-                  placeholder="counting a shelf in minutes, before lunch…"
+                  label={backwards.question}
+                  placeholder={backwards.placeholder}
                   speaking={localVoice}
                   aloud={aloud}
                 />
