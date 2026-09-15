@@ -6,8 +6,9 @@ import { useEffect, useState, useSyncExternalStore } from "react";
  * The two bits of step 13 that need the browser. CARD 6, slide 16.
  *
  * Everything else about the takeaway is server-rendered and works with
- * JavaScript off: the three artefacts are on the page as text, the download is a
- * real link to a real file, and the file is built from the query string. These
+ * JavaScript off: the artefacts are on the page as text — the canvas and the
+ * goal further up the column since idea #156, the prompt here — the download is
+ * a real link to a real file, and the file is built from the query string. These
  * two are enhancements on top of that, and neither of them is the only way to
  * anything.
  */

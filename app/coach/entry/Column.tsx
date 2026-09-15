@@ -19,7 +19,13 @@ import {
 import { COLUMN_PATH, REPO_URL } from "@/lib/config";
 import { broughtInWords, handoverHref, skillFor } from "@/lib/handover";
 import { nudgeFor, standingFor } from "@/lib/nudge";
-import { stillOpenInWords, takeawayFor, takeawayHref, takeawayText } from "@/lib/takeaway";
+import {
+  stillOpenInWords,
+  takeawayFor,
+  takeawayHref,
+  takeawayText,
+  type Goal,
+} from "@/lib/takeaway";
 import {
   BROUGHT_ANSWERS,
   BROUGHT_MAX,
@@ -78,7 +84,11 @@ import { PrintCanvas, TakeIt } from "./Takeaway";
  *    element and it is site chrome, not part of the column.
  *  - one order, both breakpoints, appended to and never rearranged:
  *    the opening · the triage turns, each carrying the chip it earned · the
- *    canvas · the conversation · the live turn.
+ *    canvas · the conversation · the live turn. Once the coach has run out of
+ *    questions the conversation ends in a fixed order of its own (idea #156):
+ *    the goal in the SSH pattern · how it's shown · where this stands · the
+ *    takeaway — so the assessment is always read as an assessment of the goal
+ *    directly above it, and the goal is on screen while a coach is still here.
  *  - nothing is replaced. Answered triage turns grey; their chips stay above
  *    the canvas for good, under the question each one answered (idea #143).
  *  - the conversation stays short. Decision 0001 named the one thing that would
@@ -588,6 +598,52 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * The goal in the Sooner Safer Happier pattern, as it stands — idea #156.
+ *
+ * The same words that used to sit behind a door as artefact 1 of the takeaway.
+ * They are the reader's own words under the pattern's labels; nothing here
+ * drafts, improves or fills anything, exactly as before (see `lib/takeaway.ts`
+ * for the rule and for the copy that travels in the file).
+ *
+ * What changed is where it is read, not what it says: the thing you came for
+ * belongs under the canvas while there is still a coach here to sharpen it, not
+ * at the end of the run once the questions have stopped.
+ */
+function DraftGoal({ goal }: { goal: Goal }) {
+  return (
+    <div className="space-y-3 rounded-2xl border border-ink/15 bg-white px-5 py-4">
+      <p className="text-sm text-ink-soft">Objective — an outcome hypothesis</p>
+      <p className="border-l-2 border-ink/15 pl-4">
+        {goal.objective ?? "We didn’t get to the bet."}
+      </p>
+      {goal.forWhom ? (
+        <p className="text-ink-soft">
+          <span className="text-sm">For:</span> {goal.forWhom}
+        </p>
+      ) : null}
+      <p className="text-sm text-ink-soft">Key results</p>
+      <ul className="space-y-2">
+        <li>
+          <span className="text-sm text-ink-soft">Leading — what tells us we&rsquo;re on track early:</span>{" "}
+          {goal.leading ?? "still open"}
+        </li>
+        <li>
+          <span className="text-sm text-ink-soft">Lagging — what would convince a sceptic:</span>{" "}
+          {goal.lagging ?? "still an open question — it travels as one"}
+        </li>
+      </ul>
+      {/* The OKRs page, not this column, is what says how many key results an
+          OKR carries. Saying where the conversation got to is not the same as
+          saying it fell short. */}
+      <p className="text-sm text-ink-soft/75">
+        Sooner Safer Happier asks for three to five key results, leading and lagging. This is where
+        we got to, not the finished set.
+      </p>
+    </div>
+  );
+}
+
 export default function Column({
   params,
   voiceConfigured = false,
@@ -659,10 +715,16 @@ export default function Column({
      translated into words by the same table the nudge uses (`standing`), and
      the canvas's own — an open question, a box nobody wrote in — which needs no
      signal to be true. Neither is ever a number. */
-  const takeaway = atTheDoors ? takeawayFor(run, canvas) : null;
+  /* Idea #156 moved the first of the three artefacts up the page, so this is
+     now built one step earlier: from the moment the last key result lands, not
+     from the moment a door is taken. Same function, same words — it is the
+     reader's canvas arranged, and arranging it has never depended on how the
+     run ends. Everything below still renders at the moment it always did. */
+  const takeaway = coaching.leading ? takeawayFor(run, canvas) : null;
   const standing = atTheDoors ? standingFor(canvasText(canvas)) : null;
   const sharp = standing?.sharp ?? [];
-  const stillOpen = [...(standing?.open ?? []), ...(takeaway ? stillOpenInWords(takeaway) : [])];
+  const stillOpen =
+    atTheDoors && takeaway ? [...(standing?.open ?? []), ...stillOpenInWords(takeaway)] : [];
 
   /* Step 13. Built here, once, so the file you download, the text you copy and
      the words on the screen are the same words. Nothing is written anywhere. */
@@ -1066,6 +1128,33 @@ export default function Column({
 
         {share === "yes" ? (
           <>
+            {/* CARD 6 · the draft goal, under the canvas — idea #156.
+
+                It used to be artefact 1 of the takeaway, which meant you only
+                saw the thing you came for after you had been through a door.
+                Here it sits under the canvas it was built from and above the
+                assessment, so the bars below it are visibly an assessment of
+                this goal, and there is still a coach on screen to sharpen it.
+
+                It appears the moment the last key result lands, which is the
+                same moment the assessment has something to say. When it is
+                offered — whether the assessment gates it — is the next card's
+                question, not this one's.
+
+                `printable` because "print the canvas" has always put the goal
+                on the paper too; it just used to get there via the takeaway. */}
+            {takeaway ? (
+              <section aria-labelledby="draft-goal-heading" className="printable space-y-3">
+                <h2
+                  id="draft-goal-heading"
+                  className="text-sm font-semibold uppercase tracking-widest text-ink-soft"
+                >
+                  The goal, SSH pattern
+                </h2>
+                <DraftGoal goal={takeaway.goal} />
+              </section>
+            ) : null}
+
             {/* "Show me which ones" — the same gap, drawn. The glyphs are how
                 the gap is expressed, not a value: three fixed segments per
                 dimension, nothing added up, and every one of them bound to the
@@ -1223,7 +1312,13 @@ export default function Column({
                 Three artefacts and three ways to take them, and the sentence
                 that makes all of it necessary said first and said plainly. The
                 canvas above is untouched: this is appended under it, like
-                everything else in this column. */}
+                everything else in this column.
+
+                Since idea #156 this is the taking, not the showing. Two of the
+                three artefacts are already on this page — the canvas where it
+                has always been, the goal under it — so what is left here is the
+                one that is only ever a thing to carry, and the ways to carry all
+                three. Nothing has been dropped from the file. */}
             {leaving(out) && file && takeaway ? (
               <section
                 id="takeaway"
@@ -1266,80 +1361,18 @@ export default function Column({
                   </div>
                 ) : null}
 
-                <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
-                  <div className="space-y-3 rounded-2xl border border-ink/15 bg-white px-5 py-4">
-                    <Label>1 · The goal, SSH pattern</Label>
-                    <p className="text-sm text-ink-soft">Objective — an outcome hypothesis</p>
-                    <p className="border-l-2 border-ink/15 pl-4">
-                      {takeaway.goal.objective ?? "We didn’t get to the bet."}
-                    </p>
-                    {takeaway.goal.forWhom ? (
-                      <p className="text-ink-soft">
-                        <span className="text-sm">For:</span> {takeaway.goal.forWhom}
-                      </p>
-                    ) : null}
-                    <p className="text-sm text-ink-soft">Key results</p>
-                    <ul className="space-y-2">
-                      <li>
-                        <span className="text-sm text-ink-soft">Leading — what tells us we&rsquo;re on track early:</span>{" "}
-                        {takeaway.goal.leading ?? "still open"}
-                      </li>
-                      <li>
-                        <span className="text-sm text-ink-soft">
-                          Lagging — what would convince a sceptic:
-                        </span>{" "}
-                        {takeaway.goal.lagging ?? "still an open question — it travels as one"}
-                      </li>
-                    </ul>
-                    {/* The OKRs page, not this column, is what says how many key
-                        results an OKR carries. Saying where the conversation got
-                        to is not the same as saying it fell short. */}
-                    <p className="text-sm text-ink-soft/75">
-                      Sooner Safer Happier asks for three to five key results, leading and lagging.
-                      This is where we got to, not the finished set.
-                    </p>
-                  </div>
+                {/* Idea #156. Two of the three artefacts used to be repeated
+                    here as cards. The goal is now further up the same column,
+                    under the canvas it came from, and the canvas itself is a few
+                    inches above this — reading either of them back to someone
+                    who has both on screen was the same page twice.
 
-                  <div className="space-y-3 rounded-2xl border border-ink/15 bg-white px-5 py-4">
-                    <Label>2 · The canvas, gaps and all</Label>
-                    <ul className="space-y-2">
-                      {takeaway.boxes.map(({ box, notes }) => (
-                        <li key={box.id}>
-                          <span className="text-sm text-ink-soft">
-                            <span aria-hidden>{box.numeral} </span>
-                            {box.short}:
-                          </span>{" "}
-                          {notes.length === 0 ? (
-                            <span className="text-ink-soft">
-                              left alone, on purpose
-                            </span>
-                          ) : (
-                            notes.map((note, i) => (
-                              <span key={i}>
-                                {i > 0 ? " · " : null}
-                                {note.kind === "open" ? (
-                                  <>
-                                    <span className="text-ink-soft">open question — </span>
-                                    {note.text}
-                                  </>
-                                ) : (
-                                  note.text
-                                )}
-                              </span>
-                            ))
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="text-sm text-ink-soft/75">
-                      It goes as it is. Nothing is tidied up on the way out, and nothing you left
-                      open is written as a blank.
-                    </p>
-                  </div>
-                </div>
-
+                    The file is a different matter and is untouched: it carries
+                    all three, canvas and all, because it travels and cannot lean
+                    on what happens to be on this screen. That is why the button
+                    below still says all three, and says it truthfully. */}
                 <div className="no-print space-y-3 rounded-2xl border border-ink/15 bg-white px-5 py-4">
-                  <Label>3 · Carry on elsewhere</Label>
+                  <Label>Carry on elsewhere</Label>
                   <p className="text-ink-soft">
                     A prompt with your canvas already in it, for your own assistant — the same
                     questions, asked the same way, wherever you go next.
