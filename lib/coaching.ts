@@ -39,14 +39,17 @@
  *    position in this chain, on every run there has ever been; CARD A contract 1
  *    always said the flow reads that signal to decide whether to keep going, and
  *    contract 3 that the signal "may well be what prompts the coach to double
- *    back". This is that, kept.
+ *    back". This is that, kept. The same is true of the sharpening rounds added
+ *    by idea #157: `sharpenFor()` says which dimension is at nothing and which
+ *    box mends it, and `fold()` walks there. Nothing here forms an opinion about
+ *    a canvas.
  *  - it does not count. No step numbers, no totals, no "n of five". The boxes
  *    filling in are the only orientation there is.
  */
 
 import { COLUMN_PATH } from "./config";
 import { CANVAS_ORDER, type CanvasBoxId } from "./canvas";
-import { centreGapFor, type CentreGap } from "./nudge";
+import { centreGapFor, sharpenFor, type CentreGap, type Sharpen } from "./nudge";
 import { BROUGHT_MAX, NAME_MAX, type Run, type TriageAnswer } from "./triage";
 
 /** The longest answer we'll carry on the canvas. A UX bound, not a safety one. */
@@ -112,6 +115,17 @@ export type Coaching = {
   hypothesis: string | null;
   /** 10 · leading ⑤. What tells us we’re on track, long before the outcome is due. */
   leading: string | null;
+  /**
+   * 11a · the sharpening. One entry per round the coach has taken back into a
+   * box that already had an answer in it, in the order it took them, each one
+   * the reader's own words — or `ENOUGH`, which ends the sharpening.
+   *
+   * Append-only, and deliberately not keyed by box: where a round went is
+   * recomputed from the canvas as it stood before it, never carried. See
+   * `sharpenRounds()` and
+   * `docs/decisions/0006-sharpening-rounds-are-derived.md`.
+   */
+  sharpening: string[];
   /** 11 · the nudge. Whether the reader asked to see which ones. */
   nudge: "show" | "later" | null;
   /**
@@ -146,8 +160,53 @@ export const NO_COACHING: Coaching = {
   centreAgain: null,
   hypothesis: null,
   leading: null,
+  sharpening: [],
   nudge: null,
   out: null,
+};
+
+/**
+ * How many times the coach will go back into the canvas before it stops asking —
+ * idea #157, and the whole of what "bounded" means here.
+ *
+ * Three, fixed. Not "until every dimension clears", which is a pass/fail gate
+ * the reader cannot get past, and not one, which would leave a canvas thin in
+ * two places no better off. A round also never repeats a dimension
+ * (`sharpenFor`), and `ENOUGH` ends the lot — so three is a ceiling and not a
+ * quota, and nothing anywhere counts down to it on screen.
+ */
+export const SHARPEN_ROUNDS = 3;
+
+/**
+ * "Leave it there" — the answer to a sharpening question that isn't an answer at
+ * all, and ends the sharpening on the spot.
+ *
+ * It sits beside the field, weighted like every other answer in this column, and
+ * it is what keeps this from being a gate: the assessment decides whether the
+ * coach *keeps coaching*, never whether the reader is allowed to leave.
+ */
+export const ENOUGH = "leave-it";
+
+export const ENOUGH_ANSWER: TriageAnswer = {
+  value: ENOUGH,
+  label: "Leave it there",
+  aside: "I’ll take it as it is",
+  chip: "left as it was",
+  /* Said out loud, this answer sits beside a field the reader is otherwise
+     answering in their own words — so every phrase here has to be one nobody
+     says by accident in the middle of a sentence about their goal. "Move on",
+     "carry on" and "push on" were all in here and all came out: `matchSpoken`
+     looks for them anywhere in what was said, and "…so the shelf count can move
+     on" is an answer, not a request to stop. */
+  phrases: [
+    "leave it there",
+    "leave it as it is",
+    "take it as it is",
+    "rather leave it",
+    "that'll do",
+    "thatll do",
+    "that will do",
+  ],
 };
 
 /* ------------------------------------------------------------------------ */
@@ -208,6 +267,14 @@ export function backToCentre(c: Coaching): CentreGap | null {
  * hand-edited URL can never land the reader in the middle of a conversation
  * that never happened.
  *
+ * Since idea #157 the order is no longer entirely fixed — the tail of it is the
+ * sharpening rounds, and how many there are and where they go depends on what
+ * the reader wrote. The gating is the same gating all the same: the run is still
+ * only ever a prefix, and each step of the prefix is still checked against what
+ * the coach would have asked at that point. What changed is that the check is
+ * computed rather than written down. See
+ * `docs/decisions/0006-sharpening-rounds-are-derived.md`.
+ *
  * Coaching only exists at all once triage has finished with "yes, let's look at
  * it together" — the other answer left for the handover at step 07 and does not
  * come back.
@@ -235,13 +302,45 @@ export function readCoaching(
   const moved = settled && (!gap || back === "no" || Boolean(centreAgain));
   const hypothesis = moved ? first(params.hypothesis) : null;
   const leading = hypothesis ? first(params.leading) : null;
-  const nudge = leading ? oneOf(first(params.nudge), ["show", "later"] as const) : null;
+
+  /* 11a · the sharpening rounds, read the same way and on the same terms: one at
+     a time, each one gated on the coach having had a reason to ask it.
+
+     The reason is not in the query string and cannot be put there. `sharpenRounds`
+     folds the rounds already read onto the canvas and asks the signal what is
+     still at nothing; only if it answers is `sharpenN` read at all. So a
+     hand-edited URL can supply words for a round — they are the reader's words,
+     they are welcome to them — but not a round the coach never offered, and not
+     one aimed at a box the canvas didn't send it to. Decision 0006. */
+  const sharpening: string[] = [];
+  if (leading) {
+    const said = { ...NO_COACHING, centre, problem, lagging, whoKnows, back, centreAgain, hypothesis, leading };
+    for (let i = 0; i < SHARPEN_ROUNDS; i++) {
+      const rounds = sharpenRounds({ ...said, sharpening });
+      const waiting = rounds.length > 0 && rounds[rounds.length - 1].said === null;
+      if (!waiting) break;
+      const answer = first(params[`sharpen${i + 1}`]);
+      if (!answer) break;
+      sharpening.push(answer);
+      if (answer === ENOUGH) break;
+    }
+  }
+  /* Past the sharpening: either the coach had nothing to go back for, or it has
+     been back as far as it goes, or the reader said leave it. Until then there is
+     no nudge and no door, whatever the address bar says — a run cannot be
+     finished while the coach is mid-question. */
+  const sharpened =
+    Boolean(leading) &&
+    !sharpenRounds({ ...NO_COACHING, centre, problem, lagging, whoKnows, back, centreAgain, hypothesis, leading, sharpening })
+      .some((round) => round.said === null);
+
+  const nudge = sharpened ? oneOf(first(params.nudge), ["show", "later"] as const) : null;
   // The doors exist once the last answer has landed. Whether they are on screen
   // is the column's call, because the nudge sits between the two and a room
   // never gets one — but nothing can be *through* a door before the canvas is.
-  const out = leading ? oneOf(first(params.out), DOORS) : null;
+  const out = sharpened ? oneOf(first(params.out), DOORS) : null;
 
-  return { centre, problem, lagging, whoKnows, back, centreAgain, hypothesis, leading, nudge, out };
+  return { centre, problem, lagging, whoKnows, back, centreAgain, hypothesis, leading, sharpening, nudge, out };
 }
 
 /**
@@ -274,6 +373,10 @@ export function columnHref(
   put("centreAgain", merged.centreAgain);
   put("hypothesis", merged.hypothesis);
   put("leading", merged.leading);
+  /* The sharpening rounds, numbered in the order they were taken. The number is
+     the position in the chain and nothing else — it names no box, and it is
+     never shown to anyone. Decision 0006. */
+  (merged.sharpening ?? []).slice(0, SHARPEN_ROUNDS).forEach((said, i) => put(`sharpen${i + 1}`, said));
   put("nudge", merged.nudge);
   put("out", merged.out);
   const s = q.toString();
@@ -334,14 +437,17 @@ function emptyBoxes(): Record<CanvasBoxId, BoxState> {
 }
 
 /**
- * The canvas as it stands, folded from what the reader has said.
+ * The canvas up to the last of the coach's fixed questions — steps 06–10.
  *
  * Every move in here is the coach's, transcribed from slides 9–14: the jump
  * past ④ to ③ at step 07, the box that inflates at 08, the double-back to ① at
  * 09, and the order it returns in. The fold renders them; it does not choose
  * them.
+ *
+ * What comes after it — the sharpening rounds — is in `fold()` below, because
+ * where those go is read off this canvas rather than written down anywhere.
  */
-export function canvasFor(c: Coaching): CanvasState {
+function beforeSharpening(c: Coaching): CanvasState {
   const boxes = emptyBoxes();
   let lit: CanvasBoxId = "centre";
 
@@ -411,6 +517,80 @@ export function canvasFor(c: Coaching): CanvasState {
   boxes.leading.notes.push({ kind: "sticky", text: c.leading });
 
   return { lit, boxes };
+}
+
+/**
+ * One sharpening round: where the coach went back to and what it asked, and the
+ * reader's answer to it — `null` on the one still waiting, of which there is
+ * never more than one.
+ */
+export type Round = { ask: Sharpen; said: string | null };
+
+/**
+ * The whole canvas, and the rounds that shaped the tail of it — idea #157.
+ *
+ * The loop is the decision record in ten lines. Each time round: hand the canvas
+ * *as it stands* to the signal, and if a dimension is at nothing, that is a
+ * round — the box it names, the question it asks. The reader's answer for that
+ * position, if there is one, goes into that box as a second sticky, and the next
+ * turn of the loop reads the canvas again, now including it.
+ *
+ * So the destination is derived every time, from material that is all on screen,
+ * and nothing about where a round went is carried anywhere. That is what keeps a
+ * hand-edited URL from faking a conversation once the run stops being a fixed
+ * sequence of questions. See
+ * `docs/decisions/0006-sharpening-rounds-are-derived.md`.
+ *
+ * Three bounds, all of them here: `SHARPEN_ROUNDS`, never the same dimension
+ * twice (`asked`), and `ENOUGH` ending it outright. None of them is counted out
+ * loud anywhere.
+ *
+ * As everywhere else in this file, the route is not this module's opinion: the
+ * signal says what is thin, `lib/nudge.ts` says which box mends it, and this
+ * only folds the result.
+ */
+function fold(c: Coaching): { state: CanvasState; rounds: Round[] } {
+  const state = beforeSharpening(c);
+  const rounds: Round[] = [];
+  // Sharpening exists only once the coach has run out of its own questions —
+  // before ⑤ has landed there is a next box to go to, and going back instead
+  // would be the coach interrupting itself.
+  if (!c.leading) return { state, rounds };
+
+  const asked: string[] = [];
+  for (let i = 0; i < SHARPEN_ROUNDS; i++) {
+    const ask = sharpenFor(canvasText(state), asked);
+    if (!ask) break;
+    const said = c.sharpening[i] ?? null;
+    rounds.push({ ask, said });
+    // The round still waiting. The canvas re-lights that box, because that is
+    // where the conversation now is — the same move the double-back makes.
+    if (!said) {
+      state.lit = ask.box;
+      break;
+    }
+    if (said === ENOUGH) break;
+    // Appended, never replacing. The earlier wording was not wrong, it was
+    // thin, so there is nothing here to strike through.
+    state.boxes[ask.box].notes.push({ kind: "sticky", text: said });
+    asked.push(ask.id);
+  }
+
+  return { state, rounds };
+}
+
+/** The canvas as it stands, folded from what the reader has said. */
+export function canvasFor(c: Coaching): CanvasState {
+  return fold(c).state;
+}
+
+/**
+ * The sharpening rounds this run has, in order. The last one has `said === null`
+ * when the coach is waiting on it; when they are all answered, or there was
+ * never anything to go back for, the conversation is at the doors.
+ */
+export function sharpenRounds(c: Coaching): Round[] {
+  return fold(c).rounds;
 }
 
 /**
