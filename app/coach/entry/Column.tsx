@@ -5,6 +5,8 @@ import {
   ANSWER_MAX,
   DONT_KNOW,
   DONT_KNOW_ANSWER,
+  ENOUGH,
+  ENOUGH_ANSWER,
   backToCentre,
   canvasFor,
   canvasText,
@@ -13,6 +15,7 @@ import {
   laggingSettled,
   leaving,
   readCoaching,
+  sharpenRounds,
   type Coaching,
   type CanvasState,
 } from "@/lib/coaching";
@@ -457,13 +460,20 @@ function Ask({
   speaking,
   aloud,
   showLabel = false,
+  saidHref,
   spoken = [],
   spokenHrefs = {},
   children,
 }: {
   run: Run;
   coaching: Coaching;
-  name: keyof Coaching;
+  /**
+   * The field this answer lands in. A key of `Coaching` for every question the
+   * coach asks from its own list, and `sharpenN` for a sharpening round — those
+   * are a numbered chain rather than a named box, which is decision 0006 and the
+   * reason this is a string.
+   */
+  name: string;
   label: string;
   placeholder: string;
   speaking: boolean;
@@ -471,6 +481,8 @@ function Ask({
   aloud: boolean;
   /** When the coach's question was said inside the canvas rather than here. */
   showLabel?: boolean;
+  /** Where a spoken answer lands, when the field isn't a plain `Coaching` key. */
+  saidHref?: string;
   /**
    * Answers that are on screen as buttons beside this field, so saying one of
    * them out loud lands exactly where tapping it would have. Anything else you
@@ -492,7 +504,7 @@ function Ask({
         <SayIt
           answers={spoken}
           hrefs={spokenHrefs}
-          freeTextHref={columnHref(run, coaching, { [name]: "__SAID__" } as Partial<Coaching>)}
+          freeTextHref={saidHref ?? columnHref(run, coaching, { [name]: "__SAID__" } as Partial<Coaching>)}
           invitation="…just say it"
           max={ANSWER_MAX}
           say={aloud ? label : undefined}
@@ -695,20 +707,44 @@ export default function Column({
   const backwards = backToCentre(coaching);
   const moved = settled && (!backwards || coaching.back === "no" || Boolean(coaching.centreAgain));
 
+  /* Step 11a — the sharpening. Idea #157: the assessment decides whether the
+     coach keeps coaching. Where a dimension of "how it's shown" is at nothing,
+     the coach goes back into the box that dimension depends on and asks about
+     the thing that is actually thin, rather than reporting the reading to
+     someone with no turn left to take.
+
+     Bounded, and never a gate: at most three rounds, never the same dimension
+     twice, "leave it there" beside every one of them, and when they are spent
+     the conversation carries on whatever the bars say. The route is the
+     signal's, as ever — see `sharpenFor` in `lib/nudge.ts` and
+     `docs/decisions/0006-sharpening-rounds-are-derived.md`.
+
+     It is not suppressed in a room. The nudge is (one person told what's thin in
+     front of everyone), but this is a question about the canvas like any other,
+     and a room that has said nothing about the so-what should be asked about the
+     so-what. */
+  const rounds = sharpenRounds(coaching);
+  const sharpening = rounds.find((round) => round.said === null) ?? null;
+
   /* Step 11. The signal has been running underneath this whole conversation,
      exactly as it does today; this is the first and only moment anything is
      said about it, and what is said is words. `null` means there is nothing to
-     say — in a room, always. See `lib/nudge.ts` and CARD A, contract 1. */
-  const nudge = coaching.leading
+     say — in a room, always. See `lib/nudge.ts` and CARD A, contract 1.
+
+     It waits for the sharpening, because the gap it names is a gap the coach is
+     still in the middle of closing. */
+  const nudge = coaching.leading && !sharpening
     ? nudgeFor(canvasText(canvas), { room: who === "room" })
     : null;
 
   /* CARD 6. The doors are on screen once the coach has run out of questions —
-     the last answer has landed, and the nudge has been either answered or never
-     offered (a room never gets one). This is the only place in the column that
-     decides when step 12 exists, and it decides it from the conversation rather
-     than from a count of how many steps have gone by. */
-  const atTheDoors = Boolean(coaching.leading) && (!nudge || Boolean(coaching.nudge));
+     the last answer has landed, the coach has been back into the canvas as far
+     as it goes, and the nudge has been either answered or never offered (a room
+     never gets one). This is the only place in the column that decides when step
+     12 exists, and it decides it from the conversation rather than from a count
+     of how many steps have gone by. */
+  const atTheDoors =
+    Boolean(coaching.leading) && !sharpening && (!nudge || Boolean(coaching.nudge));
   const out = atTheDoors ? coaching.out : null;
 
   /* Step 12, said honestly. Two readings, kept apart on purpose: the signal's,
@@ -873,6 +909,26 @@ export default function Column({
           },
         ]
       : []),
+    /* 11a · the sharpening rounds — idea #157. One turn per trip back into the
+       canvas, in the order they were taken, each one the thin dimension said in
+       words and the question that dimension asks.
+
+       It reads as the coach carrying on, because that is what it is: the same
+       voice, the same kind of question, in a box that already has something in
+       it. Nothing here is a validation failure, a retry or a second attempt —
+       the aside says so, and "leave it there" beside the field means the reader
+       is never held here. */
+    ...rounds.map((round, i) => ({
+      key: `sharpen${i + 1}`,
+      spent: round.said !== null,
+      aside: (
+        <p>
+          {round.ask.why} Nothing you&rsquo;ve said is wrong — this is the one thing I&rsquo;d want
+          on the canvas before we call it done.
+        </p>
+      ),
+      question: <p>{round.ask.question}</p>,
+    })),
     /* 11 · the nudge. The gap in words, never a number, and never at all in a
        room. */
     ...(nudge
@@ -1137,9 +1193,11 @@ export default function Column({
                 this goal, and there is still a coach on screen to sharpen it.
 
                 It appears the moment the last key result lands, which is the
-                same moment the assessment has something to say. When it is
-                offered — whether the assessment gates it — is the next card's
-                question, not this one's.
+                same moment the assessment has something to say. Idea #157
+                answers the question this one left open: it is here from that
+                moment, and while the coach is still sharpening it says so, so
+                that a draft on screen is never mistaken for a draft it would
+                call finished.
 
                 `printable` because "print the canvas" has always put the goal
                 on the paper too; it just used to get there via the takeaway. */}
@@ -1151,6 +1209,11 @@ export default function Column({
                 >
                   The goal, SSH pattern
                 </h2>
+                {sharpening ? (
+                  <p className="text-sm text-ink-soft">
+                    As it stands — I&rsquo;ve got one more thing I&rsquo;d ask about it first.
+                  </p>
+                ) : null}
                 <DraftGoal goal={takeaway.goal} />
               </section>
             ) : null}
@@ -1758,6 +1821,45 @@ export default function Column({
                       …or let me redo the bet
                     </Link>
                   </p>
+                </Ask>
+              ) : null}
+
+              {/* 11a · answering a sharpening round. The same field as every
+                  other coaching answer, and the same shape — a plain GET form
+                  that works with JavaScript off, with the answer that isn't an
+                  answer beside it.
+
+                  "Leave it there" is weighted exactly like the field, because
+                  it has to be: the moment this reads as a hurdle, the
+                  assessment has become a mark and the column has become a test.
+                  Idea #157 says so in as many words, and rule 5 means nothing
+                  here may say which round this is or how many are left. */}
+              {share === "yes" && sharpening ? (
+                <Ask
+                  run={run}
+                  coaching={coaching}
+                  name={`sharpen${rounds.length}`}
+                  label={sharpening.ask.question}
+                  placeholder={sharpening.ask.placeholder}
+                  speaking={localVoice}
+                  aloud={aloud}
+                  saidHref={columnHref(run, coaching, {
+                    sharpening: [...coaching.sharpening, "__SAID__"],
+                  })}
+                  spoken={[ENOUGH_ANSWER]}
+                  spokenHrefs={{
+                    [ENOUGH]: columnHref(run, coaching, {
+                      sharpening: [...coaching.sharpening, ENOUGH],
+                    }),
+                  }}
+                >
+                  <Choice
+                    href={columnHref(run, coaching, {
+                      sharpening: [...coaching.sharpening, ENOUGH],
+                    })}
+                  >
+                    Leave it there &mdash; I&rsquo;ll take it as it is
+                  </Choice>
                 </Ask>
               ) : null}
 
