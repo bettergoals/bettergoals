@@ -29,6 +29,15 @@
  * coach to double back". Before it, the double-back fired on every single run
  * from a fixed position in the chain and asked one hard-coded question.
  *
+ * Idea #157 adds `sharpenFor()` — whether any dimension is still at nothing, and
+ * which canvas box the coach goes back to about it. Same translation again, read
+ * after the last box lands rather than before the bet, and the same contract: it
+ * reads `check.status`, it ranks nothing, and it renders nothing. What it is
+ * *for* is the one thing this file did not do before — the signal deciding
+ * whether the coach keeps coaching, rather than reporting a verdict to someone
+ * with no turn left to take. See
+ * `docs/decisions/0006-sharpening-rounds-are-derived.md`.
+ *
  * CARD 6 adds `standingFor()` — what's sharp and what's still open at step 12,
  * read off the same signal and said in the same words. It is the same
  * translation table, split by status rather than sorted to one sentence, and it
@@ -43,6 +52,7 @@
  * with three doors and no reason to pick one.
  */
 
+import type { CanvasBoxId } from "./canvas";
 import { type Check, evaluateOutcome } from "./outcomeCoach";
 
 /** One line of the "how it's shown" legend: a glyph, and the words it draws. */
@@ -255,6 +265,133 @@ export function centreGapFor(text: string): CentreGap | null {
   return {
     label: TRANSLATION[thin.id].label,
     why: `${TRANSLATION[thin.id][thin.status]} ${back.because}`,
+    question: back.question,
+    placeholder: back.placeholder,
+  };
+}
+
+/* ------------------------------------------------------------------------ */
+/* Sharpening — the assessment deciding whether the coach keeps going.        */
+/* Idea #157, under `docs/decisions/0006-sharpening-rounds-are-derived.md`.   */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * The box each dimension is mended in, and what the coach asks when it gets
+ * there. One entry per dimension the nudge draws — all seven, because idea #157
+ * is that *every* line of "how it's shown" has somewhere to be fixed, and a
+ * dimension with no way back is a bar the reader can only be told about.
+ *
+ * `because` says why that box is the place, in the coach's voice. The pairing is
+ * the canvas's own logic, not an opinion formed here:
+ *
+ *  - `customer`, `outcome` and `plain` are box ① — who this is for, said as a
+ *    change rather than a deliverable, in words anyone can read. The same two
+ *    box ① carries at step 09, plus the wording, because ① is the sentence
+ *    everyone else reads first.
+ *  - `measures` and `baseline` are box ③, where the measure is asked for.
+ *  - `hypothesis` is box ④, which is the bet.
+ *  - `sowhat` is box ②. The driver is what the organisation gets if this lands;
+ *    a "so what" written anywhere else is a customer benefit said twice.
+ */
+const SHARPEN: Record<
+  string,
+  { box: CanvasBoxId; because: string; question: string; placeholder: string }
+> = {
+  customer: {
+    box: "centre",
+    because: "Everything downstream is measuring somebody, and we haven't said who.",
+    question: "Who’s on the other end of this, and what would they be doing differently?",
+    placeholder: "district managers, counting a shelf in minutes…",
+  },
+  outcome: {
+    box: "centre",
+    because: "Box ① is where that gets said as a change rather than a thing you’d ship.",
+    question:
+      "If you shipped all of it and nothing changed for anyone, would you call it a success? Say the change instead.",
+    placeholder: "counts they trust without redoing them…",
+  },
+  measures: {
+    box: "lagging",
+    because: "③ is where the measure lives, so that’s where we mend it.",
+    question: "What would you actually count — and what would convince a sceptic it moved?",
+    placeholder: "hours per count, and how often it gets redone…",
+  },
+  baseline: {
+    box: "lagging",
+    because: "The bet in ④ can only be as sharp as the number in ③ it hangs off.",
+    question: "Where’s that number today, where do you want it, and by when?",
+    placeholder: "from 3 hours to 45 minutes by Q3…",
+  },
+  hypothesis: {
+    box: "hypothesis",
+    because: "④ is the bet, and a bet is something you could turn out to be wrong about.",
+    question: "Say it as a belief: what do you think will happen, and what would show you were wrong?",
+    placeholder: "we believe counting in daylight will…",
+  },
+  sowhat: {
+    box: "problem",
+    because: "The driver in ② is where that lives — what this buys the organisation, not just them.",
+    question: "And if it lands — what’s better for the organisation? What does that buy you?",
+    placeholder: "…so we stop paying for the night shift",
+  },
+  plain: {
+    box: "centre",
+    because: "Box ① is the sentence everyone else reads first, so it’s the one to say plainly.",
+    question: "Say it again for someone who joined last week — no jargon, no acronyms, one sentence.",
+    placeholder: "a new starter would know what’s different…",
+  },
+};
+
+/**
+ * A dimension at nothing, and where the coach goes back to mend it — or `null`,
+ * which is the ordinary case and the one that ends the sharpening.
+ *
+ * Contract 1 holds exactly as it does everywhere else in this file: `status` and
+ * nothing else, no recompute, no second-guess, nothing rendered as a value. It
+ * reads `missing` — the dimension the legend draws with no bar filled — because
+ * that is the reading idea #157 says the conversation cannot end on. `partial`
+ * is not a failing grade and does not stop anything; it is the nudge's business,
+ * said in words, exactly as before.
+ *
+ * `except` is the dimensions already sharpened this run. Asking the same one
+ * twice is how a bounded conversation turns into a loop, and a reader who has
+ * just answered a question about the so-what does not need it asked again
+ * because the engine still can't see one.
+ *
+ * Which of several: the first the engine emits, which is canvas order. There is
+ * deliberately no ranking between them — they are all at nothing, and inventing
+ * a worst would be a score by another name.
+ */
+export type Sharpen = {
+  /** The dimension the engine named it. Carried so a run never repeats itself. */
+  id: string;
+  /** The same dimension in the reader's terms — the nudge's own label. */
+  label: string;
+  /** The box the coach goes back to. */
+  box: CanvasBoxId;
+  /** What's thin and why that box is where it gets mended, in words. */
+  why: string;
+  /** What to ask once we're back there. Derived from what's thin, never stock. */
+  question: string;
+  /** An example answer, in the shape that question asks for. */
+  placeholder: string;
+};
+
+export function sharpenFor(text: string, except: readonly string[] = []): Sharpen | null {
+  const signal = evaluateOutcome(text);
+  if (!signal) return null;
+
+  const thin = signal.checks.find(
+    (c) => SHARPEN[c.id] && c.status === "missing" && !except.includes(c.id),
+  );
+  if (!thin) return null;
+
+  const back = SHARPEN[thin.id];
+  return {
+    id: thin.id,
+    label: TRANSLATION[thin.id].label,
+    box: back.box,
+    why: `${TRANSLATION[thin.id].missing} ${back.because}`,
     question: back.question,
     placeholder: back.placeholder,
   };

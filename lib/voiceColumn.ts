@@ -52,11 +52,14 @@ import {
   ANSWER_MAX,
   DONT_KNOW,
   DONT_KNOW_ANSWER,
+  ENOUGH,
+  ENOUGH_ANSWER,
   backToCentre,
   canvasFor,
   canvasText,
   columnHref,
   readCoaching,
+  sharpenRounds,
   type CanvasState,
   type Coaching,
 } from "./coaching";
@@ -121,6 +124,11 @@ export const ANSWER_FIELDS = [
   "centreAgain",
   "hypothesis",
   "leading",
+  /* Idea #157. One field for every sharpening round, not one per round: the
+     rounds are a chain and the column appends to it, so which round this is
+     never has to be said out loud — or trusted to a voice model that might get
+     it wrong. See `landAnswer` and decision 0006. */
+  "sharpen",
   "nudge",
   "out",
 ] as const;
@@ -167,6 +175,9 @@ const OUT_CHOICES: readonly Choice[] = [
 
 /** Step 08's one non-free-text answer, offered beside the leader's own words. */
 const LAGGING_CHOICES: readonly Choice[] = [DONT_KNOW_ANSWER];
+
+/** Idea #157. "Leave it there", which ends the sharpening wherever it has got to. */
+const SHARPEN_CHOICES: readonly Choice[] = [ENOUGH_ANSWER];
 
 /**
  * Where the conversation is. One of these, always — the column is never in
@@ -342,6 +353,27 @@ export function turnFor(run: Run, c: Coaching): Turn {
       freeText: true,
       max: ANSWER_MAX,
       note: "If they want to redo the bet instead, send it as the hypothesis field again with their new wording.",
+    };
+  }
+
+  /* 11a · the sharpening — idea #157. Where a dimension of the assessment is at
+     nothing, the coach goes back into the box that dimension depends on rather
+     than stopping and reporting it. Which box, and what it asks there, is read
+     off the canvas by `sharpenRounds` — the same call the page makes, so the
+     spoken coach and the printed column can never be in different boxes.
+     Bounded at three, never the same dimension twice, and "leave it there" ends
+     it. See `docs/decisions/0006-sharpening-rounds-are-derived.md`. */
+  const waiting = sharpenRounds(c).find((round) => round.said === null);
+  if (waiting) {
+    return {
+      kind: "ask",
+      field: "sharpen",
+      question: waiting.ask.question,
+      preamble: `You're going back into a box they've already answered, and it is not a correction — say so. Why, as what's thin rather than as a verdict: ${waiting.ask.why} Nothing they've said is wrong; this is the one thing you'd want on the canvas before calling it done.`,
+      choices: SHARPEN_CHOICES,
+      freeText: true,
+      max: ANSWER_MAX,
+      note: `You came back for one thing — ${waiting.ask.label}. Ask about that and nothing else, and don't re-run the box. If they'd rather leave it as it is, that is a real answer and you take it first time: send "${ENOUGH}" and move on without pressing. Never say which round this is, how many there are, or that anything is being checked.`,
     };
   }
 
@@ -523,7 +555,13 @@ export function landAnswer(run: Run, coaching: Coaching, field: string, value: s
     }
   }
 
-  const href = columnHref(run, coaching, { [field]: landing } as Partial<Run & Coaching>);
+  /* A sharpening answer is appended to the chain rather than written into a
+     named field — the coach never says which round it is on, because the column
+     already knows. Decision 0006. */
+  const href =
+    field === "sharpen"
+      ? columnHref(run, coaching, { sharpening: [...coaching.sharpening, landing] })
+      : columnHref(run, coaching, { [field]: landing } as Partial<Run & Coaching>);
   const next = stateFromHref(href);
   return { ok: true, href, run: next.run, coaching: next.coaching };
 }
