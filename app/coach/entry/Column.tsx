@@ -30,7 +30,7 @@ import {
   WHO_QUESTION,
   broughtQuestion,
   callThem,
-  chipsFor,
+  chipFor,
   nameQuestion,
   readRun,
   readsAloud,
@@ -75,10 +75,10 @@ import { PrintCanvas, TakeIt } from "./Takeaway";
  *    overflow or a max-height. The nav in SiteChrome is the page's only sticky
  *    element and it is site chrome, not part of the column.
  *  - one order, both breakpoints, appended to and never rearranged:
- *    the opening · the triage turns · the chips · the canvas · the
- *    conversation · the live turn.
+ *    the opening · the triage turns, each carrying the chip it earned · the
+ *    canvas · the conversation · the live turn.
  *  - nothing is replaced. Answered triage turns grey; their chips stay above
- *    the canvas for good.
+ *    the canvas for good, under the question each one answered (idea #143).
  *  - the conversation stays short. A question stays once it is answered; the
  *    help that came with it does not — see `Turn`'s `aside`. Decision 0001
  *    named the one thing that would reopen the scrolling canvas — the
@@ -123,30 +123,63 @@ import { PrintCanvas, TakeIt } from "./Takeaway";
  * you said is removed and no question is removed, they grey and they stay. What
  * goes is the coach's own scaffolding, and decision 0001 is explicit that a
  * conversation that has grown too long is shortened rather than pinned.
+ *
+ * `answer` is the chip that turn left behind — idea #143. It is rendered with
+ * the question it answered, because a chip is only a fact about you if you can
+ * see what it was an answer to; in a row of its own, "one person, not a room"
+ * was a phrase floating under four questions.
+ *
+ * A spent turn is also set a size smaller than a live one. Question size is
+ * what the thing you are being asked to answer gets; a transcript of four
+ * answered questions at that size is most of a screen before the canvas starts,
+ * which is what idea #143 reported. Nothing is removed and nothing moves — the
+ * words are the same words, in the same place, read more quietly.
  */
 function Turn({
   spent = false,
   aside,
+  answer,
   children,
 }: {
   spent?: boolean;
   aside?: React.ReactNode;
+  answer?: string | null;
   children: React.ReactNode;
 }) {
   return (
     <div className={spent ? "text-ink-soft/70" : "text-ink"}>
-      <div className="space-y-2 text-lg leading-relaxed sm:text-xl">{children}</div>
+      <div
+        className={
+          spent ? "space-y-1 text-base sm:text-lg" : "space-y-2 text-lg leading-relaxed sm:text-xl"
+        }
+      >
+        {children}
+      </div>
       {aside && !spent ? (
         <div className="mt-2 space-y-2 text-base text-ink-soft sm:text-lg">{aside}</div>
+      ) : null}
+      {answer ? (
+        <p className="mt-1.5">
+          <Chip>{answer}</Chip>
+        </p>
       ) : null}
     </div>
   );
 }
 
-/** Triage answers are outline chips — facts about you, not your thinking. */
+/**
+ * Triage answers are outline chips — facts about you, not your thinking.
+ *
+ * It says "you said" to a screen reader, because sighted readers get that from
+ * the chip sitting under the question and hearing a bare phrase after a
+ * question is not the same sentence at all.
+ */
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <li className="rounded-full border border-ink/25 px-3 py-1 text-sm text-ink-soft/75">{children}</li>
+    <span className="inline-block rounded-full border border-ink/25 px-3 py-1 text-sm text-ink-soft/75">
+      <span className="sr-only">You said: </span>
+      {children}
+    </span>
   );
 }
 
@@ -220,7 +253,10 @@ function Seam({ state, started }: { state: CanvasState; started: boolean }) {
         Your canvas
       </h2>
       <details className="canvas-arrives" open={started}>
-        <summary className="mb-3 flex cursor-pointer list-none items-baseline gap-2 rounded-2xl border border-dashed border-ink/25 bg-white/60 px-5 py-4 text-ink-soft hover:bg-white">
+        {/* The canvas speaks in one voice throughout (idea #143): this line is
+            the coach talking about the canvas, so it is the same size as every
+            other line in it that isn't your own words. */}
+        <summary className="mb-3 flex cursor-pointer list-none items-baseline gap-2 rounded-2xl border border-dashed border-ink/25 bg-white/60 px-5 py-4 text-sm text-ink-soft hover:bg-white">
           <span aria-hidden>▾</span>
           <span>
             <span className="font-semibold text-ink">canvas</span> —{" "}
@@ -511,7 +547,6 @@ export default function Column({
      which is an answer the column has to be able to tell from silence. */
   const you = callThem(run);
 
-  const chips = chipsFor(run);
   const speaking = mode === "speak";
   /* Idea #121. "Talk to me" means a conversation: the coach reads its question
      out loud and the microphone opens when it stops, at every turn, until the
@@ -592,14 +627,28 @@ export default function Column({
       </p>
 
       {/* One column. One scroller. Everything below is appended in order and
-          nothing in it ever moves. */}
-      <article className="the-column space-y-8">
+          nothing in it ever moves.
+
+          The gap between blocks is idea #143's, and it is the same argument
+          decision 0004 made about the asides: the canvas and the question you
+          are answering are held apart by everything between them, and a third
+          of that was air. Six spent coaching turns at two rems apart is half a
+          screen of nothing. Nothing is removed to get it. */}
+      <article className="the-column space-y-6">
         {/* 01 Landing. Slide 3 — unchanged by anything that happens later. The
             open-source line is part of the opening and stays with it, greying
             along with it rather than being cleared away. */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           <Turn spent={Boolean(mode)}>
-            <h1 className="text-2xl font-bold leading-snug tracking-tight sm:text-3xl">
+            {/* The heading quietens with the turn it is part of — idea #143.
+                It is the same words in the same place at the same level; a
+                greeting you answered two turns ago does not need to be the
+                biggest thing on a screen you are trying to read a canvas on. */}
+            <h1
+              className={`font-bold leading-snug tracking-tight ${
+                mode ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl"
+              }`}
+            >
               Hello. I help you turn a goal into an outcome worth chasing.
             </h1>
             <p>Shall we talk it through? Speaking is quicker. Typing works just as well.</p>
@@ -615,100 +664,98 @@ export default function Column({
           </p>
         </div>
 
-        {/* 02 Who's here. Slide 4. */}
+        {/* 02–04 · the triage turns, as one block of transcript.
+            Idea #143. Four questions and the three answers they earned, read
+            together: each chip sits under the question it answered, and the
+            block is spaced as a conversation rather than as four unrelated
+            sections. Nothing here is rearranged — the DOM order is the order
+            it always was, and the group is the same four turns with a tighter
+            gap between them. */}
         {mode ? (
-          <Turn spent={Boolean(who)}>
-            <p>{WHO_QUESTION}</p>
-          </Turn>
-        ) : null}
-
-        {/* 02a What to call you — idea #131. Not a slide: the deck goes from
-            who's here straight to what you brought, and taking two facts in a
-            row without ever asking who you are is what made this read as a
-            form. The coach says the last answer back here, as slide 5 has it,
-            and then asks the one thing that makes the rest a conversation.
-
-            It is a courtesy, not a field. "I'd rather not say" is beside it,
-            weighted the same, and nothing downstream needs an answer either
-            way — PRINCIPLES.md, "Accessible to everyone". */}
-        {who ? (
-          <Turn spent={Boolean(name)}>
-            <p>{nameQuestion(who)}</p>
-          </Turn>
-        ) : null}
-
-        {/* 03 What you brought. Slide 5 — the coach greets you by name the
-            first turn it has one. */}
-        {name ? (
-          <Turn spent={Boolean(brought)}>
-            <p>{broughtQuestion(run)}</p>
-          </Turn>
-        ) : null}
-
-        {/* The room fork, flagged and not built. The deck runs the same thirteen
-            steps on a big screen with the nudge suppressed; that spine is a
-            later card, and pretending otherwise would be worse than saying so. */}
-        {who === "room" ? (
-          <aside className="border-l-2 border-ink/15 pl-4 text-sm text-ink-soft">
-            <p>
-              <strong className="text-ink">The big-screen run isn&rsquo;t in this column yet.</strong> A
-              room of you forks the whole thing onto its own spine — the same questions and the same
-              canvas, up where everyone can see them, and no nudge, because a room doesn&rsquo;t need
-              one person told what&rsquo;s thin. It&rsquo;s deferred, not dropped.
-            </p>
-            <p className="mt-2">
-              What already does a room today is{" "}
-              <Link href="/coach/jam" className="underline underline-offset-2">
-                the goal jam
-              </Link>
-              . Carry on here and the questions are the same ones.
-            </p>
-          </aside>
-        ) : null}
-
-        {/* 04 Can you share it. Slide 6 — the fork, and the one place the data
-            line is said. It is not repeated anywhere else in the column. */}
-        {brought ? (
-          <Turn
-            spent={Boolean(share)}
-            aside={
-              <p>
-                Before you answer — there&rsquo;s no account here, no database, and I keep nothing
-                when you close the tab. Even so, some things can only be talked about inside your
-                own organisation, and if that&rsquo;s this, I&rsquo;ll set you up to run this same
-                conversation in there. Your call, and either answer is a good one.
-              </p>
-            }
-          >
-            <p>{shareQuestion(run)}</p>
-          </Turn>
-        ) : null}
-
-        {/* The chips. They accumulate here, they grey, and they are never
-            cleared — so the canvas below reads as something the conversation
-            produced rather than a new tool you have been handed. Two chips read
-            as two chips: there is nothing here that counts them. */}
-        {chips.length > 0 ? (
-          <section aria-labelledby="chips-heading">
-            <h2 id="chips-heading" className="sr-only">
-              What you have told the coach
+          <section aria-labelledby="triage-heading" className="space-y-4">
+            {/* The section is questions and answers together now, so the name
+                it is given to a screen reader is the deck's own name for this
+                block rather than the old one, which described a row of chips
+                that no longer exists on its own. */}
+            <h2 id="triage-heading" className="sr-only">
+              The conversation so far
             </h2>
-            <ul className="flex flex-wrap gap-2">
-              {chips.map((chip, i) => (
-                <Chip key={`${i}-${chip}`}>{chip}</Chip>
-              ))}
-            </ul>
-            {/* Slide 8's footnote, said once, at the moment the canvas arrives
-                and the worry it answers actually exists. It points up at the
-                chips because that is what it is about — and it goes once the
-                coaching has started, because by then you have watched three
-                turns grey and stay put and the sentence is telling you
-                something the page is already doing (idea #134). */}
-            {share === "yes" && !coaching.centre ? (
-              <p className="mt-3 text-sm text-ink-soft/75">
-                <span aria-hidden>↑ </span>
-                What you told me stays up there, greyed. Nothing has been cleared away.
-              </p>
+
+            {/* 02 Who's here. Slide 4. */}
+            <Turn spent={Boolean(who)} answer={chipFor(run, "who")}>
+              <p>{WHO_QUESTION}</p>
+            </Turn>
+
+            {/* 02a What to call you — idea #131. Not a slide: the deck goes
+                from who's here straight to what you brought, and taking two
+                facts in a row without ever asking who you are is what made this
+                read as a form. The coach says the last answer back here, as
+                slide 5 has it, and then asks the one thing that makes the rest
+                a conversation.
+
+                It is a courtesy, not a field. "I'd rather not say" is beside
+                it, weighted the same, and nothing downstream needs an answer
+                either way — PRINCIPLES.md, "Accessible to everyone". So this
+                turn is also the one that can be spent and still leave no chip:
+                a chip saying what you declined to tell me would be a record of
+                the wrong thing. */}
+            {who ? (
+              <Turn spent={Boolean(name)} answer={chipFor(run, "name")}>
+                <p>{nameQuestion(who)}</p>
+              </Turn>
+            ) : null}
+
+            {/* 03 What you brought. Slide 5 — the coach greets you by name the
+                first turn it has one. */}
+            {name ? (
+              <Turn spent={Boolean(brought)} answer={chipFor(run, "brought")}>
+                <p>{broughtQuestion(run)}</p>
+              </Turn>
+            ) : null}
+
+            {/* The room fork, flagged and not built. The deck runs the same
+                thirteen steps on a big screen with the nudge suppressed; that
+                spine is a later card, and pretending otherwise would be worse
+                than saying so. */}
+            {who === "room" ? (
+              <aside className="border-l-2 border-ink/15 pl-4 text-sm text-ink-soft">
+                <p>
+                  <strong className="text-ink">
+                    The big-screen run isn&rsquo;t in this column yet.
+                  </strong>{" "}
+                  A room of you forks the whole thing onto its own spine — the same questions and
+                  the same canvas, up where everyone can see them, and no nudge, because a room
+                  doesn&rsquo;t need one person told what&rsquo;s thin. It&rsquo;s deferred, not
+                  dropped.
+                </p>
+                <p className="mt-2">
+                  What already does a room today is{" "}
+                  <Link href="/coach/jam" className="underline underline-offset-2">
+                    the goal jam
+                  </Link>
+                  . Carry on here and the questions are the same ones.
+                </p>
+              </aside>
+            ) : null}
+
+            {/* 04 Can you share it. Slide 6 — the fork, and the one place the
+                data line is said. It is not repeated anywhere else in the
+                column. */}
+            {brought ? (
+              <Turn
+                spent={Boolean(share)}
+                answer={chipFor(run, "share")}
+                aside={
+                  <p>
+                    Before you answer — there&rsquo;s no account here, no database, and I keep
+                    nothing when you close the tab. Even so, some things can only be talked about
+                    inside your own organisation, and if that&rsquo;s this, I&rsquo;ll set you up to
+                    run this same conversation in there. Your call, and either answer is a good one.
+                  </p>
+                }
+              >
+                <p>{shareQuestion(run)}</p>
+              </Turn>
             ) : null}
           </section>
         ) : null}
@@ -751,7 +798,7 @@ export default function Column({
                 and nothing has landed in any box yet. It is about the lighting,
                 not about how much is done. */}
             {!coaching.centre ? (
-              <p className="-mt-4 text-sm text-ink-soft/75">
+              <p className="-mt-2 text-sm text-ink-soft/75">
                 The lit box is where we&rsquo;re talking. The others are questions I haven&rsquo;t
                 asked yet.
               </p>
