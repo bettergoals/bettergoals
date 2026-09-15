@@ -32,6 +32,36 @@ const STEPS = [
 ];
 
 /**
+ * The heading pattern /okrs uses, applied to the sections under the column —
+ * idea #167.
+ *
+ * A small uppercase eyebrow saying where you are, then the title, then the one
+ * sentence that sets the section up. Two bare `h2`s with a paragraph after one
+ * of them was the reason the bottom of this page read as a wall: nothing told
+ * you a new section had started, or what it was for.
+ *
+ * Written out here rather than lifted out of `app/okrs/page.tsx` and shared,
+ * because that page is not this idea and a card gets to change one thing.
+ */
+function SectionHeading({
+  eyebrow,
+  title,
+  children,
+}: {
+  eyebrow: string;
+  title: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="max-w-3xl">
+      <p className="text-xs font-semibold uppercase tracking-widest text-ink-soft/70">{eyebrow}</p>
+      <h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2>
+      {children ? <p className="mt-3 leading-relaxed text-ink-soft">{children}</p> : null}
+    </div>
+  );
+}
+
+/**
  * The front door is the conversation.
  *
  * The column built by CARDs 0–6 is the page: the coach's opening, the triage
@@ -68,10 +98,16 @@ export default async function Home({
       {!started && (
         <>
           <section className="mx-auto max-w-6xl px-4 py-16">
-            <h2 className="text-2xl font-bold tracking-tight">What makes a goal better?</h2>
-            <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            <SectionHeading eyebrow="Sooner · Safer · Happier" title="What makes a goal better?">
+              Three things, and a goal that misses any one of them is a goal
+              somebody is going to have to be talked into.
+            </SectionHeading>
+            <div className="mt-8 grid gap-4 sm:grid-cols-3">
               {PILLARS.map((p) => (
-                <div key={p.word} className={`rounded-2xl border ${p.border} bg-white p-6 shadow-sm`}>
+                <div
+                  key={p.word}
+                  className={`rounded-2xl border ${p.border} bg-white p-6 shadow-sm transition hover:shadow-md`}
+                >
                   <h3 className={`text-xl font-bold ${p.color}`}>{p.word}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-ink-soft">{p.text}</p>
                 </div>
@@ -96,34 +132,47 @@ export default async function Home({
 
           <section className="border-y border-ink/10 bg-white">
             <div className="mx-auto max-w-6xl px-4 py-16">
-              <h2 className="text-2xl font-bold tracking-tight">How this site gets built</h2>
-              <p className="mt-2 max-w-2xl text-ink-soft">
+              <SectionHeading eyebrow="In the open" title="How this site gets built">
                 This is a living experiment in working the way we talk about working:
                 small ideas, fast feedback, shipped continuously.
-              </p>
-              <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              </SectionHeading>
+              {/* The numeral is the step, so it gets the same medallion the
+                  canvas numerals get rather than being a big green digit
+                  floating above a heading — idea #167. The tint carries the
+                  colour and the digit stays ink, because `sooner` is mid-tone
+                  and a green 1 on a green disc is harder to read than the plain
+                  one it replaced. Same four steps, same words. */}
+              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {STEPS.map((s) => (
-                  <div key={s.n} className="relative rounded-2xl border border-ink/10 p-6">
-                    <span className="text-3xl font-bold text-sooner">{s.n}</span>
-                    <h3 className="mt-2 font-semibold">{s.title}</h3>
+                  <div
+                    key={s.n}
+                    className="rounded-2xl border border-ink/10 bg-chalk p-6 shadow-sm transition hover:shadow-md"
+                  >
+                    <span className="flex size-9 items-center justify-center rounded-full bg-sooner/20 text-lg font-bold text-ink">
+                      {s.n}
+                    </span>
+                    <h3 className="mt-3 font-semibold">{s.title}</h3>
                     <p className="mt-1 text-sm leading-relaxed text-ink-soft">{s.text}</p>
                   </div>
                 ))}
               </div>
+              {/* One filled button and one outlined one, as /okrs opens with.
+                  Adding your idea is the thing this section is asking for, so it
+                  is the one that looks like it. */}
               <div className="mt-8 flex flex-wrap gap-3">
-                <a
-                  href={BUILD_URL}
-                  className="rounded-full border border-ink/15 bg-white px-6 py-3 font-semibold shadow-sm hover:bg-ink/5"
-                >
-                  See the live board ↗
-                </a>
                 <a
                   href={NEW_IDEA_URL}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded-full border border-ink/15 bg-white px-6 py-3 font-semibold shadow-sm hover:bg-ink/5"
+                  className="rounded-full bg-sooner px-6 py-3 font-semibold text-ink shadow-sm transition hover:bg-sooner/90 hover:shadow-md"
                 >
                   Add your idea →
+                </a>
+                <a
+                  href={BUILD_URL}
+                  className="rounded-full border border-ink/15 bg-chalk px-6 py-3 font-semibold shadow-sm transition hover:border-ink/40 hover:shadow-md"
+                >
+                  See the live board ↗
                 </a>
               </div>
             </div>
