@@ -4,8 +4,8 @@
  * The things the coach establishes before any coaching starts: how you want to
  * talk, who is in the room, what to call you, what you brought, and whether the
  * two of you can work on it out here. Every answer leaves an outline chip
- * behind — a fact about you, not your thinking — and those chips stay above the
- * canvas for the rest of the run.
+ * behind — a fact about you, not your thinking — and that chip sits under the
+ * question it answered, above the canvas, for the rest of the run.
  *
  * Source: slides 3, 4, 5 and 6 of `docs/reference/voice-coach-deck.md`, under
  * `docs/reference/card-a.md`. The deck is binding on what is asked, in what
@@ -316,25 +316,39 @@ export function runHref(run: Run, next: Partial<Run>, hash = "#live"): string {
   return `${COLUMN_PATH}${s ? `?${s}` : ""}${hash}`;
 }
 
-function chipFor(answers: readonly TriageAnswer[], value: string): string {
+function chipOf(answers: readonly TriageAnswer[], value: string): string {
   return answers.find((a) => a.value === value)?.chip ?? value;
 }
 
+/** The four turns that can leave a chip behind. Mode is not one of them. */
+export type TriageTurn = "who" | "name" | "brought" | "share";
+
 /**
- * The chips, in the order they were earned. The mode answer is not one of
- * them — the deck never shows it as a chip, and it is the one answer you can
- * change at any time.
+ * What one answered turn left behind, or null when it left nothing.
+ *
+ * Idea #143 asks the chips by turn rather than as a list, because that is where
+ * they now sit: under the question they answered rather than collected in a row
+ * of their own, where "one person, not a room" had nothing next to it saying
+ * which question it was the answer to. They are still chips, still greyed, and
+ * still above the canvas for the rest of the run — the deck's contract (slides
+ * 5, 7 and 8) is about where they stay, not about them being in one row.
+ *
+ * The mode answer is still not one of them: the deck never shows it as a chip,
+ * and it is the one answer you can change at any time.
  */
-export function chipsFor(run: Run): string[] {
-  const chips: string[] = [];
-  if (run.who) chips.push(chipFor(WHO_ANSWERS, run.who));
-  // Their name in their own spelling, and nothing at all when they'd rather not
-  // say — declining leaves no trace, which is the point of being able to.
-  const you = callThem(run);
-  if (you) chips.push(you);
-  if (run.brought) chips.push(chipFor(BROUGHT_ANSWERS, run.brought));
-  if (run.share) chips.push(chipFor(SHARE_ANSWERS, run.share));
-  return chips;
+export function chipFor(run: Run, turn: TriageTurn): string | null {
+  switch (turn) {
+    case "who":
+      return run.who ? chipOf(WHO_ANSWERS, run.who) : null;
+    // Their name in their own spelling, and nothing at all when they'd rather
+    // not say — declining leaves no trace, which is the point of being able to.
+    case "name":
+      return callThem(run);
+    case "brought":
+      return run.brought ? chipOf(BROUGHT_ANSWERS, run.brought) : null;
+    case "share":
+      return run.share ? chipOf(SHARE_ANSWERS, run.share) : null;
+  }
 }
 
 /**

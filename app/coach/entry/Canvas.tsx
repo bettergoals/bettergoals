@@ -22,7 +22,20 @@ import type { CanvasState, Note } from "@/lib/coaching";
  *  - never colour alone. Lighting is a heavier border *and* the box saying
  *    where the conversation is; a blue note is blue *and* says in words that it
  *    is an open question.
+ *  - two sizes of text in a box and no more (idea #143). What you said is at
+ *    reading size; everything the coach says about a box — what it is waiting
+ *    for, where it stands, the digging, the wording you replaced — is a step
+ *    down and soft. The same line used to be `text-base` in an empty box and
+ *    `text-sm` in a full one, which is a box that changes voice depending on
+ *    how much is in it. Size is meaning here, so it follows what the words are
+ *    rather than what else is on screen.
  */
+
+/** Your words, in a box. The one thing in the canvas at reading size. */
+const SAID = "text-base";
+
+/** The coach's own voice about a box: a step down, never below `text-sm`. */
+const ABOUT = "text-sm";
 
 /**
  * Where each box sits on a wide screen: the centre in the centre, the other
@@ -57,13 +70,13 @@ function Sticky({ note }: { note: Note }) {
       }`}
     >
       {note.struck ? (
-        <p className="text-sm text-ink-soft/70">
+        <p className={`${ABOUT} text-ink-soft/70`}>
           <s>{note.struck}</s>
         </p>
       ) : null}
-      <p className={note.struck ? "mt-1" : undefined}>{note.text}</p>
+      <p className={`${SAID} ${note.struck ? "mt-1" : ""}`}>{note.text}</p>
       {open ? (
-        <p className="mt-2 text-sm text-ink-soft">
+        <p className={`mt-2 ${ABOUT} text-ink-soft`}>
           An open question — take this one back to your team. It counts.
         </p>
       ) : null}
@@ -112,7 +125,7 @@ export function Canvas({ state }: { state: CanvasState }) {
                 to look like progress, and this growth is the only cue that the
                 conversation is going deeper rather than stalling (slide 11). */}
             {here.digging.length > 0 ? (
-              <div className="mt-3 space-y-2 border-l-2 border-ink/15 pl-4 text-ink-soft">
+              <div className={`mt-3 space-y-2 border-l-2 border-ink/15 pl-4 ${ABOUT} text-ink-soft`}>
                 {here.digging.map((line, i) => (
                   <p key={i}>{line}</p>
                 ))}
@@ -131,11 +144,11 @@ export function Canvas({ state }: { state: CanvasState }) {
                 yet asked, or what the coach has said about it on its way past.
                 Never "empty", never "incomplete", never a count. */}
             {!said ? (
-              <p className={`mt-3 ${isLit ? "text-ink-soft" : "text-ink-soft/70"}`}>
+              <p className={`mt-3 ${ABOUT} ${isLit ? "text-ink-soft" : "text-ink-soft/70"}`}>
                 {here.standing ?? box.waiting}
               </p>
             ) : here.standing ? (
-              <p className="mt-3 text-sm text-ink-soft/70">{here.standing}</p>
+              <p className={`mt-3 ${ABOUT} text-ink-soft/70`}>{here.standing}</p>
             ) : null}
           </div>
         );
