@@ -79,13 +79,19 @@ import { PrintCanvas, TakeIt } from "./Takeaway";
  *    canvas · the conversation · the live turn.
  *  - nothing is replaced. Answered triage turns grey; their chips stay above
  *    the canvas for good, under the question each one answered (idea #143).
- *  - the conversation stays short. A question stays once it is answered; the
- *    help that came with it does not — see `Turn`'s `aside`. Decision 0001
- *    named the one thing that would reopen the scrolling canvas — the
- *    conversation running long enough that the canvas sits two screens above
- *    the live turn — and said the answer is a shorter conversation rather than
- *    a pinned panel. Idea #134 is that answer being taken, and
- *    `docs/decisions/0004-the-conversation-quietens.md` records it.
+ *  - the conversation stays short. Decision 0001 named the one thing that would
+ *    reopen the scrolling canvas — the conversation running long enough that the
+ *    canvas sits two screens above the live turn — and said the answer is a
+ *    shorter conversation rather than a pinned panel. Two ideas have taken that
+ *    answer, in this order. Idea #134: the help that came with a question goes
+ *    once the question is answered, and the question stays
+ *    (`docs/decisions/0004-the-conversation-quietens.md`, `Turn`'s `aside`).
+ *    Idea #146: a *coaching* question folds away too, because a coaching
+ *    question is a question about a canvas box and its answer is in that box —
+ *    see `Said` and
+ *    `docs/decisions/0005-a-coaching-question-lives-in-its-box.md`. Folded, not
+ *    deleted: it is a disclosure, every word is still in the document, and the
+ *    triage questions above the canvas — which have no box — are untouched.
  *  - no progress bar, no step numbers, no count, no score. The canvas filling
  *    in is the only orientation there is.
  *  - no persistence. The whole run is in the query string; close the tab and
@@ -208,8 +214,8 @@ type CoachTurn = {
  */
 function Said({ children }: { children: React.ReactNode }) {
   return (
-    <details>
-      <summary className="cursor-pointer list-none text-sm text-ink-soft/75 marker:hidden">
+    <details className="said-so-far">
+      <summary className="cursor-pointer list-none text-sm text-ink-soft/75">
         <span className="underline underline-offset-4">everything we&rsquo;ve said so far</span>{" "}
         <span aria-hidden>▸</span>
       </summary>
