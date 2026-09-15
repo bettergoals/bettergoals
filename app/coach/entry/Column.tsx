@@ -22,6 +22,7 @@ import {
 import { COLUMN_PATH, REPO_URL } from "@/lib/config";
 import { broughtInWords, handoverHref, skillFor } from "@/lib/handover";
 import { nudgeFor, standingFor } from "@/lib/nudge";
+import { KR_RANGE } from "@/lib/okrPattern";
 import {
   stillOpenInWords,
   takeawayFor,
@@ -645,12 +646,14 @@ function DraftGoal({ goal }: { goal: Goal }) {
           {goal.lagging ?? "still an open question — it travels as one"}
         </li>
       </ul>
-      {/* The OKRs page, not this column, is what says how many key results an
-          OKR carries. Saying where the conversation got to is not the same as
-          saying it fell short. */}
+      {/* The OKR pattern, not this column, is what says how many key results an
+          OKR carries — so the count comes from `lib/okrPattern.ts`, the same
+          constant /okrs renders and both coaches are briefed on (idea #164).
+          Saying where the conversation got to is not the same as saying it fell
+          short. */}
       <p className="text-sm text-ink-soft/75">
-        Sooner Safer Happier asks for three to five key results, leading and lagging. This is where
-        we got to, not the finished set.
+        Sooner Safer Happier asks for {KR_RANGE} key results, leading and lagging. This is where we
+        got to, not the finished set.
       </p>
     </div>
   );

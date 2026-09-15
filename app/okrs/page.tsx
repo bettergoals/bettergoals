@@ -2,9 +2,14 @@ import Link from "next/link";
 import {
   CADENCE,
   CHECKLIST,
+  GOLDEN_THREAD,
+  KEY_RESULTS,
+  KR_LEADING_RANGE,
+  KR_RANGE,
   MBO_TO_OKR,
   NAVIGATION,
   NOT_OK_OKR,
+  OBJECTIVE,
   OK_OKR,
   SSH_SOURCES,
   THREE_MS,
@@ -32,8 +37,8 @@ const ESSENCE = [
     border: "border-safer/40",
   },
   {
-    label: "3 to 5 of them",
-    text: "3–4 leading indicators so you can pivot early, plus 1 lagging indicator — the impact metric. No more than five.",
+    label: `${KEY_RESULTS.min} to ${KEY_RESULTS.max} of them`,
+    text: `${KR_LEADING_RANGE} leading indicators so you can pivot early, plus ${KEY_RESULTS.lagging} lagging indicator — the impact metric. ${KR_RANGE} in all, and no more.`,
     color: "text-happier",
     border: "border-happier/40",
   },
@@ -168,9 +173,7 @@ export default function OkrsPage() {
       {/* How to write one --------------------------------------------------- */}
       <section id="write-one" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-16">
         <SectionHeading eyebrow="The format" title="Write the Objective as an outcome hypothesis">
-          The word “hypothesis” is deliberate: it sets a clear expectation that
-          the outcome may be invalid, and that there are unknown-unknowns only
-          uncovered once the work takes place.
+          {OBJECTIVE.whyHypothesis}
         </SectionHeading>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-5">
@@ -178,44 +181,40 @@ export default function OkrsPage() {
             <p className="text-xs font-semibold uppercase tracking-widest text-ink-soft/70">
               Objective
             </p>
-            <p className="mt-1 text-sm text-ink-soft">data + insight + belief = bet</p>
+            <p className="mt-1 text-sm text-ink-soft">{OBJECTIVE.equation}</p>
             <dl className="mt-5 space-y-4 font-mono text-sm">
-              <div>
-                <dt className="font-bold text-sooner">Due to</dt>
-                <dd className="text-ink-soft">&lt;this insight, feedback or belief&gt;</dd>
-              </div>
-              <div>
-                <dt className="font-bold text-sooner">We believe that</dt>
-                <dd className="text-ink-soft">&lt;this bet&gt;</dd>
-              </div>
-              <div>
-                <dt className="font-bold text-sooner">Will result in</dt>
-                <dd className="text-ink-soft">&lt;this outcome&gt;</dd>
-              </div>
+              {OBJECTIVE.clauses.map((clause) => (
+                <div key={clause.lead}>
+                  <dt className="font-bold text-sooner">{clause.lead}</dt>
+                  <dd className="text-ink-soft">&lt;{clause.fills}&gt;</dd>
+                </div>
+              ))}
             </dl>
           </div>
 
           <div className="rounded-2xl border border-safer/40 bg-white p-6 shadow-sm lg:col-span-3">
             <p className="text-xs font-semibold uppercase tracking-widest text-ink-soft/70">
-              3–5 Key Results
+              {KR_RANGE} Key Results
             </p>
-            <p className="mt-1 text-sm text-ink-soft">“We’ll know we’re successful when…”</p>
+            <p className="mt-1 text-sm text-ink-soft">{KEY_RESULTS.promise}</p>
             <p className="mt-4 overflow-x-auto rounded-xl bg-ink px-4 py-3 font-mono text-sm text-chalk">
-              &lt;verb&gt; &lt;measure&gt; from &lt;x&gt; to &lt;y&gt; by &lt;z&gt;
+              {KEY_RESULTS.format}
             </p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <div>
-                <h3 className="text-sm font-semibold text-safer">3–4 leading indicators</h3>
+                <h3 className="text-sm font-semibold text-safer">
+                  {KR_LEADING_RANGE} leading indicators
+                </h3>
                 <p className="mt-1 text-sm leading-relaxed text-ink-soft">
-                  Indicative of future performance — they let you pivot to
-                  maximise the outcome while there is still time.
+                  {KEY_RESULTS.leadingText}
                 </p>
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-safer">1 lagging indicator</h3>
+                <h3 className="text-sm font-semibold text-safer">
+                  {KEY_RESULTS.lagging} lagging indicator
+                </h3>
                 <p className="mt-1 text-sm leading-relaxed text-ink-soft">
-                  Assesses performance that has already happened — profit,
-                  revenue, expenses. The impact metric.
+                  {KEY_RESULTS.laggingText}
                 </p>
               </div>
             </div>
@@ -404,10 +403,7 @@ export default function OkrsPage() {
           ))}
         </div>
         <p className="mt-4 max-w-3xl text-sm leading-relaxed text-ink-soft">
-          As you move down the levels, the Objective gets more specific to that
-          business area while still contributing to the level above. A complete
-          set of nested objectives forms the golden thread that links work
-          throughout the organisation back to the strategy.
+          {GOLDEN_THREAD}
         </p>
       </section>
 

@@ -16,6 +16,7 @@ than working it out during build.
 | [0004](0004-the-conversation-quietens.md) | **The conversation quietens as it is spent** — an answered question keeps its wording and loses the help that came with it. The shorter conversation 0001 asked for, not a pinned canvas | Decided, 14 Sep 2026 | The column, onwards |
 | [0005](0005-a-coaching-question-lives-in-its-box.md) | **A coaching question lives in its box** — the lit box says "we're here" on itself, and an answered coaching question folds behind one line instead of being read twice. Extends 0004 | Decided, 15 Sep 2026 | The column, onwards |
 | [0006](0006-sharpening-rounds-are-derived.md) | **Sharpening rounds are derived, not declared** — the coach can go back to a box that already has an answer, and where it goes is recomputed from the canvas rather than carried in the URL | Decided, 15 Sep 2026 | The coaching state model, onwards |
+| [0007](0007-the-coaches-are-briefed-on-the-pattern.md) | **The coaches are briefed on the pattern, from the constants the page renders** — one brief, built from `lib/okrPattern.ts`, reaches both coaches, so the framework the site teaches and the framework the coach coaches to cannot drift | Decided, 15 Sep 2026 | Anything that tells a coach what a good OKR looks like |
 
 Each file states the decision, the option not taken and why, the consequence we
 accept, what the affected card must now do, and what would reopen it.
