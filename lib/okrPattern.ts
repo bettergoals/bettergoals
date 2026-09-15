@@ -65,6 +65,63 @@ export const WHY_OKRS = [
   },
 ];
 
+/**
+ * Slides 8 and 12 — the Objective, written as an outcome hypothesis.
+ *
+ * The format the `/okrs` page prints and the coaches coach to. It lives here
+ * rather than in the page's markup because the brief the coaches are given
+ * (`lib/okrBrief.ts`) is built from it: the framework the site teaches and the
+ * framework the coach coaches to are the same three clauses or they have drifted
+ * again.
+ */
+export const OBJECTIVE = {
+  /** What the three clauses add up to. */
+  equation: "data + insight + belief = bet",
+  /** The format, in the order it is written. */
+  clauses: [
+    { lead: "Due to", fills: "this insight, feedback or belief" },
+    { lead: "We believe that", fills: "this bet" },
+    { lead: "Will result in", fills: "this outcome" },
+  ],
+  /** Why the word is “hypothesis” and not “plan”. */
+  whyHypothesis:
+    "The word “hypothesis” is deliberate: it sets a clear expectation that the outcome may be invalid, and that there are unknown-unknowns only uncovered once the work takes place.",
+} as const;
+
+/**
+ * Slide 12 — how many Key Results an OKR carries, and what each kind is for.
+ *
+ * The counts live here and nowhere else. They have to agree in five places —
+ * the Key Results box and the four-line summary on `/okrs`, the draft goal in
+ * the coaching column, the takeaway, and the brief both coaches are given — and
+ * the whole point of this file is that the framework on the site is the
+ * framework SSH actually teach. A number typed a second time is a number that
+ * can drift.
+ */
+export const KEY_RESULTS = {
+  /** "No more than 3 to 5 Key Results per OKR." */
+  min: 3,
+  max: 5,
+  /** Of those, 3–4 are leading indicators… */
+  leadingMin: 3,
+  leadingMax: 4,
+  /** …and one is the lagging indicator. */
+  lagging: 1,
+  /** What a set of Key Results answers. */
+  promise: "“We’ll know we’re successful when…”",
+  /** The shape every Key Result is written in. */
+  format: "<verb> <measure> from <x> to <y> by <z>",
+  leadingText:
+    "Indicative of future performance — they let you pivot to maximise the outcome while there is still time.",
+  laggingText:
+    "Assesses performance that has already happened — profit, revenue, expenses. The impact metric.",
+} as const;
+
+/** "3–5". The count of Key Results, said once. */
+export const KR_RANGE = `${KEY_RESULTS.min}–${KEY_RESULTS.max}`;
+/** "3–4". How many of them are leading indicators. */
+export const KR_LEADING_RANGE = `${KEY_RESULTS.leadingMin}–${KEY_RESULTS.leadingMax}`;
+
 /** Slide 9 — the 3Ms. */
 export const THREE_MS = [
   {
@@ -237,7 +294,10 @@ export const OKRS_VS_KPIS = {
   ],
 };
 
-/** Slide 3 — the cadence OKRs live in. */
+/** Slide 3 — the cadence OKRs live in, and what nesting them buys. */
+export const GOLDEN_THREAD =
+  "As you move down the levels, the Objective gets more specific to that business area while still contributing to the level above. A complete set of nested objectives forms the golden thread that links work throughout the organisation back to the strategy.";
+
 export const CADENCE = [
   {
     horizon: "Multi-year",

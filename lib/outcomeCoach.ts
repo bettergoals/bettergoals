@@ -12,6 +12,8 @@
  * really did see in your words — the findings quote them back to you.
  */
 
+import { KR_RANGE } from "./okrPattern";
+
 export type CheckStatus = "strong" | "partial" | "missing";
 
 export type Check = {
@@ -317,7 +319,11 @@ function measures(t: string): Check {
     status,
     finding,
     question: "What single number would move first if this were working, and what number would show the impact landed?",
-    nextStep: "Name one leading indicator (movement in weeks) and one lagging indicator (the impact itself). Resist adding a third.",
+    // Idea #164: this used to say "resist adding a third", which is the site
+    // teaching one thing on /okrs and the check saying another. The pattern
+    // asks for KR_RANGE key results, leading and lagging — so the step is to
+    // name the two that matter most, not to stop at two.
+    nextStep: `Name the leading indicator that would move first and the lagging indicator that shows the impact landed. The SSH pattern asks for ${KR_RANGE} key results in all — start with those two.`,
   };
 }
 

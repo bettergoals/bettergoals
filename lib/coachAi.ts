@@ -9,6 +9,12 @@
  * answer, and offer candidate rewrites that never invent a fact — anything the
  * author hasn't said is left as a «placeholder» for them to fill in.
  *
+ * Since idea #164 it is also handed the SSH OKR pattern itself — the objective
+ * as an outcome hypothesis, the key results and their counts, the 3Ms and the
+ * golden thread — built from the same constants `/okrs` renders, so the
+ * framework the site teaches and the framework the coach coaches to cannot
+ * drift apart. See `lib/okrBrief.ts`.
+ *
  * The conversation happens in two stages. On a first draft the coach is in the
  * "clarify" stage: it asks two or three questions about the context only the
  * author has — who they are in this, who it's for, what they hope changes — and
@@ -41,6 +47,8 @@
  * idle timeouts kill.
  */
 
+import { okrPatternBrief } from "./okrBrief";
+import { KR_RANGE } from "./okrPattern";
 import { type Band, type Check, type CheckStatus, bandFor } from "./outcomeCoach";
 
 const BASE_URL = () => process.env.AI_GATEWAY_BASE_URL || "https://ai-gateway.vercel.sh/v1";
@@ -204,6 +212,10 @@ ${OUTCOME_PRINCIPLES}
 
 ${COACH_PRINCIPLES}
 
+## The SSH OKR pattern (the domain content you are teaching)
+
+${okrPatternBrief()}
+
 ## What you return
 
 Return ONLY a JSON object — no prose before or after, no markdown fences — with exactly this shape:
@@ -229,7 +241,7 @@ Return ONLY a JSON object — no prose before or after, no markdown fences — w
 The checks, and how to score them (2 for strong, 1 for partial, 0 for missing — the page adds them up out of 14):
 - customer: names who gets a better experience (a customer, colleague or role) and what problem or opportunity this addresses, and ideally why now.
 - outcome: describes a change in the world — behaviour, experience, results — rather than a project, deliverable, activity or solution. "Deliver", "build", "launch", "migrate", "implement" are the tell. A goal you could complete with nothing getting better for anyone is an output.
-- measures: names how movement and impact would be seen — a leading indicator (early signal) and a lagging indicator (impact). One primary measure beats seven.
+- measures: names how movement and impact would be seen — leading indicators (the early signals) and a lagging indicator (the impact). One of each, named and measurable, is strong; the pattern's full set is ${KR_RANGE} key results and the questions are where the rest come from. No named measure at all is missing.
 - baseline: gives the baseline, the target and the timeframe for the measure(s). All three present = strong; some = partial; none = missing.
 - hypothesis: makes the underlying belief explicit ("we believe…", "because…") and leaves room to test it — a bet with an early signal in weeks, not a verdict at year-end.
 - sowhat: says what value this creates and how it connects to the wider strategic direction. A goal whose achievement you could not explain to the board as mattering is missing this.
@@ -250,7 +262,7 @@ Rules for "questions" (the coaching):
 Rules for "candidates" (helping them write a better outcome):
 - 0 to 3 candidate phrasings of the outcome, one or two sentences each, outcome-shaped, in plain language. Offer them so the author can pick and refine — you are a sparring partner, not a ghost-writer.
 - NEVER invent a baseline, target, date, customer, cause or fact the author did not give you. Where a candidate needs one, write a placeholder in guillemets: «baseline», «target», «by when», «who». The "note" says why this phrasing and which placeholders the author still owes.
-- Prefer one primary measure plus at most one guardrail. Do not add metrics.
+- Carry the measures they have actually given you and no more: a candidate is a phrasing of their goal, not a drafted set of key results. Where one needs a measure they haven't named, leave a «placeholder» rather than inventing it, and ask for it in a question instead.
 - Offer none when the draft is too thin to rephrase honestly (the questions come first then), and none when "done" is true and the author's own wording is already the strong version.
 
 Rules for "headline": one or two sentences of honest, direct feedback a busy leader reads first. Name the verdict in words and the one thing that would most change it.

@@ -34,6 +34,7 @@
 import { CANVAS_ORDER, type CanvasBox } from "./canvas";
 import type { CanvasState, Note } from "./coaching";
 import { COACHING_RULES, skillFor } from "./handover";
+import { KR_RANGE } from "./okrPattern";
 import type { Run } from "./triage";
 
 /** What the reader said they'd take back to their team, and which box it was in. */
@@ -252,7 +253,7 @@ export function takeawayText(run: Run, state: CanvasState): string {
   );
   out.push(
     BLANK,
-    `Sooner Safer Happier asks for three to five key results, leading and lagging.`,
+    `Sooner Safer Happier asks for ${KR_RANGE} key results, leading and lagging.`,
     `This is where the conversation got to, not the finished set.`,
     BLANK,
     `## 2 · The canvas, gaps and all`,
