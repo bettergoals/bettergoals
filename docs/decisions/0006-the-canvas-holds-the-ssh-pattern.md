@@ -1,4 +1,4 @@
-# 0005 — The canvas holds the pattern `/okrs` teaches
+# 0006 — The canvas holds the pattern `/okrs` teaches
 
 **Status:** decided, 15 September 2026
 **Decides:** [Ensure the AI Voice Coach is using or referencing how SSH thinks about OKRs](https://github.com/bettergoals/bettergoals/issues/147)

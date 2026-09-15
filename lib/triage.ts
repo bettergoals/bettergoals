@@ -177,7 +177,24 @@ export function callThem(run: Run): string | null {
   return run.name && run.name !== NO_NAME ? run.name : null;
 }
 
-/** Slide 5. What you brought — the second chip. Free text is offered alongside. */
+/**
+ * Slide 5. What you brought — the second chip. Free text is offered alongside.
+ *
+ * Idea #152 merges the deck's two "I have something" answers into one. The deck
+ * offers three: nothing yet, something from work, a draft I wrote. But nothing
+ * anywhere downstream ever told the last two apart — same next question, same
+ * fork, same coaching — so the third answer asked people to sort their own
+ * material into a distinction the coach then ignored. Where it brought a
+ * document from work that they'd since edited, there was no right answer at
+ * all.
+ *
+ * What is actually being asked here is whether they have something or nothing,
+ * so that is now what it asks. This departs from the deck on what is offered,
+ * not on what is asked or in what order, and it is a merge rather than a
+ * removal: everything the two old answers could be said in still matches, and
+ * anyone who wants to say where theirs came from has the free-text answer they
+ * always had.
+ */
 export const BROUGHT_ANSWERS: readonly TriageAnswer[] = [
   {
     value: "nothing",
@@ -187,20 +204,54 @@ export const BROUGHT_ANSWERS: readonly TriageAnswer[] = [
     phrases: ["nothing", "nothing yet", "a hunch", "hunch", "an itch", "itch", "not yet"],
   },
   {
-    value: "work",
-    label: "Something from work",
-    aside: "an OKR, a target, a mandate",
-    chip: "something from work",
-    phrases: ["from work", "work", "an okr", "okr", "okrs", "a target", "target", "a mandate", "mandate"],
-  },
-  {
-    value: "draft",
-    label: "A draft I wrote",
-    aside: "I've had a go myself",
-    chip: "a draft I wrote",
-    phrases: ["a draft", "draft", "had a go", "wrote one", "written one"],
+    value: "something",
+    label: "Something already",
+    aside: "an OKR, a mandate, a draft I wrote",
+    chip: "something to work on",
+    phrases: [
+      "something",
+      "something already",
+      "got something",
+      "have something",
+      // Everything the two merged answers used to answer to. Said out loud,
+      // "it's the OKR my boss gave me" and "a draft I had a go at" have always
+      // been the same answer; now they land on the same one.
+      "from work",
+      "work",
+      "an okr",
+      "okr",
+      "okrs",
+      "a target",
+      "target",
+      "a mandate",
+      "mandate",
+      "a draft",
+      "draft",
+      "had a go",
+      "wrote one",
+      "written one",
+    ],
   },
 ];
+
+/**
+ * The two answers idea #152 merged, kept so a link or an open tab from before
+ * the merge still reads as the answer it was rather than as a stray word in the
+ * chip. Nothing downstream ever told them apart — which is why they merged — so
+ * both land on the single answer that replaced them.
+ */
+const BROUGHT_MERGED: Record<string, string> = { work: "something", draft: "something" };
+
+/**
+ * What they brought, as this run should carry it: one of the offered answers,
+ * or their own words. Everything that reads `brought` off a query string goes
+ * through here, so an old link is never a second way in.
+ */
+export function readBrought(raw: string | null | undefined): string | null {
+  const said = raw?.trim();
+  if (!said) return null;
+  return BROUGHT_MERGED[said] ?? said.slice(0, BROUGHT_MAX);
+}
 
 /**
  * Slide 6. The fork. Both answers leave this screen forward, and the wording,
@@ -280,8 +331,7 @@ export function readRun(params: Record<string, string | string[] | undefined>): 
   // "I'd rather not say" is an answer and travels as itself. Anything else is
   // their own words, with only the lead-in trimmed off.
   const name = nameRaw === NO_NAME ? NO_NAME : nameRaw ? cleanName(nameRaw) || null : null;
-  const broughtRaw = name ? first(params.brought) : null;
-  const brought = broughtRaw ? broughtRaw.slice(0, BROUGHT_MAX) : null;
+  const brought = name ? readBrought(first(params.brought)) : null;
   const share = brought ? oneOf(first(params.share), ["yes", "no"] as const) : null;
   // Not gated by anything above it. Asking the coach to be quiet is not a turn
   // in the conversation, and it has to work at whatever point it is asked.
@@ -391,9 +441,7 @@ export function broughtQuestion(run: Run): string {
 
 /** What they brought, named the way the question needs to name it. */
 function broughtAs(brought: string | null): string {
-  if (brought === "draft") return "that draft";
   if (brought === "nothing") return "whatever comes up";
-  if (brought === "work") return "it";
   if (brought && BROUGHT_ANSWERS.some((a) => a.value === brought)) return "it";
   return "that";
 }

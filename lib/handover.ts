@@ -23,7 +23,7 @@
  */
 
 import { CANVAS_ORDER } from "./canvas";
-import { BROUGHT_ANSWERS, BROUGHT_MAX, type Run, type Who } from "./triage";
+import { BROUGHT_ANSWERS, readBrought, type Run, type Who } from "./triage";
 
 /**
  * The skill the off-ramp hands over. The deck calls it `better-goals.skill`;
@@ -66,7 +66,7 @@ export type CarryBack = { brought: string | null; who: Who | null };
 export function readCarryBack(params: Record<string, string | string[] | undefined>): CarryBack | null {
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? null;
   if (one(params.carry) !== "1") return null;
-  const brought = one(params.brought)?.trim().slice(0, BROUGHT_MAX) || null;
+  const brought = readBrought(one(params.brought));
   const who = one(params.who);
   return { brought, who: who === "me" || who === "room" ? who : null };
 }
