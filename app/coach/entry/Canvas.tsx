@@ -22,6 +22,12 @@ import type { CanvasState, Note } from "@/lib/coaching";
  *  - never colour alone. Lighting is a heavier border *and* the box saying
  *    where the conversation is; a blue note is blue *and* says in words that it
  *    is an open question.
+ *  - the lit box is unmistakable (idea #146). It carries slide 10's own marker —
+ *    "DRIVER → PROBLEM · WE'RE HERE" — so which box the conversation is in is
+ *    said in words on the box itself, not inferred from a border weight or read
+ *    off a line of transcript somewhere below the canvas. The border is heavier
+ *    too, and the unlit boxes sit back a shade; neither of those is carrying it
+ *    on its own.
  *  - two sizes of text in a box and no more (idea #143). What you said is at
  *    reading size; everything the coach says about a box — what it is waiting
  *    for, where it stands, the digging, the wording you replaced — is a step
@@ -95,8 +101,10 @@ export function Canvas({ state }: { state: CanvasState }) {
           <div
             key={box.id}
             aria-current={isLit ? "true" : undefined}
-            className={`rounded-2xl bg-white p-5 ${PLACE[box.id]} ${
-              isLit ? "border-2 border-ink/45 shadow-sm" : "border border-ink/15"
+            className={`rounded-2xl p-5 ${PLACE[box.id]} ${
+              isLit
+                ? "border-2 border-ink bg-white shadow-md"
+                : "border border-ink/15 bg-white/60"
             }`}
           >
             <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
@@ -110,6 +118,15 @@ export function Canvas({ state }: { state: CanvasState }) {
               >
                 {box.label}
               </span>
+              {/* Slide 10's own marker, in the deck's own words. It is the
+                  lighting said out loud: the border tells you at a glance, this
+                  tells you for certain, and a screen reader gets it from here
+                  rather than from `aria-current` alone (idea #146). */}
+              {isLit ? (
+                <span className="rounded-full bg-ink px-2 py-0.5 text-xs font-semibold uppercase tracking-widest text-chalk">
+                  we&rsquo;re here
+                </span>
+              ) : null}
               {/* Parked is a state of the conversation, not of the answer. It
                   is said in the label so it is unmissable, and the box keeps
                   everything that was already in it. */}
