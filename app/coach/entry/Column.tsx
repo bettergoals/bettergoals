@@ -249,21 +249,60 @@ function Said({ children }: { children: React.ReactNode }) {
  */
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-block rounded-full border border-ink/25 px-3 py-1 text-sm text-ink-soft/75">
+    /* Idea #167. A chip was `border-ink/25` and `text-ink-soft/75` inside a turn
+       that is itself `text-ink-soft/70` — two fades multiplied, on the one thing
+       in a spent turn that is the reader's own answer. It sits on the chalk as a
+       card now, like everything else you can point at on this site, and its
+       words are at full strength. It is still an outline chip and still quieter
+       than a live question: what changed is that you can read it. */
+    <span className="inline-block rounded-full border border-ink/20 bg-white px-3 py-1 text-sm text-ink-soft shadow-sm">
       <span className="sr-only">You said: </span>
       {children}
     </span>
   );
 }
 
+/**
+ * The surface every tappable answer in this column shares — idea #167.
+ *
+ * Answers were flat white rectangles on a near-white page: correct, identically
+ * weighted, and impossible to tell from the paragraphs around them. They are
+ * cards now, in the site's own language — `rounded-2xl`, a shadow that deepens
+ * under the pointer, and a focus ring you can actually see. Nothing here marks
+ * one answer out from another; that is the whole reason it is one constant used
+ * by all of them.
+ *
+ * The edge is separate because two things already say more about a card's border
+ * than this does: the door you took carries a heavier one, and the handover
+ * panel is not an answer at all.
+ */
+const CARD =
+  "rounded-2xl bg-white shadow-sm transition hover:bg-ink/[0.02] hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+
+/** The resting border, where nothing else is saying more about it. */
+const CARD_EDGE = "border border-ink/15 hover:border-ink/40";
+
+/** The text field and its send button, so all four forms in this column match. */
+const FIELD =
+  "flex-1 rounded-2xl border border-ink/15 bg-white px-5 py-4 shadow-sm transition placeholder:text-ink-soft/75 hover:border-ink/25 focus:border-ink/40 focus:outline-2 focus:outline-offset-2 focus:outline-ink";
+const SEND =
+  "rounded-2xl bg-ink px-5 py-4 font-semibold text-chalk shadow-sm transition hover:bg-ink-soft hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:px-6";
+
 function Answer({ href: to, label, aside }: { href: string; label: string; aside?: string }) {
   return (
     <Link
       href={to}
-      className="flex flex-col rounded-2xl border border-ink/15 bg-white px-5 py-4 text-left transition-colors hover:border-ink/40 hover:bg-ink/[0.03] sm:min-w-56 sm:flex-1"
+      className={`${CARD} ${CARD_EDGE} group flex items-start gap-3 px-5 py-4 text-left sm:min-w-56 sm:flex-1`}
     >
-      <span className="font-semibold">{label}</span>
-      {aside ? <span className="mt-0.5 text-sm text-ink-soft">{aside}</span> : null}
+      <span className="flex-1">
+        <span className="font-semibold">{label}</span>
+        {aside ? <span className="mt-0.5 block text-sm text-ink-soft">{aside}</span> : null}
+      </span>
+      {/* Every answer gets the same arrow, which is the point: it says "this is
+          a thing you press" and says nothing about which one to press. */}
+      <span aria-hidden className="text-ink-soft/50 transition-colors group-hover:text-ink">
+        →
+      </span>
     </Link>
   );
 }
@@ -329,7 +368,7 @@ function Seam({ state, started }: { state: CanvasState; started: boolean }) {
         {/* The canvas speaks in one voice throughout (idea #143): this line is
             the coach talking about the canvas, so it is the same size as every
             other line in it that isn't your own words. */}
-        <summary className="mb-3 flex cursor-pointer list-none items-baseline gap-2 rounded-2xl border border-dashed border-ink/25 bg-white/60 px-5 py-4 text-sm text-ink-soft hover:bg-white">
+        <summary className="mb-3 flex cursor-pointer list-none items-baseline gap-2 rounded-2xl border border-dashed border-ink/25 bg-white px-5 py-4 text-sm text-ink-soft shadow-sm transition hover:border-ink/40 hover:shadow-md">
           <span aria-hidden>▾</span>
           <span>
             <span className="font-semibold text-ink">canvas</span> —{" "}
@@ -400,7 +439,8 @@ function Why({ children }: { children: React.ReactNode }) {
 }
 
 /** The two switches above the live turn share a shape: quiet, always there. */
-const SWITCH = "rounded-full border border-ink/15 px-3 py-1.5 text-sm text-ink-soft hover:bg-ink/5";
+const SWITCH =
+  "rounded-full border border-ink/15 bg-white px-3 py-1.5 text-sm text-ink-soft shadow-sm transition hover:border-ink/40 hover:text-ink hover:shadow-md";
 
 /**
  * Available at any point, in both directions, at every step of the run. In
@@ -530,11 +570,11 @@ function Ask({
             maxLength={ANSWER_MAX}
             autoComplete="off"
             placeholder={placeholder}
-            className="flex-1 rounded-2xl border border-ink/15 bg-white px-5 py-4 placeholder:text-ink-soft/75"
+            className={FIELD}
           />
           <button
             type="submit"
-            className="rounded-2xl bg-ink px-5 py-4 font-semibold text-chalk hover:bg-ink-soft sm:px-6"
+            className={SEND}
           >
             ↵ send
           </button>
@@ -553,10 +593,7 @@ function Ask({
  */
 function Choice({ href: to, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link
-      href={to}
-      className="rounded-2xl border border-ink/15 bg-white px-5 py-4 text-left font-semibold transition-colors hover:border-ink/40 hover:bg-ink/[0.03]"
-    >
+    <Link href={to} className={`${CARD} ${CARD_EDGE} px-5 py-4 text-left font-semibold`}>
       {children}
     </Link>
   );
@@ -586,13 +623,13 @@ function Door({
     <Link
       href={to}
       aria-current={taken ? "true" : undefined}
-      className={`flex flex-col rounded-2xl bg-white px-5 py-4 text-left transition-colors hover:border-ink/40 hover:bg-ink/[0.03] ${
-        taken ? "border-2 border-ink/45" : "border border-ink/15"
+      className={`${CARD} group flex flex-col px-5 py-4 text-left ${
+        taken ? "border-2 border-ink/45" : CARD_EDGE
       }`}
     >
       <span className="font-semibold">{label}</span>
       <span className="mt-0.5 text-sm text-ink-soft">{aside}</span>
-      <span className="mt-3 text-sm font-semibold text-ink-soft">
+      <span className="mt-3 text-sm font-semibold text-ink-soft transition-colors group-hover:text-ink">
         {go} <span aria-hidden>→</span>
       </span>
       {taken ? (
@@ -604,10 +641,20 @@ function Door({
   );
 }
 
-/** A heading inside the leaving screens. Never a step, never a count. */
-function Label({ children }: { children: React.ReactNode }) {
+/**
+ * A heading inside the leaving screens. Never a step, never a count.
+ *
+ * `tone` is the one place a colour is allowed in here, and only where the site
+ * already spends that colour on the same idea: `sooner` is what is sharp — the
+ * Objective's colour on /okrs — and `safer` is what is still open, which is the
+ * colour a blue sticky and the questions you take away have carried since
+ * CARD 6. The words under it say which is which regardless.
+ */
+function Label({ tone, children }: { tone?: string; children: React.ReactNode }) {
   return (
-    <h3 className="text-sm font-semibold uppercase tracking-widest text-ink-soft">{children}</h3>
+    <h3 className={`text-sm font-semibold uppercase tracking-widest ${tone ?? "text-ink-soft"}`}>
+      {children}
+    </h3>
   );
 }
 
@@ -625,9 +672,17 @@ function Label({ children }: { children: React.ReactNode }) {
  */
 function DraftGoal({ goal }: { goal: Goal }) {
   return (
-    <div className="space-y-3 rounded-2xl border border-ink/15 bg-white px-5 py-4">
-      <p className="text-sm text-ink-soft">Objective — an outcome hypothesis</p>
-      <p className="border-l-2 border-ink/15 pl-4">
+    /* Idea #167. The same words, set the way /okrs sets them — because this is
+       the same pattern, and the page the reporter liked is the page that already
+       gets this right. The Objective is `sooner` and the Key Results are
+       `safer` there; they are here too, the bet is the biggest line in the box
+       because it is the thing you came for, and the two labels are the
+       pattern's own labels rather than two more lines of grey. */
+    <div className="space-y-3 rounded-2xl border border-ink/15 bg-white px-5 py-4 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-widest text-sooner">
+        Objective — an outcome hypothesis
+      </p>
+      <p className="border-l-2 border-sooner/40 pl-4 text-lg leading-relaxed">
         {goal.objective ?? "We didn’t get to the bet."}
       </p>
       {goal.forWhom ? (
@@ -635,8 +690,8 @@ function DraftGoal({ goal }: { goal: Goal }) {
           <span className="text-sm">For:</span> {goal.forWhom}
         </p>
       ) : null}
-      <p className="text-sm text-ink-soft">Key results</p>
-      <ul className="space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-widest text-safer">Key results</p>
+      <ul className="space-y-2 border-l-2 border-safer/40 pl-4">
         <li>
           <span className="text-sm text-ink-soft">Leading — what tells us we&rsquo;re on track early:</span>{" "}
           {goal.leading ?? "still open"}
@@ -996,13 +1051,27 @@ export default function Column({
             {/* The heading quietens with the turn it is part of — idea #143.
                 It is the same words in the same place at the same level; a
                 greeting you answered two turns ago does not need to be the
-                biggest thing on a screen you are trying to read a canvas on. */}
+                biggest thing on a screen you are trying to read a canvas on.
+
+                Idea #167 takes the other half of that: while it is still live
+                this is the first line of the site, and it is now sized like one
+                — /okrs, the page this one was compared against, opens at
+                `text-4xl sm:text-5xl`. The accent is the same device that page
+                uses on its own title, one coloured phrase, and the phrase is the
+                promise. Both belong to the live turn: once it is spent the
+                heading drops back to where #143 put it and the accent goes with
+                it, because the colour is part of the greeting and inherits the
+                quiet of the turn it is part of. */}
             <h1
               className={`font-bold leading-snug tracking-tight ${
-                mode ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl"
+                mode ? "text-xl sm:text-2xl" : "text-3xl sm:text-4xl"
               }`}
             >
-              Hello. I help you turn a goal into an outcome worth chasing.
+              Hello. I help you turn a goal into{" "}
+              <span className={mode ? undefined : "text-sooner"}>
+                an outcome worth chasing
+              </span>
+              .
             </h1>
             <p>Shall we talk it through? Speaking is quicker. Typing works just as well.</p>
           </Turn>
@@ -1235,9 +1304,9 @@ export default function Column({
                   {nudge.bars.map((bar) => (
                     <li
                       key={bar.label}
-                      className="flex flex-col gap-1 rounded-2xl border border-ink/15 bg-white px-5 py-4 sm:flex-row sm:items-baseline sm:gap-4"
+                      className="flex flex-col gap-1 rounded-2xl border border-ink/15 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-baseline sm:gap-4"
                     >
-                      <span aria-hidden className="font-mono tracking-widest text-ink-soft/70">
+                      <span aria-hidden className="font-mono tracking-widest text-ink-soft">
                         {bar.glyph}
                       </span>
                       <span className="sm:flex-1">
@@ -1310,9 +1379,19 @@ export default function Column({
                   </Turn>
                 ) : (
                   <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
+                    {/* Idea #167. Two panels of identical grey, side by side,
+                        under a heading that says they are two different
+                        readings. They carry the site's own colours for those two
+                        ideas now — sharp is the Objective's colour on /okrs,
+                        still-open is the colour an open question has had on this
+                        canvas since CARD 6 — so you can tell which column you
+                        are in before you have read a word of it. Neither is a
+                        mark: no tick, no cross, no total, and the asymmetry
+                        between them is still the only thing that reports
+                        anything. */}
                     {sharp.length > 0 ? (
-                      <div className="space-y-2 rounded-2xl border border-ink/15 bg-white px-5 py-4">
-                        <Label>Sharp</Label>
+                      <div className="space-y-2 rounded-2xl border border-sooner/40 bg-white px-5 py-4 shadow-sm">
+                        <Label tone="text-sooner">Sharp</Label>
                         <ul className="space-y-2 text-ink-soft">
                           {sharp.map((line) => (
                             <li key={line}>{line}</li>
@@ -1321,8 +1400,8 @@ export default function Column({
                       </div>
                     ) : null}
                     {stillOpen.length > 0 ? (
-                      <div className="space-y-2 rounded-2xl border border-ink/15 bg-white px-5 py-4">
-                        <Label>Still open</Label>
+                      <div className="space-y-2 rounded-2xl border border-safer/50 bg-white px-5 py-4 shadow-sm">
+                        <Label tone="text-safer">Still open</Label>
                         <ul className="space-y-2 text-ink-soft">
                           {stillOpen.map((line) => (
                             <li key={line}>{line}</li>
@@ -1407,8 +1486,8 @@ export default function Column({
                     The questions are marked as questions everywhere they
                     appear, here and in the file (rule 9). */}
                 {out === "questions" ? (
-                  <div className="space-y-2 rounded-2xl border border-safer/50 bg-safer/10 px-5 py-4">
-                    <Label>The questions you&rsquo;re taking</Label>
+                  <div className="space-y-2 rounded-2xl border border-safer/50 bg-safer/10 px-5 py-4 shadow-sm">
+                    <Label tone="text-safer">The questions you&rsquo;re taking</Label>
                     {takeaway.open.length > 0 ? (
                       <ul className="space-y-2">
                         {takeaway.open.map((q) => (
@@ -1437,7 +1516,7 @@ export default function Column({
                     all three, canvas and all, because it travels and cannot lean
                     on what happens to be on this screen. That is why the button
                     below still says all three, and says it truthfully. */}
-                <div className="no-print space-y-3 rounded-2xl border border-ink/15 bg-white px-5 py-4">
+                <div className="no-print space-y-3 rounded-2xl border border-ink/15 bg-white px-5 py-4 shadow-sm">
                   <Label>Carry on elsewhere</Label>
                   <p className="text-ink-soft">
                     A prompt with your canvas already in it, for your own assistant — the same
@@ -1504,7 +1583,7 @@ export default function Column({
             </Turn>
             <Link
               href={handoverHref(run)}
-              className="block rounded-2xl border border-ink/15 bg-white p-5 transition-colors hover:border-ink/40 hover:bg-ink/[0.03] sm:p-6"
+              className={`${CARD} ${CARD_EDGE} block p-5 sm:p-6`}
             >
               <span className="text-lg font-semibold sm:text-xl">
                 The skill, where to install it, and the prompt to carry back{" "}
@@ -1617,11 +1696,11 @@ export default function Column({
                       maxLength={NAME_MAX}
                       autoComplete="given-name"
                       placeholder="…first name is plenty"
-                      className="flex-1 rounded-2xl border border-ink/15 bg-white px-5 py-4 placeholder:text-ink-soft/75"
+                      className={FIELD}
                     />
                     <button
                       type="submit"
-                      className="rounded-2xl bg-ink px-5 py-4 font-semibold text-chalk hover:bg-ink-soft sm:px-6"
+                      className={SEND}
                     >
                       ↵ send
                     </button>
@@ -1667,11 +1746,11 @@ export default function Column({
                       maxLength={BROUGHT_MAX}
                       autoComplete="off"
                       placeholder="…or tell me in your own words"
-                      className="flex-1 rounded-2xl border border-ink/15 bg-white px-5 py-4 placeholder:text-ink-soft/75"
+                      className={FIELD}
                     />
                     <button
                       type="submit"
-                      className="rounded-2xl bg-ink px-5 py-4 font-semibold text-chalk hover:bg-ink-soft sm:px-6"
+                      className={SEND}
                     >
                       ↵ send
                     </button>
