@@ -34,6 +34,7 @@
 import { CANVAS_ORDER, type CanvasBox } from "./canvas";
 import type { CanvasState, Note } from "./coaching";
 import { COACHING_RULES, skillFor } from "./handover";
+import { KEY_RESULTS } from "./okrPattern";
 import type { Run } from "./triage";
 
 /** What the reader said they'd take back to their team, and which box it was in. */
@@ -56,8 +57,14 @@ export type Goal = {
   objective: string | null;
   /** Who it's for and what changes in their behaviour — the current wording. */
   forWhom: string | null;
-  /** What tells us we're on track, long before the outcome is due. */
-  leading: string | null;
+  /**
+   * What tells us we're on track, long before the outcome is due — all of them.
+   *
+   * A list since idea #147, because the pattern this artefact is written in
+   * asks for three to five key results and only one of those is the lagging
+   * indicator. Empty is a conversation that didn't get there, never a failure.
+   */
+  leading: string[];
   /** What would convince a sceptic — null when that answer was a question. */
   lagging: string | null;
 };
@@ -91,7 +98,8 @@ export function takeawayFor(run: Run, state: CanvasState): Takeaway {
   const goal: Goal = {
     objective: noteIn(state, "hypothesis")?.text ?? null,
     forWhom: noteIn(state, "centre")?.text ?? null,
-    leading: noteIn(state, "leading")?.text ?? null,
+    // Every sticky in ⑤, not the last one: each is its own key result.
+    leading: state.boxes.leading.notes.filter((n) => n.kind === "sticky").map((n) => n.text),
     lagging: lagging && lagging.kind === "sticky" ? lagging.text : null,
   };
 
@@ -239,20 +247,21 @@ export function takeawayText(run: Run, state: CanvasState): string {
 
   if (goal.forWhom) out.push(`For: ${goal.forWhom}`, BLANK);
 
-  out.push(`**Key results**`, BLANK);
-  out.push(
-    goal.leading
-      ? `- Leading — what tells us we're on track early: ${goal.leading}`
-      : `- Leading — what tells us we're on track early: (still open)`,
-  );
-  out.push(
-    goal.lagging
-      ? `- Lagging — what would convince a sceptic: ${goal.lagging}`
-      : `- Lagging — what would convince a sceptic: (still open — see the questions below)`,
-  );
+  /* The leading indicators are a list because there is more than one of them —
+     idea #147. Each is its own key result and travels as one, in the order it
+     was said. */
+  out.push(`**Key results**`, BLANK, `Leading — what tells us we're on track early:`, BLANK);
+  if (goal.leading.length === 0) {
+    out.push(`- (still open)`);
+  } else {
+    for (const measure of goal.leading) out.push(`- ${measure}`);
+  }
+  out.push(BLANK, `Lagging — what would convince a sceptic:`, BLANK);
+  out.push(goal.lagging ? `- ${goal.lagging}` : `- (still open — see the questions below)`);
   out.push(
     BLANK,
-    `Sooner Safer Happier asks for three to five key results, leading and lagging.`,
+    `Sooner Safer Happier ask for ${KEY_RESULTS.min} to ${KEY_RESULTS.max} key results — ${KEY_RESULTS.leading.min} or ${KEY_RESULTS.leading.max} leading`,
+    `indicators you can still pivot on, plus the one lagging indicator for the impact.`,
     `This is where the conversation got to, not the finished set.`,
     BLANK,
     `## 2 · The canvas, gaps and all`,

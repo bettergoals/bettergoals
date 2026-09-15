@@ -52,14 +52,21 @@ import {
   ANSWER_MAX,
   DONT_KNOW,
   DONT_KNOW_ANSWER,
+  ENOUGH,
+  ENOUGH_ANSWER,
+  WORDINGS,
   canvasFor,
   canvasText,
   columnHref,
+  paramsFrom,
   readCoaching,
   type CanvasState,
   type Coaching,
+  type Landing,
+  type Wording,
 } from "./coaching";
 import { nudgeFor } from "./nudge";
+import { KEY_RESULTS, sshOkrBrief } from "./okrPattern";
 import {
   BROUGHT_ANSWERS,
   BROUGHT_MAX,
@@ -99,6 +106,11 @@ export const COACH_ASKS = {
   hypothesis: "What's the bet, and which of those numbers should move?",
   // Idea #140. Horizon-relative rather than "in weeks" — see `CANVAS_ORDER`.
   leading: "What tells us we're on track, long before the outcome is due?",
+  /* Idea #147. ⑤ holds the set, so it gets asked more than once — same box,
+     same question, asked again. Sooner Safer Happier count three or four
+     leading indicators against a single lagging one, and one early signal on
+     its own is a goal you can only judge at the end. */
+  leadingMore: "What else would tell us early? A different kind of signal, not the same one twice.",
   back: "Can I take you back a step? I don't think the problem is here.",
   out: "Where do you want to leave this?",
 } as const;
@@ -163,6 +175,13 @@ const OUT_CHOICES: readonly Choice[] = [
 
 /** Step 08's one non-free-text answer, offered beside the leader's own words. */
 const LAGGING_CHOICES: readonly Choice[] = [DONT_KNOW_ANSWER];
+
+/**
+ * ⑤'s other answer, once one early signal has landed: that's the set. Idea
+ * #147. It is only ever offered beside the field, never instead of it — the
+ * question is still "what else?", and this is the reader saying "nothing".
+ */
+const ENOUGH_CHOICES: readonly Choice[] = [ENOUGH_ANSWER];
 
 /**
  * Where the conversation is. One of these, always — the column is never in
@@ -314,17 +333,27 @@ export function turnFor(run: Run, c: Coaching): Turn {
   if (!c.hypothesis) {
     return { kind: "ask", field: "hypothesis", question: COACH_ASKS.hypothesis, choices: [], freeText: true, max: ANSWER_MAX };
   }
-  if (!c.leading) {
+  /* 10 · leading ⑤, asked until they say that's the set. Idea #147: the box
+     holds the leading indicators, and Sooner Safer Happier count three or four
+     of those against one lagging measure. Asking once was the column deciding
+     that a goal has a single measure — a decision that belongs to `/okrs`, and
+     `/okrs` decides the other way. Still one box, still the same question;
+     nothing here counts what is in it or says how many it wants. */
+  if (!c.leadingSet) {
+    const firstSignal = c.leading.length === 0;
     return {
       kind: "ask",
       field: "leading",
-      question: COACH_ASKS.leading,
-      preamble:
-        "Say the bet back to them once, and say that it's written against a measure that already exists — which is why you asked for the measure first. Then ask for the early signal at the horizon they gave you: weeks if this is a quarterly outcome, months if it's annual or multi-year.",
-      choices: [],
+      question: firstSignal ? COACH_ASKS.leading : COACH_ASKS.leadingMore,
+      preamble: firstSignal
+        ? "Say the bet back to them once, and say that it's written against a measure that already exists — which is why you asked for the measure first. Then ask for the early signal at the horizon they gave you: weeks if this is a quarterly outcome, months if it's annual or multi-year."
+        : undefined,
+      choices: firstSignal ? [] : ENOUGH_CHOICES,
       freeText: true,
       max: ANSWER_MAX,
-      note: "If they want to redo the bet instead, send it as the hypothesis field again with their new wording.",
+      note: firstSignal
+        ? "There is room in this box for more than one early signal and you will be back here for the next one, so take this one properly rather than hurrying it. If they want to redo the bet instead, send it as the hypothesis field again with their new wording."
+        : `Sooner Safer Happier would look for ${KEY_RESULTS.leading.min} to ${KEY_RESULTS.leading.max} leading indicators against the one lagging measure, and a second one of a different kind — behaviour as well as volume, quality as well as speed — is usually where the goal gets better. Ask once, warmly, and take either answer. Send each new signal as its own answer in their own words. "${ENOUGH}" is them saying that's the set, and it is a good answer: one signal they will actually watch beats four they won't. Never tell them how many they have or how many they need, and never press twice.`,
     };
   }
 
@@ -410,7 +439,18 @@ export function columnNote(run: Run, coaching: Coaching): string {
     return `${whoYoureTalkingTo} They said this one has to stay inside their organisation, and that was a good answer. Tell them briefly that nothing about this needs you to see their wording: the coaching is the questions, and the questions travel. The link on screen has the skill, where it goes, and a prompt to take behind their own walls. Then stop — this run doesn't come back here, and there is nothing left to ask.`;
   }
   if (turn.kind === "refining") {
-    return `${whoYoureTalkingTo} They chose to keep refining, and the other two doors are still open underneath. The canvas:\n${canvas}\n\nAsk what they want to change. The two you can reopen cleanly are the bet (field "hypothesis") and the early signal (field "leading") — send either again with their new wording. Anything further up the canvas they should take away and sharpen there. When they're done, they can still stop here (field "out", value "stop") or take the questions away (value "questions").`;
+    /* Idea #147. This used to say the bet and the early signal were the only
+       two that could be reopened cleanly, and that anything further up the
+       canvas had to be taken away and sharpened elsewhere. That is no longer
+       true, and it was the wrong half of the canvas to fence off: the boxes
+       worth going back to are usually ① and ②, because everything below them
+       is only as sharp as they are. */
+    const sharpen = canSharpen(coaching);
+    return `${whoYoureTalkingTo} They chose to keep refining, and the other two doors are still open underneath. The canvas:\n${canvas}\n\nAsk what they want to change, and go wherever they take you — ${sharpen
+      .map((box) => `"${box}"`)
+      .join(
+        ", ",
+      )} all take a new wording, and the old one stays beside it struck through. Another early signal goes in "leading" as its own answer and joins the ones already there. The thinnest box is usually the one worth reopening, and going back to ① or ② is often what makes the rest of it true. When they're done, they can still stop here (field "out", value "stop") or take the questions away (value "questions").`;
   }
   if (turn.kind === "takeaway") {
     return `${whoYoureTalkingTo} They've been through a door and the takeaway is on screen: the goal in the SSH pattern, the canvas gaps and all, and a prompt to carry on elsewhere. Say once, plainly, that you don't keep a copy — no account, no database — so they should take it before they close the tab: the download is a PDF, and there's a plain-text copy and a print beside it. Say something warm about where they got to, in one sentence and without flattering it. Offer to keep going if they want. Don't ask anything else.`;
@@ -436,6 +476,18 @@ export function columnNote(run: Run, coaching: Coaching): string {
     parts.push(`Their answer goes in field "${turn.field}", in their own words, as a short phrase or a sentence.`);
   }
   if (turn.note) parts.push(turn.note);
+
+  /* Contract 3, said out loud every turn: the boxes already on the canvas are
+     yours to reopen. It is listed rather than implied because the coach has no
+     other way of knowing which ones will be accepted — and a coach that offers
+     to sharpen a phrase and is then refused is worse than one that never
+     offered. Idea #147. */
+  const sharpen = canSharpen(coaching);
+  if (sharpen.length > 0) {
+    parts.push(
+      `You can also go back at any point, not only now: send "${sharpen.join('" or "')}" again with their new wording and that box takes it, keeping what it replaced struck through beside it. Going back is a normal move and never a correction — do it when something they said earlier now looks wrong, and say why in a few words. You can't write into a box we haven't reached yet.`,
+    );
+  }
   return parts.join("\n\n");
 }
 
@@ -446,7 +498,9 @@ export function columnNote(run: Run, coaching: Coaching): string {
 /** Read a run back out of a column link — the same gating the server applies. */
 export function stateFromHref(href: string): { run: Run; coaching: Coaching } {
   const url = new URL(href, "https://bettergoals.ai");
-  const params: Record<string, string> = Object.fromEntries(url.searchParams.entries());
+  // Repeats matter here — a box said into twice is the same key twice. See
+  // `paramsFrom`.
+  const params = paramsFrom(url);
   const run = readRun(params);
   return { run, coaching: readCoaching(params, run) };
 }
@@ -464,6 +518,45 @@ export type Landed =
   | { ok: false; error: string };
 
 /**
+ * The boxes the coach could go back to right now: every one the leader has
+ * already said their own words into. Idea #147.
+ *
+ * CARD A, contract 3, is unambiguous that this is the coach's to do — "both are
+ * the coach's calls, made for conversational reasons", "going backwards is a
+ * normal move, not a correction" — and `columnCoachInstructions` has always told
+ * it to offer to sharpen a phrase that now looks wrong. It could not: the only
+ * field `landAnswer` would take was the one the column was waiting on, so the
+ * offer was made and then refused. This is the gap being closed.
+ *
+ * Forwards is not the same shape and is not offered: a box further down the
+ * canvas has nothing under it yet, and `readCoaching` would drop an answer that
+ * landed there anyway. The coach moves forwards by asking the next question.
+ */
+export function canSharpen(c: Coaching): Wording[] {
+  return WORDINGS.filter((box) => Boolean(c[box]));
+}
+
+/**
+ * What a revision would take off the canvas with it, if anything.
+ *
+ * Going back must not cost them what they said afterwards. One revision really
+ * can: changing ③ from a measure to "I don't know" reopens the digging, and
+ * everything gated behind it falls away. So the move is made, the canvas it
+ * would produce is read back, and if anything the leader said has gone the
+ * answer is refused and the coach is told why — which is a conversation to
+ * have out loud, not an error to show them.
+ */
+function lostBy(before: Coaching, after: Coaching): string[] {
+  const gone: string[] = [];
+  for (const box of WORDINGS) if (before[box] && !after[box]) gone.push(box);
+  if (after.leading.length < before.leading.length) gone.push("leading");
+  for (const choice of ["back", "nudge", "out"] as const) {
+    if (before[choice] && !after[choice]) gone.push(choice);
+  }
+  return gone;
+}
+
+/**
  * Land one answer from the coach, exactly where tapping or typing it would have
  * gone: a link back to the column with one more thing known.
  *
@@ -477,25 +570,42 @@ export function landAnswer(run: Run, coaching: Coaching, field: string, value: s
   const said = value.trim();
   if (!said) return { ok: false, error: "There were no words in that answer." };
 
-  /* Keeping refining reopens the last two boxes and the doors, and nothing
-     else — the same two the column offers as links, for the same reason: they
-     are the two that can be taken back without pulling apart what sits under
-     them. */
-  const allowed: readonly AnswerField[] =
+  /* The question the column is on, plus every box already on the canvas —
+     going back to sharpen one is the coach's call to make at any point in the
+     conversation (CARD A, contract 3, and idea #147). Keeping refining reopens
+     the doors as well, and adds to ⑤. */
+  const sharpen = canSharpen(coaching);
+  const here: readonly AnswerField[] =
     turn.kind === "ask" ? [turn.field] : turn.kind === "refining" ? ["hypothesis", "leading", "out"] : [];
+  const allowed: readonly AnswerField[] =
+    here.length === 0 ? [] : [...new Set<AnswerField>([...here, ...sharpen])];
   if (!allowed.includes(field as AnswerField)) {
+    const back = sharpen.length > 0 ? `, or go back to "${sharpen.join('" or "')}"` : "";
     return {
       ok: false,
       error:
         allowed.length === 0
           ? "There's nothing left to answer — the conversation is at the takeaway."
-          : `That isn't the question you're on. The column is waiting on "${allowed.join('" or "')}".`,
+          : `That box isn't open yet. The column is waiting on "${here.join('" or "')}"${back}. Ask that one instead.`,
     };
   }
 
-  const choices = turn.kind === "ask" ? turn.choices : OUT_CHOICES;
-  const freeText = turn.kind === "ask" ? turn.freeText : field !== "out";
-  const max = turn.kind === "ask" ? turn.max : ANSWER_MAX;
+  /* A box being sharpened is always their own words — the answers on screen
+     belong to the question being asked now, not to the one being revisited.
+     ③ keeps "I don't know", because deciding you never had the baseline is a
+     real second answer to that box and the most interesting one on the canvas. */
+  const sharpening = !here.includes(field as AnswerField);
+  const choices: readonly Choice[] = sharpening
+    ? field === "lagging"
+      ? LAGGING_CHOICES
+      : []
+    : turn.kind === "ask"
+      ? turn.choices
+      : field === "out"
+        ? OUT_CHOICES
+        : [];
+  const freeText = sharpening ? true : turn.kind === "ask" ? turn.freeText : field !== "out";
+  const max = !sharpening && turn.kind === "ask" ? turn.max : ANSWER_MAX;
 
   let landing = said.slice(0, max);
   if (choices.length > 0) {
@@ -506,8 +616,21 @@ export function landAnswer(run: Run, coaching: Coaching, field: string, value: s
     }
   }
 
-  const href = columnHref(run, coaching, { [field]: landing } as Partial<Run & Coaching>);
+  const href = columnHref(run, coaching, { [field]: landing } as Landing);
   const next = stateFromHref(href);
+
+  /* Going back never costs them what they said afterwards. If it would, the
+     answer doesn't land and the coach is told what it was about to cost. */
+  const gone = sharpening ? lostBy(coaching, next.coaching) : [];
+  if (gone.length > 0) {
+    return {
+      ok: false,
+      error: `Sharpening "${field}" from here would take the rest of the canvas with it — ${gone
+        .map((box) => `"${box}"`)
+        .join(", ")} would come off. Don't land it. Say out loud what changed, agree it with them, and pick it up in the takeaway instead.`,
+    };
+  }
+
   return { ok: true, href, run: next.run, coaching: next.coaching };
 }
 
@@ -557,7 +680,11 @@ export function columnCoachInstructions(): string {
 
 You are grounded in Sooner Safer Happier. A better goal describes a change in the world for a customer, colleague or citizen — not a list of things to build. You are here to turn what they brought into an outcome worth chasing: who the customer is and what they'd do differently, what's in their way, how they'd know it landed, the bet, and what tells them they're on track long before the outcome is due.
 
-THE GOLDEN THREAD. Sooner Safer Happier hangs outcomes on a thread: multi-year outcomes are the north star, annual outcomes make those digestible for the year ahead, and quarterly outcomes let teams pivot within the year — each nested in the level above and more specific than it. Every canvas is one of the three. Settle which one early, while you're on the measure, and ask it in passing rather than as a survey question. Then hold them to it: the outcome lands at the end of its horizon, and the leading indicator is whatever tells them they're on track long before it does — weeks for a quarterly outcome, months for an annual or multi-year one. Never ask for value in weeks. Ask for evidence sooner than their horizon.
+${sshOkrBrief()}
+
+THE CANVAS AND THE PATTERN. The five boxes are the Outcome Canvas — how Sooner Safer Happier get a room from a blank page to a drafted OKR. ④ is the Objective, written as an outcome hypothesis. ③ and ⑤ are the key results: ③ holds the one lagging measure that would convince a sceptic, and ⑤ holds the leading indicators, which is why you come back to it — ${KEY_RESULTS.leading.min} to ${KEY_RESULTS.leading.max} of them is the pattern, and the box takes them one at a time. Never reduce a set they have given you down to one, and never tell them how many they have or how many they need. Coach towards "«verb» «measure» from «x» to «y» by «z»" by asking for the missing half — where it is now, where they want it, by when — rather than by quoting the format at them.
+
+WHICH HORIZON. Every canvas sits on one of the three rungs of the golden thread above. Settle which one early, while you're on the measure, and ask it in passing rather than as a survey question. Then hold them to it: the outcome lands at the end of its horizon, and the leading indicator is whatever tells them they're on track long before it does — weeks for a quarterly outcome, months for an annual or multi-year one. Never ask for value in weeks. Ask for evidence sooner than their horizon.
 
 WHO YOU'RE TALKING TO. Early on you ask what to call them, and from then on the [column] notes carry it. Use it the way a person would — when you greet them, when you're asking something that takes nerve to answer, when you want their attention back — and not in every sentence, which is worse than never having asked. If they'd rather not say, that's completely fine: say so once, warmly, and never raise it again. Ask nothing else about them — no surname, no employer, no job title — and nothing at all about anyone who isn't in the room.
 
@@ -567,7 +694,9 @@ THE CUSTOMER. Box ① asks who the customer is, in the Sooner Safer Happier sens
 
 HOW THE COLUMN MOVES. You do not control the page except through the answer tool. Messages beginning [column] tell you the canvas as it stands and what the column needs next; the result of every answer call tells you the same for the turn after. That is the *intent* of the next box — not a line to read out. Work through the canvas in the order you are given, because each box is what makes the next one answerable, and never read the canvas out in full: they can see it. The one exception is the moment it first appears, where the note asks you to walk them round it — that is an orientation, given once, and after it you never describe the canvas again.
 
-HOW YOU ASK. The wording is yours. Ask in your own words, in the language they are using, and shape the question around what they have already told you rather than starting fresh each time. You are a sparring partner, not an auditor: follow up when an answer is thin, ask for the example behind a generalisation, and when you hear an output dressed as an outcome say so in a few words and ask whether they could hit it and nothing improve for anyone. If a phrase they used earlier now looks wrong, say so and offer to sharpen it — send that box again with their new wording; going back is a normal move and never a correction. One question at a time, and never jump to a box the column has not asked for yet.
+HOW YOU ASK. The wording is yours. Ask in your own words, in the language they are using, and shape the question around what they have already told you rather than starting fresh each time. You are a sparring partner, not an auditor: follow up when an answer is thin, ask for the example behind a generalisation, and when you hear an output dressed as an outcome say so in a few words and ask whether they could hit it and nothing improve for anyone. One question at a time, and never jump to a box the column has not asked for yet.
+
+GOING BACK. Every box already on the canvas is yours to reopen, at any point, and the [column] note lists the ones that are. If a phrase they used earlier now looks wrong — and it often does once the measure is on the table, because a vague ① is what makes ③ unmeasurable — say so, offer to sharpen it, and send that box again with their new wording. The old wording stays on the canvas struck through: nothing they said is lost by improving it. Going back is a normal move and never a correction, so don't apologise for it or call it a mistake. Come back to where you were afterwards and carry on; you never lose your place. Don't do it more than the conversation earns — a coach who reopens every box is an auditor with extra steps.
 
 LANDING AN ANSWER. When they have actually answered, call answer with the field from the note and their own words. Carry their words, not your summary of them — the canvas is their thinking, not yours. If they ask what you meant, think aloud, or answer something else, reply in a sentence and come back to it — put it a different way if the first way didn't land; don't call answer until they've answered it. Never invent a number, a baseline or a fact on their behalf. If something is unknown, that is the answer and you say so plainly.
 

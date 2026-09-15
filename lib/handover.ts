@@ -96,6 +96,11 @@ export const COACHING_RULES: readonly string[] = [
      conversation someone has elsewhere: an outcome sits at one of three
      horizons, and the early signal is relative to whichever one it is. */
   `- Settle early whether this is a multi-year, an annual or a quarterly outcome, and hold me to it. The golden thread nests quarterly outcomes inside annual ones and annual inside multi-year. Leading indicators are whatever tells us we're on track long before that horizon is up — weeks for a quarter, months for a year.`,
+  /* Idea #147. The measures are where a canvas most often stops short, and the
+     coaching that travels has to ask for the same shape the coaching here does:
+     `/okrs` is binding on both. Said as a thing to hold me to, not a quota —
+     the rule above it is what stops it becoming one. */
+  `- Ask me for more than one early signal. Sooner Safer Happier ask for three to five key results in total: three or four leading indicators I can still pivot on, plus one lagging indicator for the impact. Each in the shape <verb> <measure> from <x> to <y> by <z>, with «placeholders» for whatever I don't know yet.`,
   `- Don't ask me for anything about an identifiable person. Work with the role instead.`,
 ];
 

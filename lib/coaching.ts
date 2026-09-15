@@ -28,6 +28,22 @@
  * folded `CanvasState`, so the day the coach does emit a box identifier, this
  * file is the only one that changes.
  *
+ * ## Boxes that hold more than one thing (idea #147)
+ *
+ * Two of the deck's assumptions were the column's rather than the canvas's, and
+ * both made the goal worse:
+ *
+ *  - ⑤ held one measure. `/okrs` — binding, per CARD A — asks for three to five
+ *    key results, of which one is the lagging indicator, so the box that holds
+ *    the leading ones holds a *set*. See `LEADING_MAX` and `ENOUGH`.
+ *  - a box could only be written into once. Contract 3 says out-of-order moves
+ *    are the coach's and going back is a normal move, so every box that holds
+ *    the reader's own words can be said into again: the new wording is what the
+ *    box carries and the old one stays with it, struck through. See `WORDINGS`
+ *    and `earlier`.
+ *
+ * Neither adds a step, a control or a count. The order is still the order.
+ *
  * Two things this file deliberately does not do:
  *  - it does not decide the route. The lit box, the jump at step 07 and the
  *    double-back at step 09 are the coach's calls with the coach's wording,
@@ -39,10 +55,78 @@
 
 import { COLUMN_PATH } from "./config";
 import { CANVAS_ORDER, type CanvasBoxId } from "./canvas";
+import { KEY_RESULTS } from "./okrPattern";
 import { BROUGHT_MAX, NAME_MAX, type Run, type TriageAnswer } from "./triage";
 
 /** The longest answer we'll carry on the canvas. A UX bound, not a safety one. */
 export const ANSWER_MAX = 180;
+
+/**
+ * How many leading indicators box ⑤ will hold — idea #147.
+ *
+ * Not a number this file gets to choose. `/okrs` is how Sooner Safer Happier
+ * frame goals and CARD A makes it binding on the coach: an OKR carries three to
+ * five key results, one of them the lagging indicator and the rest leading. The
+ * box held exactly one, which is the shape the pack calls NOT OK — a single
+ * number that tells you at the end whether you were right and nothing before
+ * it. It is a ceiling, never a target: one early signal is a finished canvas,
+ * and nothing counts what is in the box or calls it short.
+ */
+export const LEADING_MAX = KEY_RESULTS.leading.max;
+
+/**
+ * "That's the set" — the answer that closes box ⑤ without adding to it.
+ *
+ * ⑤ is the one box that can take more than one answer, so it is the one box
+ * that needs a way to say *enough*. It is the reader's call, never a count
+ * reaching a limit: the coach asks whether anything else would tell them early,
+ * and this is the other answer to that question. Weighted like `DONT_KNOW` and
+ * for the same reason — stopping at one is not stopping short.
+ */
+export const ENOUGH = "set";
+
+/** "That's the set", offered beside the field once one early signal has landed. */
+export const ENOUGH_ANSWER: TriageAnswer = {
+  value: ENOUGH,
+  label: "That’s the set",
+  aside: "one you can act on beats four you can’t",
+  chip: "that’s the set",
+  /**
+   * What it can sound like. Every one of them is a whole phrase, and the bare
+   * words — "enough", "done", "no more" — are deliberately not here: this is
+   * the one question whose free-text answer is a *measure*, and "no more than
+   * five minutes a shelf" or "counts done before lunch" is a measure, not
+   * somebody closing the box. `matchSpoken` matches on whole words anywhere in
+   * what was said, so a one-word phrase here would quietly eat their answer.
+   */
+  phrases: [
+    "that's the set",
+    "thats the set",
+    "that's it",
+    "thats it",
+    "that's all",
+    "thats all",
+    "that's enough",
+    "thats enough",
+    "nothing else",
+    "that'll do",
+    "thatll do",
+    "we're done",
+    "were done",
+    "i'm done",
+    "im done",
+    "leave it there",
+    // A browser that transcribes a curly apostrophe lands here instead: see
+    // `DONT_KNOW_ANSWER` for why the space-separated forms are listed too.
+    "that s the set",
+    "that s it",
+    "that s all",
+    "that s enough",
+    "that ll do",
+    "we re done",
+    "i m done",
+  ],
+};
 
 /**
  * The one answer at step 08 that isn't the reader's own words: "I don't know."
@@ -81,6 +165,40 @@ export const DONT_KNOW_ANSWER: TriageAnswer = {
 };
 
 /**
+ * The boxes that hold the reader's own words, rather than a choice between
+ * answers the column put on screen — so the boxes a later answer can sharpen.
+ *
+ * CARD A, contract 3: going back is the coach's call and a normal move, and the
+ * canvas "strikes through the old sticky and writes the new one". Every field
+ * here can be said into twice: the second wording is what the box carries, the
+ * first stays with it, struck through. ⑤ is deliberately not in this list — it
+ * accumulates a set rather than replacing a wording. See `earlier`.
+ */
+export const WORDINGS = [
+  "centre",
+  "problem",
+  "lagging",
+  "whoKnows",
+  "centreAgain",
+  "hypothesis",
+] as const;
+
+export type Wording = (typeof WORDINGS)[number];
+
+/**
+ * One more thing said, on its way into the link that carries the run: the field
+ * it lands in and the words, or `null` to take it off the canvas again.
+ *
+ * It is a field and a string rather than a slice of `Coaching` because what
+ * arrives is always one answer — and what that answer *does* to the box is this
+ * module's business, not the caller's. Landing in ⑤ adds a key result; landing
+ * anywhere else sharpens a wording and keeps what it replaced.
+ */
+export type Landing = Partial<
+  Record<keyof Run | Wording | "leading" | "back" | "nudge" | "out", string | null>
+>;
+
+/**
  * What the reader has said into the canvas, in the order the coach asked for
  * it. Each field is one turn; a gap ends the run, exactly as triage works.
  */
@@ -99,8 +217,28 @@ export type Coaching = {
   centreAgain: string | null;
   /** 10 · hypothesis ④. The bet. */
   hypothesis: string | null;
-  /** 10 · leading ⑤. What tells us we’re on track, long before the outcome is due. */
-  leading: string | null;
+  /**
+   * 10 · leading ⑤. What tells us we’re on track, long before the outcome is
+   * due — the *set* of them, in the order they were said, up to `LEADING_MAX`.
+   *
+   * A list rather than a string since idea #147: Sooner Safer Happier ask for
+   * three to five key results, and only one of those is the lagging indicator.
+   * Empty is the box before anything has landed in it; one is a finished canvas.
+   */
+  leading: string[];
+  /**
+   * Whether the reader has said that's the set — `ENOUGH`, or the box full.
+   * The conversation moves on from ⑤ when they say so, never when a count is
+   * reached: there is no target number of measures and nothing says how many.
+   */
+  leadingSet: boolean;
+  /**
+   * The wording a later answer replaced, per box. Kept, and struck through on
+   * the canvas — nothing the reader said is ever cleared away by sharpening it.
+   * One per box: the most recent thing it replaced, which is what the deck's
+   * own double-back at step 09 shows.
+   */
+  earlier: Partial<Record<Wording, string>>;
   /** 11 · the nudge. Whether the reader asked to see which ones. */
   nudge: "show" | "later" | null;
   /**
@@ -134,7 +272,9 @@ export const NO_COACHING: Coaching = {
   back: null,
   centreAgain: null,
   hypothesis: null,
-  leading: null,
+  leading: [],
+  leadingSet: false,
+  earlier: {},
   nudge: null,
   out: null,
 };
@@ -143,9 +283,28 @@ export const NO_COACHING: Coaching = {
 /* Reading the run                                                           */
 /* ------------------------------------------------------------------------ */
 
+/**
+ * Everything said into one box, in the order it was said.
+ *
+ * A box can be written into more than once — sharpened later (every box), or
+ * added to (⑤). The query string is the only place any of it lives, so the
+ * repeats are the same key repeated, and the order they arrive in is the order
+ * they were said in. What that repetition *means* is the box's business, not
+ * this function's: `readCoaching` reads ⑤ as a set and everything else as a
+ * wording and the wording it replaced.
+ */
+function said(value: string | string[] | undefined): string[] {
+  const values = Array.isArray(value) ? value : value === undefined ? [] : [value];
+  return values
+    .filter((v): v is string => typeof v === "string")
+    .map((v) => v.trim().slice(0, ANSWER_MAX))
+    .filter(Boolean);
+}
+
+/** The current value of a field that only ever holds one — the last one said. */
 function first(value: string | string[] | undefined): string | null {
-  const v = Array.isArray(value) ? value[0] : value;
-  return typeof v === "string" && v.trim() ? v.trim().slice(0, ANSWER_MAX) : null;
+  const values = said(value);
+  return values.length > 0 ? values[values.length - 1] : null;
 }
 
 function oneOf<T extends string>(value: string | null, allowed: readonly T[]): T | null {
@@ -167,27 +326,64 @@ export function readCoaching(
 ): Coaching {
   if (run.share !== "yes") return NO_COACHING;
 
-  const centre = first(params.centre);
-  const problem = centre ? first(params.problem) : null;
-  const lagging = problem ? first(params.lagging) : null;
+  /* A box's current wording, and the wording it replaced. Said into twice means
+     the coach came back and sharpened it — the second is what the box carries
+     and the first stays, struck through. Never an edit: nothing is lost. */
+  const earlier: Partial<Record<Wording, string>> = {};
+  const wording = (key: Wording, asked: boolean): string | null => {
+    if (!asked) return null;
+    const words = said(params[key]);
+    if (words.length === 0) return null;
+    const now = words[words.length - 1];
+    const before = words[words.length - 2];
+    if (before && before !== now) earlier[key] = before;
+    return now;
+  };
+
+  const centre = wording("centre", true);
+  const problem = wording("problem", Boolean(centre));
+  const lagging = wording("lagging", Boolean(problem));
   const digging = lagging === DONT_KNOW;
-  const whoKnows = digging ? first(params.whoKnows) : null;
+  const whoKnows = wording("whoKnows", digging);
   // Step 08 is finished when the reader has given a measure, or — having said
   // "I don't know" — has said who would know. The second is not a lesser
   // answer: it is the open question they take back to their team.
   const settled = Boolean(lagging) && (!digging || Boolean(whoKnows));
   const back = settled ? oneOf(first(params.back), ["yes", "no"] as const) : null;
-  const centreAgain = back === "yes" ? first(params.centreAgain) : null;
+  const centreAgain = wording("centreAgain", back === "yes");
   const moved = back === "no" || Boolean(centreAgain);
-  const hypothesis = moved ? first(params.hypothesis) : null;
-  const leading = hypothesis ? first(params.leading) : null;
-  const nudge = leading ? oneOf(first(params.nudge), ["show", "later"] as const) : null;
+  const hypothesis = wording("hypothesis", moved);
+
+  /* ⑤ is the one box that takes more than one answer — the leading indicators,
+     which Sooner Safer Happier count three or four of against a single lagging
+     one. Every value is a key result and stays one; `ENOUGH` is the reader
+     saying that's the set, and is not itself a measure. */
+  const intoLeading = hypothesis ? said(params.leading) : [];
+  const leading = intoLeading.filter((v) => v !== ENOUGH).slice(0, LEADING_MAX);
+  const leadingSet =
+    leading.length > 0 &&
+    (intoLeading[intoLeading.length - 1] === ENOUGH || leading.length >= LEADING_MAX);
+
+  const nudge = leadingSet ? oneOf(first(params.nudge), ["show", "later"] as const) : null;
   // The doors exist once the last answer has landed. Whether they are on screen
   // is the column's call, because the nudge sits between the two and a room
   // never gets one — but nothing can be *through* a door before the canvas is.
-  const out = leading ? oneOf(first(params.out), DOORS) : null;
+  const out = leadingSet ? oneOf(first(params.out), DOORS) : null;
 
-  return { centre, problem, lagging, whoKnows, back, centreAgain, hypothesis, leading, nudge, out };
+  return {
+    centre,
+    problem,
+    lagging,
+    whoKnows,
+    back,
+    centreAgain,
+    hypothesis,
+    leading,
+    leadingSet,
+    earlier,
+    nudge,
+    out,
+  };
 }
 
 /**
@@ -198,7 +394,7 @@ export function readCoaching(
 export function columnHref(
   run: Run,
   coaching: Coaching,
-  next: Partial<Run & Coaching> = {},
+  next: Landing = {},
   hash = "#live",
 ): string {
   const merged = { ...run, ...coaching, ...next };
@@ -206,20 +402,55 @@ export function columnHref(
   const put = (key: string, value: string | null | undefined) => {
     if (value) q.set(key, String(value).slice(0, ANSWER_MAX));
   };
+
+  /* A box the reader has said something into. Three things can happen to it:
+     nothing (it carries what it carried, including the wording it replaced),
+     a new wording (the old one goes with it, struck through), or `null` — the
+     reader taking their own words back off the canvas, which takes the earlier
+     wording with them because they never asked for it to be kept. */
+  const box = (key: Wording) => {
+    const now = coaching[key];
+    const before = coaching.earlier[key];
+    const said = next[key];
+    const values =
+      said === null
+        ? []
+        : said === undefined || said === now
+          ? [before, now]
+          : now
+            ? [now, said]
+            : [said];
+    for (const value of values) if (value) q.append(key, value.slice(0, ANSWER_MAX));
+  };
+
   put("mode", merged.mode);
   put("who", merged.who);
   if (merged.name) q.set("name", merged.name.slice(0, NAME_MAX));
   if (merged.brought) q.set("brought", merged.brought.slice(0, BROUGHT_MAX));
   put("share", merged.share);
   put("voice", merged.voice);
-  put("centre", merged.centre);
-  put("problem", merged.problem);
-  put("lagging", merged.lagging);
-  put("whoKnows", merged.whoKnows);
+  box("centre");
+  box("problem");
+  box("lagging");
+  box("whoKnows");
   put("back", merged.back);
-  put("centreAgain", merged.centreAgain);
-  put("hypothesis", merged.hypothesis);
-  put("leading", merged.leading);
+  box("centreAgain");
+  box("hypothesis");
+
+  /* ⑤, the box that holds a set. A new measure is added to what is there
+     rather than replacing it — that is the whole of what "more than one
+     measure" means here — and `ENOUGH` closes the set without joining it. */
+  const intoLeading = next.leading;
+  let measures = intoLeading === null ? [] : [...coaching.leading];
+  let closed = intoLeading === null ? false : coaching.leadingSet;
+  if (intoLeading === ENOUGH) {
+    closed = measures.length > 0;
+  } else if (intoLeading != null && !measures.includes(intoLeading)) {
+    measures = [...measures, intoLeading].slice(0, LEADING_MAX);
+  }
+  for (const measure of measures) q.append("leading", measure.slice(0, ANSWER_MAX));
+  if (closed && measures.length > 0 && measures.length < LEADING_MAX) q.append("leading", ENOUGH);
+
   put("nudge", merged.nudge);
   put("out", merged.out);
   const s = q.toString();
@@ -230,6 +461,29 @@ export function columnHref(
 export function carried(run: Run, coaching: Coaching): { name: string; value: string }[] {
   const url = new URL(columnHref(run, coaching, {}, ""), "https://bettergoals.ai");
   return [...url.searchParams.entries()].map(([name, value]) => ({ name, value }));
+}
+
+/**
+ * A run's own URL read back into the shape `readRun` and `readCoaching` take.
+ *
+ * It exists because `Object.fromEntries(searchParams)` — which is what both
+ * readers used to be handed outside a page — keeps only the last value of a
+ * repeated key, and a box said into twice is exactly a repeated key. Every
+ * earlier wording and every key result but the last silently disappeared.
+ *
+ * Next's own `searchParams` already hands a page `string | string[]`, which is
+ * why the column itself never had the bug. This is the same shape, built by
+ * hand, for the two places that start from a URL instead: the voice coach
+ * landing an answer, and the takeaway route.
+ */
+export function paramsFrom(url: URL): Record<string, string | string[]> {
+  const params: Record<string, string | string[]> = {};
+  for (const [key, value] of url.searchParams.entries()) {
+    const already = params[key];
+    params[key] =
+      already === undefined ? value : Array.isArray(already) ? [...already, value] : [already, value];
+  }
+  return params;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -294,7 +548,7 @@ export function canvasFor(c: Coaching): CanvasState {
   // 06 · centre ①. The lit box is where we're talking; the others are questions
   // the coach hasn't asked yet, and say so in their own words.
   if (!c.centre) return { lit, boxes };
-  boxes.centre.notes.push({ kind: "sticky", text: c.centre });
+  boxes.centre.notes.push({ kind: "sticky", text: c.centre, struck: c.earlier.centre });
   lit = "problem";
 
   // 07 · problem ②, then the jump to ③. The coach names its own route on the
@@ -302,7 +556,7 @@ export function canvasFor(c: Coaching): CanvasState {
   // of talk. Never a diagram and never "step 3 of 5".
   boxes.lagging.standing = "up next, before the bet";
   if (!c.problem) return { lit, boxes };
-  boxes.problem.notes.push({ kind: "sticky", text: c.problem });
+  boxes.problem.notes.push({ kind: "sticky", text: c.problem, struck: c.earlier.problem });
   lit = "lagging";
   boxes.lagging.standing = null;
   boxes.hypothesis.standing = "not yet — see below";
@@ -318,9 +572,9 @@ export function canvasFor(c: Coaching): CanvasState {
       "Who would know? And has anyone ever been able to tell whether this got better?",
     ];
     if (!c.whoKnows) return { lit, boxes };
-    boxes.lagging.notes.push({ kind: "open", text: c.whoKnows });
+    boxes.lagging.notes.push({ kind: "open", text: c.whoKnows, struck: c.earlier.whoKnows });
   } else {
-    boxes.lagging.notes.push({ kind: "sticky", text: c.lagging });
+    boxes.lagging.notes.push({ kind: "sticky", text: c.lagging, struck: c.earlier.lagging });
   }
 
   // 09 · going backwards to ①. The coach's call and the coach's wording; the
@@ -345,11 +599,16 @@ export function canvasFor(c: Coaching): CanvasState {
   boxes.hypothesis.standing = null;
   boxes.leading.standing = "last — what tells us we’re on track early?";
   if (!c.hypothesis) return { lit, boxes };
-  boxes.hypothesis.notes.push({ kind: "sticky", text: c.hypothesis });
+  boxes.hypothesis.notes.push({ kind: "sticky", text: c.hypothesis, struck: c.earlier.hypothesis });
   lit = "leading";
   boxes.leading.standing = null;
-  if (!c.leading) return { lit, boxes };
-  boxes.leading.notes.push({ kind: "sticky", text: c.leading });
+  if (c.leading.length === 0) return { lit, boxes };
+
+  /* ⑤ holds the set. Each early signal is its own sticky, because each is its
+     own key result — and while the box is still open it says so in its own
+     words rather than by counting what is in it. Idea #147. */
+  for (const measure of c.leading) boxes.leading.notes.push({ kind: "sticky", text: measure });
+  if (!c.leadingSet) boxes.leading.standing = "anything else that would tell us early?";
 
   return { lit, boxes };
 }

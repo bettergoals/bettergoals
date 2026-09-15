@@ -3,8 +3,10 @@
  *
  * `lib/outcomeCoach.ts` is the deterministic structural check: it reads words.
  * This module reads meaning. The model is handed the community's principles
- * (PRINCIPLES.md, verbatim) and asked to do what the "AI Outcome Coach design
- * principles" describe: score the draft against the outcome definition
+ * (PRINCIPLES.md, verbatim) and — since idea #147 — the Sooner Safer Happier
+ * OKR pattern the site teaches, built from `lib/okrPattern.ts` so the coaching
+ * and the `/okrs` page are rendered from one source and cannot drift. It is
+ * then asked to do what the "AI Outcome Coach design principles" describe: score the draft against the outcome definition
  * principles, say honestly why, ask the questions the author most needs to
  * answer, and offer candidate rewrites that never invent a fact — anything the
  * author hasn't said is left as a «placeholder» for them to fill in.
@@ -41,6 +43,7 @@
  * idle timeouts kill.
  */
 
+import { KEY_RESULTS, sshOkrBrief } from "./okrPattern";
 import { type Band, type Check, type CheckStatus, bandFor } from "./outcomeCoach";
 
 const BASE_URL = () => process.env.AI_GATEWAY_BASE_URL || "https://ai-gateway.vercel.sh/v1";
@@ -204,6 +207,12 @@ ${OUTCOME_PRINCIPLES}
 
 ${COACH_PRINCIPLES}
 
+## How Sooner Safer Happier do OKRs (the domain you are teaching)
+
+This is the framework this site teaches, written up at bettergoals.ai/okrs. Where the principles above and this pattern disagree, the principles win — but they rarely do, because the pattern is where most of these principles came from.
+
+${sshOkrBrief()}
+
 ## What you return
 
 Return ONLY a JSON object — no prose before or after, no markdown fences — with exactly this shape:
@@ -229,8 +238,8 @@ Return ONLY a JSON object — no prose before or after, no markdown fences — w
 The checks, and how to score them (2 for strong, 1 for partial, 0 for missing — the page adds them up out of 14):
 - customer: names who gets a better experience (a customer, colleague or role) and what problem or opportunity this addresses, and ideally why now.
 - outcome: describes a change in the world — behaviour, experience, results — rather than a project, deliverable, activity or solution. "Deliver", "build", "launch", "migrate", "implement" are the tell. A goal you could complete with nothing getting better for anyone is an output.
-- measures: names how movement and impact would be seen — a leading indicator (early signal) and a lagging indicator (impact). One primary measure beats seven.
-- baseline: gives the baseline, the target and the timeframe for the measure(s). All three present = strong; some = partial; none = missing.
+- measures: names how movement and impact would be seen — leading indicators (early signals) and a lagging indicator (impact). Strong needs both kinds: a single number, however good, tells them at the end whether they were right and nothing before it. SSH's own shape is ${KEY_RESULTS.min}–${KEY_RESULTS.max} key results, ${KEY_RESULTS.leading.min}–${KEY_RESULTS.leading.max} of them leading and one lagging. More than one early signal is a strength to name, not clutter to trim; a task list wearing a measure's clothes ("go live", "sign the contract") is neither.
+- baseline: gives the baseline, the target and the timeframe for the measure(s) — the "«verb» «measure» from «x» to «y» by «z»" shape. All three present = strong; some = partial; none = missing.
 - hypothesis: makes the underlying belief explicit ("we believe…", "because…") and leaves room to test it — a bet with an early signal in weeks, not a verdict at year-end.
 - sowhat: says what value this creates and how it connects to the wider strategic direction. A goal whose achievement you could not explain to the board as mattering is missing this.
 - plain: someone who joined last week could say what would be different if this were achieved. Jargon, unexplained acronyms, project code names and 40-word sentences count against it.
@@ -250,7 +259,7 @@ Rules for "questions" (the coaching):
 Rules for "candidates" (helping them write a better outcome):
 - 0 to 3 candidate phrasings of the outcome, one or two sentences each, outcome-shaped, in plain language. Offer them so the author can pick and refine — you are a sparring partner, not a ghost-writer.
 - NEVER invent a baseline, target, date, customer, cause or fact the author did not give you. Where a candidate needs one, write a placeholder in guillemets: «baseline», «target», «by when», «who». The "note" says why this phrasing and which placeholders the author still owes.
-- Prefer one primary measure plus at most one guardrail. Do not add metrics.
+- Carry every measure the author gave you into the wording. Never reduce their set to one, and never invent a metric they didn't name — where the pattern wants one they haven't given, that is a «placeholder» and a question, not a number you supply.
 - Offer none when the draft is too thin to rephrase honestly (the questions come first then), and none when "done" is true and the author's own wording is already the strong version.
 
 Rules for "headline": one or two sentences of honest, direct feedback a busy leader reads first. Name the verdict in words and the one thing that would most change it.
@@ -451,6 +460,11 @@ function buildHandoffPrompt(text: string, turns: CoachTurn[], gaps: Check[], que
     "outcomes over outputs; treat the outcome as a hypothesis; measure movement and impact",
     "with a baseline, target and timeframe; connect it to strategy and value; and write it so",
     "anyone can understand it.",
+    "",
+    `Sooner Safer Happier ask for ${KEY_RESULTS.min} to ${KEY_RESULTS.max} key results — ${KEY_RESULTS.leading.min}–${KEY_RESULTS.leading.max} leading indicators I can still`,
+    "pivot on, plus one lagging indicator for the impact — each in the shape",
+    "<verb> <measure> from <x> to <y> by <z>. Hold me to that rather than letting me",
+    "leave with a single number. bettergoals.ai/okrs has the whole pattern.",
     "",
     "Ask me one question at a time. Don't invent baselines, targets or facts I haven't given",
     "you — if something is missing, ask. I want to leave owning the goal, not holding one you wrote.",

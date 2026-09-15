@@ -316,8 +316,14 @@ function measures(t: string): Check {
     principle: "Measure movement and impact",
     status,
     finding,
-    question: "What single number would move first if this were working, and what number would show the impact landed?",
-    nextStep: "Name one leading indicator (movement in weeks) and one lagging indicator (the impact itself). Resist adding a third.",
+    /* Idea #147. The reading above is untouched — the same words in, the same
+       status out. These two lines are what the check *says* to the reader, and
+       they said the opposite of /okrs: "resist adding a third" against a
+       pattern that asks for three to five key results, one of them lagging.
+       CARD A makes /okrs binding on the coaching, so the advice changes and
+       the signal does not. */
+    question: "What would move first if this were working, and what number would show the impact landed?",
+    nextStep: "Name the lagging indicator — the impact itself — and the leading ones that would move before it. Sooner Safer Happier ask for three to five key results in total, only one of them lagging.",
   };
 }
 

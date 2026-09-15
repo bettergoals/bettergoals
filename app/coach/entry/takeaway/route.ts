@@ -1,4 +1,4 @@
-import { canvasFor, readCoaching } from "@/lib/coaching";
+import { canvasFor, paramsFrom, readCoaching } from "@/lib/coaching";
 import { TAKEAWAY_FILENAME, takeawayText } from "@/lib/takeaway";
 import { TAKEAWAY_PDF_FILENAME, takeawayPdf } from "@/lib/takeawayPdf";
 import { readRun } from "@/lib/triage";
@@ -27,7 +27,9 @@ import { readRun } from "@/lib/triage";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const params = Object.fromEntries(new URL(request.url).searchParams.entries());
+  // Repeats and all: a box said into twice, and ⑤'s set of key results, are the
+  // same key more than once. `paramsFrom` is what keeps them.
+  const params = paramsFrom(new URL(request.url));
   const run = readRun(params);
   const coaching = readCoaching(params, run);
 

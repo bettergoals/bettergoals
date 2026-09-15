@@ -237,6 +237,32 @@ export const OKRS_VS_KPIS = {
   ],
 };
 
+/**
+ * How many key results an OKR carries.
+ *
+ * Slide 12: "no more than 3 to 5 Key Results per OKR", made of "measures of
+ * behaviour — leading (1–4) and lagging (5)" — the numerals there are the
+ * positions in the list, so four of them at most are leading and the last is
+ * the lagging one. `/okrs` says the same thing in words: "3–4 leading
+ * indicators so you can pivot early, plus 1 lagging indicator".
+ *
+ * It is a number the product has to agree with in more than one place — the
+ * canvas box that holds the early signals, both coach briefs, the takeaway and
+ * the page — so it lives here with the pattern it comes from, and nowhere else.
+ * It describes the pattern, never a quota: a leader who stops at one early
+ * signal has a finished canvas, and nothing anywhere counts what they gave.
+ */
+export const KEY_RESULTS = {
+  /** Fewest that make an OKR an OKR. */
+  min: 3,
+  /** Most, in total. */
+  max: 5,
+  /** Leading indicators — the ones you can still pivot on. */
+  leading: { min: 3, max: 4 },
+  /** Lagging — the impact metric. One. */
+  lagging: 1,
+} as const;
+
 /** Slide 3 — the cadence OKRs live in. */
 export const CADENCE = [
   {
@@ -252,3 +278,44 @@ export const CADENCE = [
     text: "Allows flexibility to pivot within the year, so teams can develop actionable plans for the work they will do.",
   },
 ];
+
+/* ------------------------------------------------------------------------ */
+/* The pattern, as the coach needs to hear it                                 */
+/* ------------------------------------------------------------------------ */
+
+/**
+ * The Sooner Safer Happier point of view on OKRs, in one brief — idea #147.
+ *
+ * CARD A is explicit about why this exists: `/okrs` is "how Sooner Safer Happier
+ * thinks about and applies OKRs… the domain content the coaching is actually
+ * teaching", and it is binding on the coach, second only to PRINCIPLES.md. It
+ * was binding on the *page* and nowhere else: neither coach had ever been told
+ * the pattern, so the framework the site teaches and the framework the coach
+ * coached to had drifted — most visibly on how many measures a goal carries.
+ *
+ * Built from the same constants the page renders, so the two can't drift again.
+ * Change the pattern here and the page and both coaches change together.
+ *
+ * It is a brief, not a script. Every consumer of it says so in its own words:
+ * the coach coaches this, it never recites it. "Coach, don't dictate."
+ */
+export function sshOkrBrief(): string {
+  const kr = KEY_RESULTS;
+  return [
+    `HOW SOONER SAFER HAPPIER DO OKRs. This is the domain you are teaching, and it is written up at bettergoals.ai/okrs. Coach it — never recite it, and never name the framework when a plain question would do.`,
+    ``,
+    `THE OBJECTIVE IS THE BET. ${ANATOMY[0].text} Its shape is an outcome hypothesis: "due to «this insight, feedback or belief», we believe that «this bet» will result in «this outcome»". The word hypothesis is deliberate — it sets the expectation that the outcome may be invalid, and that finding that out early is the point rather than the failure.`,
+    ``,
+    `THE KEY RESULTS. ${ANATOMY[1].text} ${kr.min} to ${kr.max} of them and no more: ${kr.leading.min}–${kr.leading.max} leading indicators, which are indicative of future performance and let them pivot while there is still time, plus ${kr.lagging} lagging indicator — the impact metric, the one that would convince a sceptic. Each is measurable in the shape "«verb» «measure» from «x» to «y» by «z»". One measure on its own is not the pattern: a single lagging number tells them at the end whether they were right, and nothing before it. So ask for more than one early signal, and never quietly reduce a set they have given you down to one.`,
+    ``,
+    `MORE THAN A FRAMEWORK — THE 3Ms. ${THREE_MS.map((m) => `${m.m} (${m.scope}): ${m.text}`).join(" ")}`,
+    ``,
+    `THEY NEST — THE GOLDEN THREAD. ${CADENCE.map((c) => `${c.horizon}: ${c.text}`).join(" ")} Every goal sits at one of those three horizons, and as you go down the levels the Objective gets more specific while still contributing to the level above.`,
+    ``,
+    `CALIBRATION. An OK OKR reads "${OK_OKR.objective}" with key results like "${OK_OKR.keyResults[0]}" and "${OK_OKR.keyResults[OK_OKR.keyResults.length - 1]}" — ${OK_OKR.patterns.mission.join(", ").toLowerCase()}, measures of behaviour and of value added incrementally. A NOT OK one reads "${NOT_OK_OKR.objective}" with a task list under it — ${NOT_OK_OKR.antipatterns.measurement.slice(0, 5).join(", ").toLowerCase()}.`,
+    ``,
+    `WHAT SSH ASK OF KEY RESULTS. ${CHECKLIST.find((c) => c.heading === "Key Results")?.items.join(" ") ?? ""}`,
+    ``,
+    `It is a starting point to apply to their context, not a standard to comply with. Where the pattern and their reality disagree, the principles are the tie-breaker and their reality usually wins.`,
+  ].join("\n");
+}

@@ -5,6 +5,8 @@ import {
   ANSWER_MAX,
   DONT_KNOW,
   DONT_KNOW_ANSWER,
+  ENOUGH,
+  ENOUGH_ANSWER,
   canvasFor,
   canvasText,
   carried,
@@ -13,6 +15,7 @@ import {
   readCoaching,
   type Coaching,
   type CanvasState,
+  type Landing,
 } from "@/lib/coaching";
 import { COLUMN_PATH, REPO_URL } from "@/lib/config";
 import { broughtInWords, handoverHref, skillFor } from "@/lib/handover";
@@ -394,7 +397,8 @@ function Ask({
 }: {
   run: Run;
   coaching: Coaching;
-  name: keyof Coaching;
+  /** The box this lands in. A field of the canvas, not a slice of its state. */
+  name: keyof Landing;
   label: string;
   placeholder: string;
   speaking: boolean;
@@ -423,7 +427,7 @@ function Ask({
         <SayIt
           answers={spoken}
           hrefs={spokenHrefs}
-          freeTextHref={columnHref(run, coaching, { [name]: "__SAID__" } as Partial<Coaching>)}
+          freeTextHref={columnHref(run, coaching, { [name]: "__SAID__" } as Landing)}
           invitation="…just say it"
           max={ANSWER_MAX}
           say={aloud ? label : undefined}
@@ -579,7 +583,7 @@ export default function Column({
      exactly as it does today; this is the first and only moment anything is
      said about it, and what is said is words. `null` means there is nothing to
      say — in a room, always. See `lib/nudge.ts` and CARD A, contract 1. */
-  const nudge = coaching.leading
+  const nudge = coaching.leadingSet
     ? nudgeFor(canvasText(canvas), { room: who === "room" })
     : null;
 
@@ -588,7 +592,10 @@ export default function Column({
      offered (a room never gets one). This is the only place in the column that
      decides when step 12 exists, and it decides it from the conversation rather
      than from a count of how many steps have gone by. */
-  const atTheDoors = Boolean(coaching.leading) && (!nudge || Boolean(coaching.nudge));
+  /* Idea #147. ⑤ holds a set, so "the last answer has landed" is the reader
+     saying that's the set — not the first measure arriving. Nothing counts
+     them: one is a finished canvas the moment they say it is. */
+  const atTheDoors = coaching.leadingSet && (!nudge || Boolean(coaching.nudge));
   const out = atTheDoors ? coaching.out : null;
 
   /* Step 12, said honestly. Two readings, kept apart on purpose: the signal's,
@@ -915,7 +922,7 @@ export default function Column({
                 this is only which of the two the column keeps. */}
             {coaching.hypothesis ? (
               <Turn
-                spent={Boolean(coaching.leading)}
+                spent={coaching.leading.length > 0}
                 aside={
                   <p>
                     That&rsquo;s the bet, and it&rsquo;s written against a measure that already
@@ -923,7 +930,27 @@ export default function Column({
                   </p>
                 }
               >
-                <p>Last one. {COACH_ASKS.leading}</p>
+                <p>{COACH_ASKS.leading}</p>
+              </Turn>
+            ) : null}
+
+            {/* 10 · ⑤ again. Idea #147: the box holds the leading indicators,
+                and SSH count three or four of those against the one lagging
+                measure — so the coach comes back to the same box rather than
+                the column deciding a goal has one measure. It is the same
+                question asked again, not a new step: no count, no total, and
+                "that's the set" sits beside the field the whole time. */}
+            {coaching.leading.length > 0 ? (
+              <Turn
+                spent={coaching.leadingSet}
+                aside={
+                  <p>
+                    One signal you&rsquo;ll actually watch beats four you won&rsquo;t — but one
+                    number rarely tells you the whole story early.
+                  </p>
+                }
+              >
+                <p>{COACH_ASKS.leadingMore}</p>
               </Turn>
             ) : null}
 
@@ -1150,10 +1177,23 @@ export default function Column({
                     ) : null}
                     <p className="text-sm text-ink-soft">Key results</p>
                     <ul className="space-y-2">
-                      <li>
-                        <span className="text-sm text-ink-soft">Leading — what tells us we&rsquo;re on track early:</span>{" "}
-                        {takeaway.goal.leading ?? "still open"}
-                      </li>
+                      {takeaway.goal.leading.length === 0 ? (
+                        <li>
+                          <span className="text-sm text-ink-soft">
+                            Leading — what tells us we&rsquo;re on track early:
+                          </span>{" "}
+                          still open
+                        </li>
+                      ) : (
+                        takeaway.goal.leading.map((measure) => (
+                          <li key={measure}>
+                            <span className="text-sm text-ink-soft">
+                              Leading — what tells us we&rsquo;re on track early:
+                            </span>{" "}
+                            {measure}
+                          </li>
+                        ))
+                      )}
                       <li>
                         <span className="text-sm text-ink-soft">
                           Lagging — what would convince a sceptic:
@@ -1165,8 +1205,12 @@ export default function Column({
                         results an OKR carries. Saying where the conversation got
                         to is not the same as saying it fell short. */}
                     <p className="text-sm text-ink-soft/75">
-                      Sooner Safer Happier asks for three to five key results, leading and lagging.
-                      This is where we got to, not the finished set.
+                      Sooner Safer Happier asks for{" "}
+                      <Link href="/okrs" className="underline underline-offset-2">
+                        three to five key results
+                      </Link>
+                      : leading indicators you can still pivot on, and one lagging indicator for the
+                      impact. This is where we got to, not the finished set.
                     </p>
                   </div>
 
@@ -1576,24 +1620,40 @@ export default function Column({
               {/* Slide 13's two answers. Carrying on is "that's it"; "let me
                   redo it" puts the bet back in your hands, and takes nothing
                   off the canvas that you didn't take off yourself. */}
-              {share === "yes" && coaching.hypothesis && !coaching.leading ? (
+              {share === "yes" && coaching.hypothesis && !coaching.leadingSet ? (
                 <Ask
                   run={run}
                   coaching={coaching}
                   name="leading"
-                  label={COACH_ASKS.leading}
-                  placeholder="what tells us we’re on track early…"
+                  label={coaching.leading.length > 0 ? COACH_ASKS.leadingMore : COACH_ASKS.leading}
+                  placeholder={
+                    coaching.leading.length > 0
+                      ? "…or another early signal"
+                      : "what tells us we’re on track early…"
+                  }
                   speaking={localVoice}
                   aloud={aloud}
+                  /* "That's the set" is the other answer to "what else?", so it
+                     is only there once there is a set — and it is weighted the
+                     same as the field beside it. Stopping at one is not
+                     stopping short, and nothing here says how many to give. */
+                  spoken={coaching.leading.length > 0 ? [ENOUGH_ANSWER] : []}
+                  spokenHrefs={{ [ENOUGH]: columnHref(run, coaching, { leading: ENOUGH }) }}
                 >
-                  <p className="text-sm">
-                    <Link
-                      href={columnHref(run, coaching, { hypothesis: null })}
-                      className="text-ink-soft underline underline-offset-2"
-                    >
-                      …or let me redo the bet
-                    </Link>
-                  </p>
+                  {coaching.leading.length > 0 ? (
+                    <Choice href={columnHref(run, coaching, { leading: ENOUGH })}>
+                      That&rsquo;s the set
+                    </Choice>
+                  ) : (
+                    <p className="text-sm">
+                      <Link
+                        href={columnHref(run, coaching, { hypothesis: null })}
+                        className="text-ink-soft underline underline-offset-2"
+                      >
+                        …or let me redo the bet
+                      </Link>
+                    </p>
+                  )}
                 </Ask>
               ) : null}
 
