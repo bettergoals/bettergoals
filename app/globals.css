@@ -67,6 +67,22 @@ body {
 }
 .why-on-narrow > summary::-webkit-details-marker { display: none; }
 
+/* Everything we've said so far (idea #146). A coaching question is a question
+   about a canvas box, and once it has an answer that answer is in the box a few
+   centimetres above — so keeping the question in the column as well was the same
+   conversation printed twice, with the canvas and the box you talk into held
+   apart by the second copy.
+
+   It is the same native disclosure the seam and the "why?" already use: nothing
+   is removed, every word is in the document in the order it was said, it reads
+   in full with JavaScript off, and it takes keyboard focus. Unlike those two
+   there is no wide-screen override — a wide screen has the same duplication, and
+   it is the reason the canvas and the live turn drift apart by step 10.
+
+   No height, no max-height, no overflow: the document is still the only thing
+   that scrolls (decision 0001, rule 1). See `Said` in Column.tsx. */
+.said-so-far > summary::-webkit-details-marker { display: none; }
+
 /* Print the canvas (CARD 6, slide 16). The third way of taking the takeaway,
    and the only one that produces something you can put on a wall.
 

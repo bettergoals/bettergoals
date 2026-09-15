@@ -79,13 +79,19 @@ import { PrintCanvas, TakeIt } from "./Takeaway";
  *    canvas · the conversation · the live turn.
  *  - nothing is replaced. Answered triage turns grey; their chips stay above
  *    the canvas for good, under the question each one answered (idea #143).
- *  - the conversation stays short. A question stays once it is answered; the
- *    help that came with it does not — see `Turn`'s `aside`. Decision 0001
- *    named the one thing that would reopen the scrolling canvas — the
- *    conversation running long enough that the canvas sits two screens above
- *    the live turn — and said the answer is a shorter conversation rather than
- *    a pinned panel. Idea #134 is that answer being taken, and
- *    `docs/decisions/0004-the-conversation-quietens.md` records it.
+ *  - the conversation stays short. Decision 0001 named the one thing that would
+ *    reopen the scrolling canvas — the conversation running long enough that the
+ *    canvas sits two screens above the live turn — and said the answer is a
+ *    shorter conversation rather than a pinned panel. Two ideas have taken that
+ *    answer, in this order. Idea #134: the help that came with a question goes
+ *    once the question is answered, and the question stays
+ *    (`docs/decisions/0004-the-conversation-quietens.md`, `Turn`'s `aside`).
+ *    Idea #146: a *coaching* question folds away too, because a coaching
+ *    question is a question about a canvas box and its answer is in that box —
+ *    see `Said` and
+ *    `docs/decisions/0005-a-coaching-question-lives-in-its-box.md`. Folded, not
+ *    deleted: it is a disclosure, every word is still in the document, and the
+ *    triage questions above the canvas — which have no box — are untouched.
  *  - no progress bar, no step numbers, no count, no score. The canvas filling
  *    in is the only orientation there is.
  *  - no persistence. The whole run is in the query string; close the tab and
@@ -164,6 +170,57 @@ function Turn({
         </p>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * One coaching turn, ready to render. Built as data so the column can tell the
+ * live question from the spent ones without the wording being written twice —
+ * see `Said` and idea #146.
+ */
+type CoachTurn = {
+  key: string;
+  /** Answered. Its answer is in a canvas box above, so the question folds away. */
+  spent: boolean;
+  aside?: React.ReactNode;
+  question: React.ReactNode;
+};
+
+/**
+ * The coaching questions you have already answered, folded into one line —
+ * idea #146.
+ *
+ * Every coaching question is a question *about a canvas box*, and the moment it
+ * is answered the answer is sitting in that box, a few centimetres above. So
+ * the spent turn under the canvas is the same conversation said a second time,
+ * and six of them are what hold the canvas and the box you talk into apart. The
+ * reporter drew a ring round exactly that stretch of the column.
+ *
+ * What this is careful not to be:
+ *
+ *  - **not a deletion.** Decision 0004 says a question stays on screen for good,
+ *    and it still does: every word is in the document, in the order it was said,
+ *    one tap from the summary line, and it reads in full with JavaScript off. A
+ *    native disclosure is the same device the seam and `Why` already use.
+ *  - **not a second scroller.** No height, no max-height, no overflow — decision
+ *    0001, rule 1. The document is still the only thing that scrolls.
+ *  - **not a count.** The summary says what is inside it, never how many turns
+ *    or how far through you are (rule 5). "Six questions, answered" would be a
+ *    progress bar in a sentence.
+ *
+ * Triage is untouched: those questions are above the canvas, their chips hang
+ * under them (idea #143), and no box on the canvas holds their answers — so
+ * there is nothing duplicated there to fold.
+ */
+function Said({ children }: { children: React.ReactNode }) {
+  return (
+    <details className="said-so-far">
+      <summary className="cursor-pointer list-none text-sm text-ink-soft/75">
+        <span className="underline underline-offset-4">everything we&rsquo;ve said so far</span>{" "}
+        <span aria-hidden>▸</span>
+      </summary>
+      <div className="mt-4 space-y-4">{children}</div>
+    </details>
   );
 }
 
@@ -604,6 +661,167 @@ export default function Column({
      the words on the screen are the same words. Nothing is written anywhere. */
   const file = leaving(out) ? takeawayText(run, canvas) : null;
 
+  /* CARD 5 — the coaching, steps 06–11, as data rather than as a chain of
+     conditionals in the markup.
+
+     Every line here is the coach's, in the coach's voice, and every move between
+     boxes is the coach's call (CARD A, contracts 2 and 3). The column renders
+     them; it never decides them. Two moves in particular have to land without
+     drama: the jump past ④ at step 07, narrated in one sentence in the flow of
+     talk, and the double-back to ① at step 09, where nothing — not the
+     struck-through wording, not the parked box, not the answer that was "I don't
+     know" — is allowed to read as an error, a validation failure or a skip.
+
+     The list is built in the order the coach asks, and a turn only exists once
+     the one before it has an answer — so at most one of them is ever live, and
+     everything ahead of it in the array is spent. That is what lets `Said` fold
+     the spent ones without any question being written out twice (idea #146).
+     The gating is the same gating `readCoaching` already applies; this only
+     reads it. */
+  const coachTurns: CoachTurn[] = share !== "yes" ? [] : [
+    /* 06 · centre ①. Slide 9, whose own title for this box is "customer and
+       behaviour change" — so idea #131 asking for the word "customer" here is
+       the deck's intent, not a departure from it. "Who is this for" was being
+       answered with whoever asked for the work, which is the wrong end of it
+       every time.
+
+       The aside is the one that makes "customer" safe to say: PRINCIPLES.md
+       means it in the widest sense, and plenty of people on this site have
+       patients, residents or colleagues rather than customers. Their word
+       wins. */
+    {
+      key: "centre",
+      spent: Boolean(coaching.centre),
+      aside: (
+        <p>
+          Customer, colleague or citizen — whoever&rsquo;s on the other end of this and would
+          notice it got better. Use your word for them, not mine.
+        </p>
+      ),
+      question: <p>{COACH_ASKS.centre}</p>,
+    },
+    /* 07 · problem ②. Slide 10. The deck gives box ② its label and its answer
+       but not the coach's question for it; this is that label said out loud, in
+       the voice the rest of the column uses. */
+    ...(coaching.centre
+      ? [
+          {
+            key: "problem",
+            spent: Boolean(coaching.problem),
+            question: <p>Good. Now the driver — due to what? What&rsquo;s in their way today?</p>,
+          },
+        ]
+      : []),
+    /* 07 · the jump to ③. The coach skips ④ and says why, in one sentence, in
+       the flow of talk. The canvas moves the lit box to follow and box ④ says
+       "not yet — see below" in its own words, so nothing up there reads as
+       skipped. */
+    ...(coaching.problem
+      ? [
+          {
+            key: "lagging",
+            spent: Boolean(coaching.lagging),
+            aside: (
+              <Why>
+                I do it this way round on purpose: write the clever sentence first and we&rsquo;ll
+                pick measures that flatter it.
+              </Why>
+            ),
+            question: <p>Now — before we write the bet, tell me how you&rsquo;d know it landed.</p>,
+          },
+        ]
+      : []),
+    /* 08 · "I don't know" ③. The digging happens inside the box — that is the
+       whole point of slide 11, and it is why there is no turn for it here. The
+       box grows to hold it. */
+
+    /* 09 · going backwards to ①. The coach's call and the coach's wording. It
+       asks, because it is written as a question, and both answers are real
+       ones. */
+    ...(settled
+      ? [
+          {
+            key: "back",
+            spent: Boolean(coaching.back),
+            aside: (
+              <p>
+                Your lagging measure can only be as sharp as the behaviour underneath it — so
+                let&rsquo;s sharpen that, and this box will write itself. Nothing you&rsquo;ve said
+                is wrong. We&rsquo;re fixing it upstream.
+              </p>
+            ),
+            question: <p>Can I take you back a step? I don&rsquo;t think the problem is here.</p>,
+          },
+        ]
+      : []),
+    /* 09 · the rewrite. Your old words stay on the canvas, struck through, and
+       box ③ says your words are safe while we're away. */
+    ...(coaching.back === "yes"
+      ? [
+          {
+            key: "centreAgain",
+            spent: Boolean(coaching.centreAgain),
+            question: <p>So — what would they actually be doing, on a Tuesday?</p>,
+          },
+        ]
+      : []),
+    /* 10 · hypothesis ④. Slide 13. */
+    ...(moved
+      ? [
+          {
+            key: "hypothesis",
+            spent: Boolean(coaching.hypothesis),
+            question: <p>So: what&rsquo;s the bet, and which of those numbers should move?</p>,
+          },
+        ]
+      : []),
+    /* 10 · leading ⑤. The bet said back, and the reason it came second — that is
+       the deck's "that's it", and "let me redo it" is beside the field below.
+
+       The question is first and the reflection is the aside under it, so that
+       what stays on screen once this turn is spent is the question that was
+       asked (idea #134). Both are said either way; this is only which of the two
+       the column keeps. */
+    ...(coaching.hypothesis
+      ? [
+          {
+            key: "leading",
+            spent: Boolean(coaching.leading),
+            aside: (
+              <p>
+                That&rsquo;s the bet, and it&rsquo;s written against a measure that already exists
+                — which is why I asked you for the measure first.
+              </p>
+            ),
+            question: <p>Last one. {COACH_ASKS.leading}</p>,
+          },
+        ]
+      : []),
+    /* 11 · the nudge. The gap in words, never a number, and never at all in a
+       room. */
+    ...(nudge
+      ? [
+          {
+            key: "nudge",
+            spent: Boolean(coaching.nudge),
+            question: (
+              <>
+                <p>{nudge.opening}</p>
+                <p>{nudge.gap}</p>
+              </>
+            ),
+          },
+        ]
+      : []),
+  ];
+
+  /* The fold, and the whole of idea #146 in two lines. Everything with an answer
+     goes behind one summary line; the one question still waiting sits on its own,
+     immediately above the box you answer it in. Nothing is reordered and nothing
+     is dropped — `spent` and `live` together are `coachTurns`, in order. */
+  const spent = coachTurns.filter((turn) => turn.spent);
+  const live = coachTurns.find((turn) => !turn.spent) ?? null;
+
   return (
     <div className="mx-auto max-w-3xl px-4 pt-8 pb-20">
       {/* The first thing anyone reads, so it says what this is and what happens
@@ -806,136 +1024,34 @@ export default function Column({
           </>
         ) : null}
 
-        {/* CARD 5 — the coaching. One loop, six steps of it, and the canvas
-            above reacting to every one.
+        {/* CARD 5 — the coaching, steps 06–11. The wording, the order and the
+            gating are all in `coachTurns` above; this is only where they land.
 
-            Every line here is the coach's, in the coach's voice, and every move
-            between boxes is the coach's call (CARD A, contracts 2 and 3). The
-            column renders them; it never decides them. Two moves in particular
-            have to land without drama: the jump past ④ at step 07, narrated in
-            one sentence in the flow of talk, and the double-back to ① at step
-            09, where nothing — not the struck-through wording, not the parked
-            box, not the answer that was "I don't know" — is allowed to read as
-            an error, a validation failure or a skip. */}
+            Two blocks, and the whole of idea #146 is the gap between them. The
+            questions you have already answered fold into one line, because their
+            answers are in the canvas boxes directly above and reading them again
+            here was the same conversation twice. The question still waiting sits
+            on its own, at question size, immediately above the box you answer it
+            in — so the canvas and your turn are next to each other rather than
+            six spent turns apart. */}
+        {spent.length > 0 ? (
+          <Said>
+            {spent.map((turn) => (
+              <Turn key={turn.key} spent>
+                {turn.question}
+              </Turn>
+            ))}
+          </Said>
+        ) : null}
+
+        {live ? (
+          <Turn key={live.key} aside={live.aside}>
+            {live.question}
+          </Turn>
+        ) : null}
+
         {share === "yes" ? (
           <>
-            {/* 06 · centre ①. Slide 9, whose own title for this box is
-                "customer and behaviour change" — so idea #131 asking for the
-                word "customer" here is the deck's intent, not a departure from
-                it. "Who is this for" was being answered with whoever asked for
-                the work, which is the wrong end of it every time.
-
-                The second line is the one that makes "customer" safe to say:
-                PRINCIPLES.md means it in the widest sense, and plenty of people
-                on this site have patients, residents or colleagues rather than
-                customers. Their word wins. */}
-            <Turn
-              spent={Boolean(coaching.centre)}
-              aside={
-                <p>
-                  Customer, colleague or citizen — whoever&rsquo;s on the other end of this and
-                  would notice it got better. Use your word for them, not mine.
-                </p>
-              }
-            >
-              <p>{COACH_ASKS.centre}</p>
-            </Turn>
-
-            {/* 07 · problem ②. Slide 10. The deck gives box ② its label and its
-                answer but not the coach's question for it; this is that label
-                said out loud, in the voice the rest of the column uses. */}
-            {coaching.centre ? (
-              <Turn spent={Boolean(coaching.problem)}>
-                <p>Good. Now the driver — due to what? What&rsquo;s in their way today?</p>
-              </Turn>
-            ) : null}
-
-            {/* 07 · the jump to ③. The coach skips ④ and says why, in one
-                sentence, in the flow of talk. The canvas moves the lit box to
-                follow and box ④ says "not yet — see below" in its own words, so
-                nothing up there reads as skipped. */}
-            {coaching.problem ? (
-              <Turn
-                spent={Boolean(coaching.lagging)}
-                aside={
-                  <Why>
-                    I do it this way round on purpose: write the clever sentence first and
-                    we&rsquo;ll pick measures that flatter it.
-                  </Why>
-                }
-              >
-                <p>Now — before we write the bet, tell me how you&rsquo;d know it landed.</p>
-              </Turn>
-            ) : null}
-
-            {/* 08 · "I don't know" ③. The digging happens inside the box — that
-                is the whole point of slide 11, and it is why there is no turn
-                for it here. The box grows to hold it. */}
-
-            {/* 09 · going backwards to ①. The coach's call and the coach's
-                wording. It asks, because it is written as a question, and both
-                answers are real ones. */}
-            {settled ? (
-              <Turn
-                spent={Boolean(coaching.back)}
-                aside={
-                  <p>
-                    Your lagging measure can only be as sharp as the behaviour underneath it — so
-                    let&rsquo;s sharpen that, and this box will write itself. Nothing you&rsquo;ve
-                    said is wrong. We&rsquo;re fixing it upstream.
-                  </p>
-                }
-              >
-                <p>Can I take you back a step? I don&rsquo;t think the problem is here.</p>
-              </Turn>
-            ) : null}
-
-            {/* 09 · the rewrite. Your old words stay on the canvas, struck
-                through, and box ③ says your words are safe while we're away. */}
-            {coaching.back === "yes" ? (
-              <Turn spent={Boolean(coaching.centreAgain)}>
-                <p>So — what would they actually be doing, on a Tuesday?</p>
-              </Turn>
-            ) : null}
-
-            {/* 10 · hypothesis ④. Slide 13. */}
-            {moved ? (
-              <Turn spent={Boolean(coaching.hypothesis)}>
-                <p>So: what&rsquo;s the bet, and which of those numbers should move?</p>
-              </Turn>
-            ) : null}
-
-            {/* 10 · leading ⑤. The bet said back, and the reason it came second
-                — that is the deck's "that's it", and "let me redo it" is beside
-                the field below.
-
-                The question is first and the reflection is the aside under it,
-                so that what stays on screen once this turn is spent is the
-                question that was asked (idea #134). Both are said either way;
-                this is only which of the two the column keeps. */}
-            {coaching.hypothesis ? (
-              <Turn
-                spent={Boolean(coaching.leading)}
-                aside={
-                  <p>
-                    That&rsquo;s the bet, and it&rsquo;s written against a measure that already
-                    exists — which is why I asked you for the measure first.
-                  </p>
-                }
-              >
-                <p>Last one. {COACH_ASKS.leading}</p>
-              </Turn>
-            ) : null}
-
-            {/* 11 · the nudge. The gap in words, never a number, and never at
-                all in a room. */}
-            {nudge ? (
-              <Turn spent={Boolean(coaching.nudge)}>
-                <p>{nudge.opening}</p>
-                <p>{nudge.gap}</p>
-              </Turn>
-            ) : null}
-
             {/* "Show me which ones" — the same gap, drawn. The glyphs are how
                 the gap is expressed, not a value: three fixed segments per
                 dimension, nothing added up, and every one of them bound to the
