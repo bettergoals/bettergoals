@@ -52,6 +52,7 @@ import {
   ANSWER_MAX,
   DONT_KNOW,
   DONT_KNOW_ANSWER,
+  backToCentre,
   canvasFor,
   canvasText,
   columnHref,
@@ -95,7 +96,10 @@ export const COACH_ASKS = {
   problem: "Due to what? What's in their way today?",
   lagging: "How would you know it landed? What would convince a sceptic?",
   whoKnows: "Who would know? And has anyone ever been able to tell whether this got better?",
-  centreAgain: "What would they actually be doing, on a Tuesday?",
+  // There is no `centreAgain` here any more. Idea #155: the question asked on the
+  // way back to ① is derived from what the signal says is thin about ①, so it
+  // lives beside that reading in `lib/nudge.ts` rather than as one fixed line
+  // asked on every run whether or not it was the question that needed asking.
   hypothesis: "What's the bet, and which of those numbers should move?",
   // Idea #140. Horizon-relative rather than "in weeks" — see `CANVAS_ORDER`.
   leading: "What tells us we're on track, long before the outcome is due?",
@@ -296,20 +300,33 @@ export function turnFor(run: Run, c: Coaching): Turn {
       note: "What they say lands on the canvas as an open question to take back to their team. That is a real output, not a gap.",
     };
   }
-  if (!c.back) {
+  /* 09 · back to ①, if there is a reason to go. `backToCentre` asks the signal
+     that has been running underneath all along; when it has nothing to say there
+     is no turn here at all and the conversation goes straight on to the bet.
+     Neither the reason nor the question is a stock line any more — both are the
+     thin dimension said in words (idea #155). */
+  const gap = backToCentre(c);
+  if (gap && !c.back) {
     return {
       kind: "ask",
       field: "back",
       question: COACH_ASKS.back,
-      preamble:
-        "Say why: their lagging measure can only be as sharp as the behaviour underneath it. Nothing they've said is wrong — you're fixing it upstream. Both answers are real ones.",
+      preamble: `Say why, and say it as what's thin rather than as a verdict: ${gap.why} Nothing they've said is wrong — you're fixing it upstream. Both answers are real ones.`,
       choices: BACK_CHOICES,
       freeText: false,
       max: ANSWER_MAX,
     };
   }
-  if (c.back === "yes" && !c.centreAgain) {
-    return { kind: "ask", field: "centreAgain", question: COACH_ASKS.centreAgain, choices: [], freeText: true, max: ANSWER_MAX };
+  if (gap && c.back === "yes" && !c.centreAgain) {
+    return {
+      kind: "ask",
+      field: "centreAgain",
+      question: gap.question,
+      choices: [],
+      freeText: true,
+      max: ANSWER_MAX,
+      note: `You came back here for one thing — ${gap.label}. Ask about that and nothing else, take their sharper wording, and don't re-run the box.`,
+    };
   }
   if (!c.hypothesis) {
     return { kind: "ask", field: "hypothesis", question: COACH_ASKS.hypothesis, choices: [], freeText: true, max: ANSWER_MAX };
