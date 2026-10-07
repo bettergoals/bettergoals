@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { FaceArt, MOUTH_OPEN, MOUTH_SHUT } from "./FaceArt";
 
 /**
  * The coach's face. Idea #179: "could the voice coach also have a human-like
@@ -16,6 +17,8 @@ import { useEffect, useRef } from "react";
  *    personal information").
  *  - the skin is a tint of the site's blue rather than any human skin tone, so
  *    the face doesn't belong to one kind of person more than another.
+ *  - it is a woman's face, because the voice is a woman's (idea #182). The
+ *    drawing lives in `FaceArt`, so the "Talk to me" answer can wear it too.
  *
  * The mouth follows the real loudness of the coach's voice, read from the
  * incoming WebRTC stream with an AnalyserNode, so it moves when the coach
@@ -29,10 +32,6 @@ import { useEffect, useRef } from "react";
  */
 
 export type FaceState = "connecting" | "speaking" | "listening" | "idle" | "error";
-
-/** Mouth heights in viewBox units: shut, and wide open. */
-const MOUTH_SHUT = 0.8;
-const MOUTH_OPEN = 7;
 
 export function CoachFace({ stream, state }: { stream: MediaStream | null; state: FaceState }) {
   const mouthRef = useRef<SVGEllipseElement | null>(null);
@@ -134,25 +133,7 @@ export function CoachFace({ stream, state }: { stream: MediaStream | null; state
         state === "connecting" || state === "idle" || state === "error" ? "opacity-70" : ""
       }`}
     >
-      <svg viewBox="0 0 48 48" className="h-full w-full">
-        {/* Shoulders */}
-        <path d="M6 48c2-9 9-13 18-13s16 4 18 13z" className="fill-ink-soft" />
-        {/* Neck */}
-        <rect x="20" y="29" width="8" height="8" rx="3" className="fill-sooner/30" />
-        {/* Head */}
-        <ellipse cx="24" cy="21" rx="11" ry="12.5" className="fill-[#dbe8fd]" />
-        {/* Hair */}
-        <path d="M13 19c0-8 5-11.5 11-11.5S35 11 35 19c-2-3-5-5.5-11-5.5S15 16 13 19z" className="fill-ink" />
-        {/* Brows */}
-        <path d="M17.5 17.2q2.5-1.4 5 0M25.5 17.2q2.5-1.4 5 0" className="stroke-ink" strokeWidth="1" fill="none" strokeLinecap="round" />
-        {/* Eyes */}
-        <g ref={eyesRef} style={{ transformOrigin: "24px 20.5px", transformBox: "view-box" }}>
-          <ellipse cx="20" cy="20.5" rx="1.4" ry="1.7" className="fill-ink" />
-          <ellipse cx="28" cy="20.5" rx="1.4" ry="1.7" className="fill-ink" />
-        </g>
-        {/* Mouth */}
-        <ellipse ref={mouthRef} cx="24" cy="27.5" rx="3.6" ry={MOUTH_SHUT} className="fill-ink-soft" />
-      </svg>
+      <FaceArt mouthRef={mouthRef} eyesRef={eyesRef} />
     </span>
   );
 }

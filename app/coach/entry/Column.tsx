@@ -53,6 +53,7 @@ import {
 } from "@/lib/triage";
 import { COACH_ASKS } from "@/lib/voiceColumn";
 import { Canvas } from "./Canvas";
+import { FaceArt } from "./FaceArt";
 import { SayIt } from "./SayIt";
 import { TalkToMe } from "./TalkToMe";
 import { PrintCanvas, TakeIt } from "./Takeaway";
@@ -288,14 +289,33 @@ const FIELD =
 const SEND =
   "rounded-2xl bg-ink px-5 py-4 font-semibold text-chalk shadow-sm transition hover:bg-ink-soft hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:px-6";
 
-function Answer({ href: to, label, aside }: { href: string; label: string; aside?: string }) {
+function Answer({
+  href: to,
+  label,
+  aside,
+  face,
+}: {
+  href: string;
+  label: string;
+  aside?: string;
+  face?: boolean;
+}) {
   return (
     <Link
       href={to}
       className={`${CARD} ${CARD_EDGE} group flex items-start gap-3 px-5 py-4 text-left sm:min-w-56 sm:flex-1`}
     >
       <span className="flex-1">
-        <span className="font-semibold">{label}</span>
+        <span className="font-semibold">
+          {/* Idea #182: "Talk to me" wears the face of the coach who answers,
+              still, at the size of the glyph it replaces. */}
+          {face ? (
+            <span className="mr-1.5 inline-block h-6 w-6 overflow-hidden rounded-full bg-chalk align-[-0.4em] ring-1 ring-ink/15">
+              <FaceArt />
+            </span>
+          ) : null}
+          {label}
+        </span>
         {aside ? <span className="mt-0.5 block text-sm text-ink-soft">{aside}</span> : null}
       </span>
       {/* Every answer gets the same arrow, which is the point: it says "this is
@@ -322,7 +342,13 @@ function Answers({
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
       {answers.map((answer) => (
-        <Answer key={answer.value} href={hrefs[answer.value]} label={answer.label} aside={answer.aside} />
+        <Answer
+          key={answer.value}
+          href={hrefs[answer.value]}
+          label={answer.label}
+          aside={answer.aside}
+          face={answer.face}
+        />
       ))}
     </div>
   );
