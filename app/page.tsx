@@ -140,7 +140,7 @@ export default async function Home({
                   canvas numerals get rather than being a big green digit
                   floating above a heading — idea #167. The tint carries the
                   colour and the digit stays ink, because `sooner` is mid-tone
-                  and a green 1 on a green disc is harder to read than the plain
+                  and a blue 1 on a blue disc is harder to read than the plain
                   one it replaced. Same four steps, same words. */}
               <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {STEPS.map((s) => (

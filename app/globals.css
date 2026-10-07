@@ -4,7 +4,10 @@
   --color-ink: #0c1524;
   --color-ink-soft: #22304a;
   --color-chalk: #f7f8f5;
-  --color-sooner: #10b981;
+  /* The site accent. Blue, not green (idea #176) — a deeper, more saturated
+     blue than `safer`'s sky so the two stay apart, and dark ink on it still
+     clears WCAG AA (about 5:1) on the filled buttons. */
+  --color-sooner: #3b82f6;
   --color-safer: #38bdf8;
   --color-happier: #f59e0b;
 }
