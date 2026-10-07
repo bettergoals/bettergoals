@@ -73,13 +73,16 @@ export type TriageAnswer = {
    * answer to the same place tapping it would have gone.
    */
   phrases: string[];
+  /** Wear the coach's face in place of a glyph — the answer that is her voice (idea #182). */
+  face?: boolean;
 };
 
 /** Slide 3. How you want to talk — the answer that starts the column. */
 export const MODE_ANSWERS: readonly TriageAnswer[] = [
   {
     value: "speak",
-    label: "◉ Talk to me",
+    label: "Talk to me",
+    face: true,
     aside: "about four minutes, out loud",
     chip: "out loud",
     phrases: ["talk", "speak", "speaking", "out loud"],
