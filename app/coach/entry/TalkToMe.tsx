@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { columnHref, type Coaching } from "@/lib/coaching";
 import type { Run } from "@/lib/triage";
 import { columnNote, landAnswer, turnFor } from "@/lib/voiceColumn";
+import { CoachFace } from "./CoachFace";
 
 /**
  * "◉ Talk to me" — the coach itself, on the phone. Idea #124.
@@ -71,6 +72,9 @@ export function TalkToMe({ run, coaching }: { run: Run; coaching: Coaching }) {
   const [blocked, setBlocked] = useState(false);
   /** The coach's last line, in print. What it says is always also readable. */
   const [caption, setCaption] = useState("");
+  /** The coach's voice as it arrives, and whether it is sounding — for the face. Idea #179. */
+  const [voice, setVoice] = useState<MediaStream | null>(null);
+  const [speaking, setSpeaking] = useState(false);
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
@@ -137,6 +141,8 @@ export function TalkToMe({ run, coaching }: { run: Run; coaching: Coaching }) {
     toldRef.current = null;
     setMuted(false);
     setHearing(false);
+    setSpeaking(false);
+    setVoice(null);
     if (mountedRef.current) setStatus(next);
   }, []);
 
@@ -247,8 +253,12 @@ export function TalkToMe({ run, coaching }: { run: Run; coaching: Coaching }) {
         case "response.output_audio_transcript.done":
           if (ev.transcript) setCaption(ev.transcript);
           break;
+        case "output_audio_buffer.started":
+          setSpeaking(true);
+          break;
         case "output_audio_buffer.stopped":
         case "output_audio_buffer.cleared":
+          setSpeaking(false);
           if (leavingRef.current) handOver();
           break;
         case "input_audio_buffer.speech_started":
@@ -310,6 +320,7 @@ export function TalkToMe({ run, coaching }: { run: Run; coaching: Coaching }) {
         const el = audioRef.current;
         if (!el) return;
         el.srcObject = e.streams[0];
+        setVoice(e.streams[0]);
         // A browser that won't play audio it wasn't asked for by hand gets a
         // button rather than a coach nobody can hear.
         el.play().catch(() => setBlocked(true));
@@ -423,12 +434,24 @@ export function TalkToMe({ run, coaching }: { run: Run; coaching: Coaching }) {
       <audio ref={audioRef} autoPlay hidden />
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="inline-flex items-center gap-2 text-sm font-semibold text-ink">
-          <span
-            aria-hidden
-            className={`h-2 w-2 rounded-full ${
-              live ? (hearing ? "bg-happier" : "bg-sooner") : status === "error" ? "bg-red-500" : "bg-ink/40"
-            }`}
+        <span className="inline-flex items-center gap-3 text-sm font-semibold text-ink">
+          {/* Idea #179: the coach has a face. It takes the place of the status
+              dot and wears the same colours, so the panel gains no extra line. */}
+          <CoachFace
+            stream={voice}
+            state={
+              status === "live"
+                ? hearing
+                  ? "listening"
+                  : speaking
+                    ? "speaking"
+                    : "idle"
+                : status === "error"
+                  ? "error"
+                  : status === "connecting"
+                    ? "connecting"
+                    : "idle"
+            }
           />
           {status === "connecting" && "Connecting to the coach…"}
           {live && (muted ? "Muted — I can't hear you" : hearing ? "I'm listening…" : "We're talking. Just answer.")}
