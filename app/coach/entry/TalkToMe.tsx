@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { columnHref, type Coaching } from "@/lib/coaching";
 import type { Run } from "@/lib/triage";
-import { columnNote, landAnswer, turnFor } from "@/lib/voiceColumn";
+import { MOOD_OPTIONS, columnNote, landAnswer, moodBrief, turnFor } from "@/lib/voiceColumn";
 import { CoachFace } from "./CoachFace";
 
 /**
@@ -63,6 +63,12 @@ const LAST_WORD_MS = 3500;
 /** The same quiet switch the column's own mode and voice controls wear. */
 const SWITCH = "rounded-full border border-ink/15 px-3 py-1.5 text-sm text-ink-soft hover:bg-ink/5";
 
+/**
+ * Where the column stands, as one string. The mood is left out: changing how
+ * hard the coach pushes is not an answer, and must not read as one.
+ */
+const where = (r: Run, c: Coaching) => columnHref(r, c, { mood: null }, "");
+
 export function TalkToMe({ run, coaching }: { run: Run; coaching: Coaching }) {
   const router = useRouter();
   const [status, setStatus] = useState<Status>("connecting");
@@ -97,10 +103,12 @@ export function TalkToMe({ run, coaching }: { run: Run; coaching: Coaching }) {
   });
 
   /** Where the column stands, as one string. Changes when anything is answered. */
-  const signature = columnHref(run, coaching, {}, "");
+  const signature = where(run, coaching);
   /** The last state the coach was told about, and the last move it made itself. */
   const toldRef = useRef<string | null>(null);
   const ownMoveRef = useRef<string | null>(null);
+  /** The mood the coach was last told about — idea #188. Undefined until the call is live. */
+  const moodToldRef = useRef<Run["mood"] | undefined>(undefined);
 
   const send = useCallback((event: Record<string, unknown>) => {
     const dc = dcRef.current;
@@ -139,6 +147,7 @@ export function TalkToMe({ run, coaching }: { run: Run; coaching: Coaching }) {
     responseQueued.current = false;
     handledCalls.current.clear();
     toldRef.current = null;
+    moodToldRef.current = undefined;
     setMuted(false);
     setHearing(false);
     setSpeaking(false);
@@ -202,7 +211,7 @@ export function TalkToMe({ run, coaching }: { run: Run; coaching: Coaching }) {
          so the note that would otherwise follow the navigation isn't sent
          twice — the answer's own result already carries the next question,
          which is what keeps the conversation from stalling for a round trip. */
-      const moved = columnHref(landed.run, landed.coaching, {}, "");
+      const moved = where(landed.run, landed.coaching);
       ownMoveRef.current = moved;
       toldRef.current = moved;
       reply({ ok: true, next: columnNote(landed.run, landed.coaching) });
@@ -290,7 +299,7 @@ export function TalkToMe({ run, coaching }: { run: Run; coaching: Coaching }) {
       const res = await fetch("/api/jam/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ flow: "column" }),
+        body: JSON.stringify({ flow: "column", mood: stateRef.current.run.mood }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { message?: string };
@@ -345,7 +354,9 @@ export function TalkToMe({ run, coaching }: { run: Run; coaching: Coaching }) {
       dc.onopen = () => {
         setStatus("live");
         const { run: r, coaching: c } = stateRef.current;
-        toldRef.current = columnHref(r, c, {}, "");
+        toldRef.current = where(r, c);
+        // The session was briefed in whatever mood was current when it was asked for.
+        moodToldRef.current = r.mood;
         tell(columnNote(r, c));
         responseActive.current = true;
         /* Only the first hello is a hello. Typing an answer reloads the page,
@@ -419,6 +430,19 @@ export function TalkToMe({ run, coaching }: { run: Run; coaching: Coaching }) {
     requestResponse();
   }, [signature, status, requestResponse, tell]);
 
+  /**
+   * They picked a different mood mid-conversation — idea #188. It is a link
+   * like every other control here, so the column moves; tell the coach, and
+   * let it carry on from its next sentence rather than stopping to say so.
+   */
+  const mood = run.mood;
+  useEffect(() => {
+    if (status !== "live" || moodToldRef.current === undefined) return;
+    if (moodToldRef.current === mood) return;
+    moodToldRef.current = mood;
+    tell(`[mood] ${moodBrief(mood)}`);
+  }, [mood, status, tell]);
+
   function toggleMute() {
     const next = !muted;
     micRef.current?.getAudioTracks().forEach((t) => (t.enabled = !next));
@@ -474,6 +498,28 @@ export function TalkToMe({ run, coaching }: { run: Run; coaching: Coaching }) {
           </button>
         )}
       </div>
+
+      {/* Idea #188: how hard the coach pushes, for the mood you're in. Three
+          links, so it works like every other answer here; changing it mid-call
+          changes the coach's manner from its next sentence, and nothing else. */}
+      <nav aria-label="How hard should I push?" className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="text-sm text-ink-soft">How hard should I push?</span>
+        {MOOD_OPTIONS.map((m) => (
+          <Link
+            key={m.label}
+            href={columnHref(run, coaching, { mood: m.value })}
+            scroll={false}
+            replace
+            aria-current={m.value === run.mood ? "true" : undefined}
+            title={m.aside}
+            className={
+              m.value === run.mood ? "rounded-full border border-ink bg-ink px-3 py-1.5 text-sm text-chalk" : SWITCH
+            }
+          >
+            {m.label}
+          </Link>
+        ))}
+      </nav>
 
       {/* Whatever the coach says is also in print, quietly, here by the
           controls — one line, small, out of the way of the question above it.
