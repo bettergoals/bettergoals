@@ -8,7 +8,7 @@ import type { Ref } from "react";
  *
  * Idea #182: the voice is a woman's, so the face is too — shoulder-length hair
  * framing it, a side-swept fringe, finer arched brows and a flick of lashes.
- * Still plainly a drawing, and the skin is still a tint of the site's blue
+ * Still plainly a drawing, and the skin is still a tint of the site's accent
  * rather than any human skin tone, for the reasons `CoachFace` gives.
  */
 
