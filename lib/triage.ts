@@ -44,6 +44,17 @@ export type Share = "yes" | "no";
  */
 export type Voice = "off";
 
+/**
+ * How hard the voice coach pushes — idea #188. Three moods, picked for the
+ * mood the leader is in: unset is the coach as it has always been, a sparring
+ * partner; "gentle" asks and doesn't press; "challenge" presses on everything.
+ * It changes the coach's manner, never what it asks or in what order. Like
+ * `voice`, it rides in the query string because that is the only state this
+ * thing has, and it can be changed at any point.
+ */
+export type Mood = "gentle" | "challenge";
+export const MOODS = ["gentle", "challenge"] as const;
+
 export type Run = {
   /** Unset until the landing screen is answered — that answer is what starts it. */
   mode: Mode | null;
@@ -58,6 +69,8 @@ export type Run = {
   share: Share | null;
   /** Unset means the coach speaks. Answerable at any point, in both directions. */
   voice: Voice | null;
+  /** Unset means the coach's usual manner. Idea #188. */
+  mood: Mood | null;
 };
 
 export type TriageAnswer = {
@@ -339,7 +352,8 @@ export function readRun(params: Record<string, string | string[] | undefined>): 
   // Not gated by anything above it. Asking the coach to be quiet is not a turn
   // in the conversation, and it has to work at whatever point it is asked.
   const voice = oneOf(first(params.voice), ["off"] as const);
-  return { mode, who, name, brought, share, voice };
+  const mood = oneOf(first(params.mood), MOODS);
+  return { mode, who, name, brought, share, voice, mood };
 }
 
 /**
@@ -365,6 +379,7 @@ export function runHref(run: Run, next: Partial<Run>, hash = "#live"): string {
   if (merged.brought) q.set("brought", merged.brought);
   if (merged.share) q.set("share", merged.share);
   if (merged.voice) q.set("voice", merged.voice);
+  if (merged.mood) q.set("mood", merged.mood);
   const s = q.toString();
   return `${COLUMN_PATH}${s ? `?${s}` : ""}${hash}`;
 }
