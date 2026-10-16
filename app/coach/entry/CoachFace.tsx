@@ -15,7 +15,7 @@ import { FaceArt, MOUTH_OPEN, MOUTH_SHUT } from "./FaceArt";
  *    video stream, no new dependency, and nothing about the reader or the
  *    conversation goes anywhere it wasn't already going (PRINCIPLES.md, "Refuses
  *    personal information").
- *  - the skin is a tint of the site's blue rather than any human skin tone, so
+ *  - the skin is a tint of the site's accent rather than any human skin tone, so
  *    the face doesn't belong to one kind of person more than another.
  *  - it is a woman's face, because the voice is a woman's (idea #182). The
  *    drawing lives in `FaceArt`, so the "Talk to me" answer can wear it too.
