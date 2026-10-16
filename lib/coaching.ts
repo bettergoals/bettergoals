@@ -365,6 +365,7 @@ export function columnHref(
   if (merged.brought) q.set("brought", merged.brought.slice(0, BROUGHT_MAX));
   put("share", merged.share);
   put("voice", merged.voice);
+  put("mood", merged.mood);
   put("centre", merged.centre);
   put("problem", merged.problem);
   put("lagging", merged.lagging);

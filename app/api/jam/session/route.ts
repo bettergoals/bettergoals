@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { JAM_TOOLS, coachInstructions } from "@/lib/jamBoard";
+import { MOODS, type Mood } from "@/lib/triage";
 import { COLUMN_TOOLS, columnCoachInstructions } from "@/lib/voiceColumn";
 
 /**
@@ -112,9 +113,11 @@ export async function POST(req: Request) {
 
   let names: string[] = [];
   let column = false;
+  let mood: Mood | null = null;
   try {
-    const body = (await req.json()) as { names?: unknown; flow?: unknown };
+    const body = (await req.json()) as { names?: unknown; flow?: unknown; mood?: unknown };
     column = body?.flow === "column";
+    mood = MOODS.find((m) => m === body?.mood) ?? null;
     if (Array.isArray(body?.names)) {
       names = body.names
         .filter((n): n is string => typeof n === "string")
@@ -134,7 +137,7 @@ export async function POST(req: Request) {
       session: {
         type: "realtime",
         model: MODEL(),
-        instructions: column ? columnCoachInstructions() : coachInstructions(names),
+        instructions: column ? columnCoachInstructions(mood) : coachInstructions(names),
         tools: column ? COLUMN_TOOLS : JAM_TOOLS,
         tool_choice: "auto",
         reasoning: reasoning(MODEL()),
