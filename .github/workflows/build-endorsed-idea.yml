@@ -35,13 +35,13 @@ jobs:
           exit 1
 
       - name: Check out the product site (this repo, preview branch)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: preview
           fetch-depth: 0
 
       - name: Check out the build board (bettergoals/build-bettergoals)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: bettergoals/build-bettergoals
           ref: main
